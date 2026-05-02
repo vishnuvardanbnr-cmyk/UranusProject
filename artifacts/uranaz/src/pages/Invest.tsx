@@ -59,8 +59,10 @@ export default function Invest({ user }: { user: any }) {
   const dailyEarning = watchedAmount * plan.rate;
   const totalReturn = dailyEarning * plan.days;
 
+  const hyperEnabled = hyperCoinMinPercent > 0;
+
   const handleAmountChange = (val: number) => {
-    const hypercoin = Math.ceil(val * (hyperCoinMinPercent / 100));
+    const hypercoin = hyperEnabled ? Math.ceil(val * (hyperCoinMinPercent / 100)) : 0;
     form.setValue("amount", val);
     form.setValue("hyperCoinAmount", hypercoin);
     form.setValue("usdtAmount", val - hypercoin);
@@ -69,7 +71,7 @@ export default function Invest({ user }: { user: any }) {
   // Update split whenever hyperCoinMinPercent loads
   useEffect(() => {
     const val = form.getValues("amount");
-    const hypercoin = Math.ceil(val * (hyperCoinMinPercent / 100));
+    const hypercoin = hyperEnabled ? Math.ceil(val * (hyperCoinMinPercent / 100)) : 0;
     form.setValue("hyperCoinAmount", hypercoin);
     form.setValue("usdtAmount", val - hypercoin);
   }, [hyperCoinMinPercent]);
@@ -120,21 +122,25 @@ export default function Invest({ user }: { user: any }) {
         >
           <Info size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
           <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-            Minimum <span style={{ color: TEAL, fontWeight: 700 }}>{hyperCoinMinPercent}%</span> must be HYPERCOIN.
-            Payouts every weekday (5 days/week).
+            {hyperEnabled
+              ? <>Minimum <span style={{ color: TEAL, fontWeight: 700 }}>{hyperCoinMinPercent}%</span> must be HYPERCOIN. Payouts every weekday (5 days/week).</>
+              : <>Payouts every weekday (5 days/week).</>
+            }
           </p>
         </div>
 
         {/* Available balances */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className={`grid gap-2 mb-4 ${hyperEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
           <div className="rounded-lg px-3 py-2" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
             <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>USDT Balance</div>
             <div className="font-bold text-sm" style={{ color: TEAL }}>${usdtBalance.toFixed(2)}</div>
           </div>
-          <div className="rounded-lg px-3 py-2" style={{ background: "rgba(168,100,255,0.06)", border: "1px solid rgba(168,100,255,0.14)" }}>
-            <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
-            <div className="font-bold text-sm" style={{ color: "#b87fff" }}>${hyperBalance.toFixed(2)}</div>
-          </div>
+          {hyperEnabled && (
+            <div className="rounded-lg px-3 py-2" style={{ background: "rgba(168,100,255,0.06)", border: "1px solid rgba(168,100,255,0.14)" }}>
+              <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+              <div className="font-bold text-sm" style={{ color: "#b87fff" }}>${hyperBalance.toFixed(2)}</div>
+            </div>
+          )}
         </div>
 
         <Form {...form}>
@@ -154,50 +160,52 @@ export default function Invest({ user }: { user: any }) {
                 <FormMessage />
               </FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-3">
-              <FormField control={form.control} name="hyperCoinAmount" render={({ field }) => (
-                <FormItem>
-                  <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>
-                    HYPERCOIN (min {hyperCoinMinPercent}%)
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="input-hypercoin"
-                      type="number"
-                      {...field}
-                      onChange={e => {
-                        const hyper = Number(e.target.value);
-                        const total = form.getValues("amount");
-                        field.onChange(hyper);
-                        form.setValue("usdtAmount", Math.max(0, total - hyper));
-                      }}
-                      style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(168,100,255,0.25)", color: "rgba(168,237,255,0.9)" }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="usdtAmount" render={({ field }) => (
-                <FormItem>
-                  <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Amount</FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="input-usdt"
-                      type="number"
-                      {...field}
-                      onChange={e => {
-                        const usdt = Number(e.target.value);
-                        const total = form.getValues("amount");
-                        field.onChange(usdt);
-                        form.setValue("hyperCoinAmount", Math.max(0, total - usdt));
-                      }}
-                      style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            {hyperEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="hyperCoinAmount" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>
+                      HYPERCOIN (min {hyperCoinMinPercent}%)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        data-testid="input-hypercoin"
+                        type="number"
+                        {...field}
+                        onChange={e => {
+                          const hyper = Number(e.target.value);
+                          const total = form.getValues("amount");
+                          field.onChange(hyper);
+                          form.setValue("usdtAmount", Math.max(0, total - hyper));
+                        }}
+                        style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(168,100,255,0.25)", color: "rgba(168,237,255,0.9)" }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="usdtAmount" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        data-testid="input-usdt"
+                        type="number"
+                        {...field}
+                        onChange={e => {
+                          const usdt = Number(e.target.value);
+                          const total = form.getValues("amount");
+                          field.onChange(usdt);
+                          form.setValue("hyperCoinAmount", Math.max(0, total - usdt));
+                        }}
+                        style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
             <button
               data-testid="button-submit-invest"
               type="submit"

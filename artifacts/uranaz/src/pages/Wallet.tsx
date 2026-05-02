@@ -662,6 +662,14 @@ export default function WalletPage({ user }: { user: any }) {
 
   const usdtBalance  = localUsdtBal  ?? (user?.walletBalance ?? 0);
   const hyperBalance = localHyperBal ?? (user?.hyperCoinBalance ?? 0);
+  const [hyperEnabled, setHyperEnabled] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.json())
+      .then(d => setHyperEnabled((d.hyperCoinMinPercent ?? 50) > 0))
+      .catch(() => {});
+  }, []);
 
   const { data: summary }    = useGetIncomeSummary();
   const { data: investments } = useListInvestments();
@@ -695,7 +703,7 @@ export default function WalletPage({ user }: { user: any }) {
       </h1>
 
       {/* ── USDT & HYPERCOIN Balances ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${hyperEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
         <div
           className="rounded-xl p-4"
           style={{
@@ -709,19 +717,21 @@ export default function WalletPage({ user }: { user: any }) {
             ${usdtBalance.toFixed(2)}
           </div>
         </div>
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
-            border: "1px solid rgba(184,127,255,0.28)",
-            boxShadow: "0 0 20px rgba(184,127,255,0.07)",
-          }}
-        >
-          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
-          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
-            ${hyperBalance.toFixed(2)}
+        {hyperEnabled && (
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
+              border: "1px solid rgba(184,127,255,0.28)",
+              boxShadow: "0 0 20px rgba(184,127,255,0.07)",
+            }}
+          >
+            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+            <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
+              ${hyperBalance.toFixed(2)}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── Earnings Stats ── */}
@@ -742,7 +752,7 @@ export default function WalletPage({ user }: { user: any }) {
       </div>
 
       {/* ── Action Buttons ── */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${hyperEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
         {/* Deposit */}
         <button
           onClick={() => setShowDepositModal(true)}
@@ -757,20 +767,22 @@ export default function WalletPage({ user }: { user: any }) {
           Deposit
         </button>
 
-        {/* Transfer */}
-        <button
-          onClick={() => setShowTransferModal(true)}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
-          style={{
-            background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(139,92,246,0.10))",
-            border: "1px solid rgba(184,127,255,0.32)",
-            color: "#b87fff",
-            boxShadow: "0 0 20px rgba(184,127,255,0.12)",
-          }}
-        >
-          <ArrowLeftRight size={16} strokeWidth={2.5} />
-          Transfer
-        </button>
+        {/* Transfer — only when HYPERCOIN is active */}
+        {hyperEnabled && (
+          <button
+            onClick={() => setShowTransferModal(true)}
+            className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(139,92,246,0.10))",
+              border: "1px solid rgba(184,127,255,0.32)",
+              color: "#b87fff",
+              boxShadow: "0 0 20px rgba(184,127,255,0.12)",
+            }}
+          >
+            <ArrowLeftRight size={16} strokeWidth={2.5} />
+            Transfer
+          </button>
+        )}
 
         {/* Withdraw */}
         <button
