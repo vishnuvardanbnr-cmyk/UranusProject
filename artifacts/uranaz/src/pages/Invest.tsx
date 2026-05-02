@@ -8,9 +8,146 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown } from "lucide-react";
 
 const TEAL = "#3DD6F5";
+
+/* ── Investment Detail Modal ── */
+function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyperEnabled: boolean; onClose: () => void }) {
+  const progress = Math.max(2, ((inv.durationDays - inv.remainingDays) / inv.durationDays) * 100);
+  const planLabels: Record<string, string> = {
+    tier1: "Starter — 0.6%/day · 300 days",
+    tier2: "Growth  — 0.7%/day · 260 days",
+    tier3: "Premium — 0.8%/day · 225 days",
+  };
+  const totalExpected = inv.amount * inv.dailyRate * inv.durationDays;
+  const daysElapsed = inv.durationDays - inv.remainingDays;
+
+  const rows = [
+    { icon: Hash,        label: "Investment ID",    value: `#${String(inv.id).padStart(6, "0")}` },
+    { icon: Calendar,    label: "Plan",             value: planLabels[inv.planTier] ?? inv.planTier },
+    { icon: Calendar,    label: "Start Date",       value: new Date(inv.startDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) },
+    { icon: Calendar,    label: "End Date",         value: new Date(inv.endDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) },
+    { icon: Timer,       label: "Duration",         value: `${inv.durationDays} days total` },
+    { icon: Timer,       label: "Days Elapsed",     value: `${daysElapsed} days` },
+    { icon: Timer,       label: "Days Remaining",   value: `${inv.remainingDays} days` },
+    { icon: DollarSign,  label: "Total Invested",   value: `$${inv.amount.toFixed(2)}` },
+    ...(hyperEnabled ? [
+      { icon: DollarSign, label: "HYPERCOIN",       value: `$${inv.hyperCoinAmount.toFixed(2)}` },
+      { icon: DollarSign, label: "USDT",            value: `$${inv.usdtAmount.toFixed(2)}` },
+    ] : []),
+    { icon: Percent,     label: "Daily Rate",       value: `${(inv.dailyRate * 100).toFixed(1)}%` },
+    { icon: TrendingUp,  label: "Earned So Far",    value: `$${inv.earnedSoFar.toFixed(2)}` },
+    { icon: TrendingDown, label: "Expected Total",  value: `$${totalExpected.toFixed(2)}` },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(61,214,245,0.18)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
+          maxHeight: "90dvh",
+          overflowY: "auto",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, transparent, ${TEAL}, transparent)` }} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(61,214,245,0.06))", border: "1px solid rgba(61,214,245,0.28)" }}
+            >
+              <TrendingUp size={17} style={{ color: TEAL }} />
+            </div>
+            <div>
+              <div className="font-bold tracking-wide" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.8rem" }}>
+                Investment Details
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: TEAL, boxShadow: `0 0 6px ${TEAL}` }} />
+                <span className="text-xs font-semibold" style={{ color: TEAL }}>Active</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}
+          >
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
+          </button>
+        </div>
+
+        {/* Amount hero */}
+        <div
+          className="mx-5 mb-4 rounded-2xl py-4 text-center"
+          style={{ background: "linear-gradient(135deg, rgba(61,214,245,0.08), rgba(42,179,215,0.03))", border: "1px solid rgba(61,214,245,0.18)" }}
+        >
+          <div className="text-xs mb-1 uppercase tracking-widest" style={{ color: "rgba(168,237,255,0.35)" }}>Total Invested</div>
+          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "2rem", color: TEAL, textShadow: `0 0 24px ${TEAL}50` }}>
+            ${inv.amount.toFixed(2)}
+          </div>
+          <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.4)" }}>+{(inv.dailyRate * 100).toFixed(1)}% per day</div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="px-5 mb-4">
+          <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.4)" }}>
+            <span>Progress</span>
+            <span>{progress.toFixed(1)}%</span>
+          </div>
+          <div className="w-full rounded-full h-2" style={{ background: "rgba(61,214,245,0.08)" }}>
+            <div className="h-2 rounded-full uranus-progress" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex justify-between text-xs mt-1" style={{ color: "rgba(168,237,255,0.28)" }}>
+            <span>Day {daysElapsed}</span>
+            <span>Day {inv.durationDays}</span>
+          </div>
+        </div>
+
+        <div className="mx-5 h-px mb-1" style={{ background: "rgba(61,214,245,0.07)" }} />
+
+        {/* Detail rows */}
+        <div className="px-5 pb-6">
+          {rows.map((row, i) => (
+            <div
+              key={row.label}
+              className="flex items-center justify-between py-3"
+              style={{ borderBottom: i < rows.length - 1 ? "1px solid rgba(61,214,245,0.05)" : "none" }}
+            >
+              <div className="flex items-center gap-2.5">
+                <row.icon size={12} style={{ color: "rgba(168,237,255,0.28)" }} />
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.42)" }}>{row.label}</span>
+              </div>
+              <span
+                className="text-xs font-semibold"
+                style={{
+                  color: row.label === "Earned So Far" ? "#34d399"
+                    : row.label === "HYPERCOIN" ? "#b87fff"
+                    : row.label === "Expected Total" ? "rgba(168,237,255,0.6)"
+                    : "rgba(200,240,255,0.85)",
+                  fontFamily: row.label === "Investment ID" ? "monospace" : "inherit",
+                }}
+              >
+                {row.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 const GLASS = {
   background: "rgba(5,18,32,0.65)",
   backdropFilter: "blur(14px)",
@@ -30,6 +167,7 @@ const schema = z.object({
 });
 
 export default function Invest({ user }: { user: any }) {
+  const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
   const [selectedTier, setSelectedTier] = useState<string>("tier2");
   const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
   const createInvestment = useCreateInvestment();
@@ -228,8 +366,9 @@ export default function Invest({ user }: { user: any }) {
               <div
                 key={inv.id}
                 data-testid={`card-investment-${inv.id}`}
-                className="rounded-xl p-4"
-                style={GLASS}
+                className="rounded-xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                style={{ ...GLASS, userSelect: "none" }}
+                onClick={() => setSelectedInvestment(inv)}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
@@ -272,6 +411,14 @@ export default function Invest({ user }: { user: any }) {
             onNext={() => setInvestPage(p => Math.min(totalInvestPages, p + 1))}
           />
         </div>
+      )}
+
+      {selectedInvestment && (
+        <InvestmentDetailModal
+          inv={selectedInvestment}
+          hyperEnabled={hyperEnabled}
+          onClose={() => setSelectedInvestment(null)}
+        />
       )}
     </div>
   );
