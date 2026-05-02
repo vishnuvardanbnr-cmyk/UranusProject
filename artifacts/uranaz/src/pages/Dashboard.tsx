@@ -1,6 +1,6 @@
 import { useGetIncomeSummary, useListInvestments, useGetTeamStats, useGetMyRankProgress } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { TrendingUp, Users, DollarSign, Award, ArrowRight, Wallet, Clock, CheckCircle } from "lucide-react";
+import { Users, DollarSign, Award, ArrowRight, Wallet, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const TEAL = "#3DD6F5";
@@ -161,113 +161,6 @@ export default function Dashboard({ user }: { user: any }) {
         />
         <StatCard label="Team Members"  value={teamStats?.totalMembers ?? "—"} icon={Users} />
         <StatCard label="Current Level" value={`L${user?.currentLevel ?? 0}`}  icon={Award} accent />
-      </div>
-
-      {/* Active Investments */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm tracking-wide" style={{ color: "rgba(168,237,255,0.8)" }}>
-            Active Investments
-          </h2>
-          <Link href="/invest" className="text-xs flex items-center gap-1" style={{ color: TEAL }}>
-            View all <ArrowRight size={12} />
-          </Link>
-        </div>
-
-        {loadingInv ? (
-          <div className="space-y-3">
-            {[1, 2].map(i => (
-              <div
-                key={i}
-                className="rounded-xl h-20 animate-pulse"
-                style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }}
-              />
-            ))}
-          </div>
-        ) : activeInv.length === 0 ? (
-          <div
-            className="rounded-xl p-6 text-center"
-            style={{
-              background: "rgba(5,18,32,0.65)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(61,214,245,0.10)",
-            }}
-          >
-            <TrendingUp size={32} className="mx-auto mb-2" style={{ color: "rgba(168,237,255,0.25)" }} />
-            <p className="text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>No active investments yet</p>
-            <Link href="/invest">
-              <button
-                className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{
-                  background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                  color: "#010810",
-                }}
-              >
-                Make your first investment
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {activeInv.slice(0, 3).map(inv => (
-              <div
-                key={inv.id}
-                data-testid={`card-investment-${inv.id}`}
-                className="rounded-xl p-4 transition-all"
-                style={{
-                  background: "rgba(5,18,32,0.65)",
-                  backdropFilter: "blur(12px)",
-                  border: "1px solid rgba(61,214,245,0.12)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center"
-                      style={{
-                        background: "rgba(61,214,245,0.10)",
-                        border: "1px solid rgba(61,214,245,0.18)",
-                      }}
-                    >
-                      <TrendingUp size={15} style={{ color: TEAL }} />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>
-                        ${inv.amount.toFixed(2)}
-                      </div>
-                      <div className="text-xs capitalize" style={{ color: "rgba(168,237,255,0.35)" }}>
-                        {inv.planTier.replace("tier", "Tier ")}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-sm" style={{ color: TEAL }}>
-                      +{(inv.dailyRate * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>daily</div>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div
-                  className="w-full rounded-full h-1.5"
-                  style={{ background: "rgba(61,214,245,0.08)" }}
-                >
-                  <div
-                    className="h-1.5 rounded-full uranus-progress"
-                    style={{
-                      width: `${Math.max(5, ((inv.durationDays - inv.remainingDays) / inv.durationDays) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs mt-1.5" style={{ color: "rgba(168,237,255,0.35)" }}>
-                  <span>{inv.durationDays - inv.remainingDays} days done</span>
-                  <span>{inv.remainingDays} days left</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Income Breakdown */}
