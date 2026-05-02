@@ -1,6 +1,7 @@
 import { useGetIncomeSummary, useListInvestments, useGetTeamStats, useGetMyRankProgress } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { TrendingUp, Users, DollarSign, Award, ArrowRight, Wallet, Clock, CheckCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const TEAL = "#3DD6F5";
 const TEAL_DIM = "rgba(61,214,245,0.55)";
@@ -45,6 +46,14 @@ export default function Dashboard({ user }: { user: any }) {
   const { data: investments, isLoading: loadingInv } = useListInvestments();
   const { data: teamStats } = useGetTeamStats();
   const { data: rankProgress } = useGetMyRankProgress();
+  const [launchOfferActive, setLaunchOfferActive] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.json())
+      .then(d => setLaunchOfferActive(!!d.launchOfferActive))
+      .catch(() => {});
+  }, []);
 
   const activeInv = investments?.filter(i => i.status === "active") || [];
 
@@ -305,6 +314,135 @@ export default function Dashboard({ user }: { user: any }) {
           </div>
         </div>
       )}
+
+      {/* Launch Offer — Singapore Trip */}
+      {launchOfferActive && (() => {
+        const selfInvested   = user?.totalInvested ?? 0;
+        const teamBusiness   = teamStats?.totalTeamBusiness ?? 0;
+        const legs           = teamStats?.lugsStats ?? [];
+        const leg1 = legs.find((l: any) => l.lugIndex === 1)?.business ?? 0;
+        const leg2 = legs.find((l: any) => l.lugIndex === 2)?.business ?? 0;
+        const leg3 = legs.find((l: any) => l.lugIndex === 3)?.business ?? 0;
+
+        const criteria = [
+          { label: "Self Invest",    current: selfInvested, target: 500,   fmt: (v: number) => `$${v.toFixed(0)}` },
+          { label: "Team Business",  current: teamBusiness, target: 25000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
+          { label: "Leg 1",          current: leg1,         target: 10000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
+          { label: "Leg 2",          current: leg2,         target: 10000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
+          { label: "Leg 3",          current: leg3,         target: 5000,  fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
+        ];
+        const allDone = criteria.every(c => c.current >= c.target);
+
+        return (
+          <div
+            className="rounded-2xl overflow-hidden relative"
+            style={{
+              background: "linear-gradient(155deg, rgba(4,16,32,0.97) 0%, rgba(2,10,22,0.97) 100%)",
+              border: "1px solid rgba(61,214,245,0.22)",
+              boxShadow: "0 0 40px rgba(61,214,245,0.07)",
+            }}
+          >
+            {/* Top accent line */}
+            <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, #a855f7, transparent)" }} />
+
+            {/* Ambient glow */}
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.07) 0%, rgba(168,85,247,0.04) 50%, transparent 70%)" }} />
+
+            <div className="relative p-5 space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                    style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.20)" }}
+                  >
+                    ✈️
+                  </div>
+                  <div>
+                    <div
+                      className="font-bold text-sm"
+                      style={{
+                        fontFamily: "'Orbitron', sans-serif",
+                        background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      Launch Offer
+                    </div>
+                    <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Free Singapore Trip — 3-Day 5-Star Package</div>
+                  </div>
+                </div>
+                {allDone && (
+                  <div
+                    className="px-2.5 py-1 rounded-full text-xs font-bold"
+                    style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "rgba(52,211,153,0.9)" }}
+                  >
+                    Qualified!
+                  </div>
+                )}
+              </div>
+
+              {/* Progress criteria */}
+              <div className="space-y-3">
+                {criteria.map(c => {
+                  const pct = Math.min(100, c.target > 0 ? (c.current / c.target) * 100 : 0);
+                  const done = c.current >= c.target;
+                  return (
+                    <div key={c.label}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          {done
+                            ? <CheckCircle size={12} style={{ color: "rgba(52,211,153,0.85)" }} />
+                            : <div className="w-3 h-3 rounded-full" style={{ border: "1.5px solid rgba(61,214,245,0.3)" }} />
+                          }
+                          <span className="text-xs font-medium" style={{ color: done ? "rgba(168,237,255,0.75)" : "rgba(168,237,255,0.5)" }}>
+                            {c.label}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold" style={{ color: done ? "rgba(52,211,153,0.9)" : TEAL }}>
+                          {c.fmt(c.current)} <span style={{ color: "rgba(168,237,255,0.3)", fontWeight: 400 }}>/ {c.fmt(c.target)}</span>
+                        </span>
+                      </div>
+                      <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.07)" }}>
+                        <div
+                          className="h-1.5 rounded-full transition-all duration-700"
+                          style={{
+                            width: `${pct}%`,
+                            background: done
+                              ? "linear-gradient(90deg, rgba(52,211,153,0.8), rgba(52,211,153,0.6))"
+                              : "linear-gradient(90deg, #3DD6F5, #2AB3CF)",
+                            boxShadow: done ? "0 0 8px rgba(52,211,153,0.4)" : "0 0 8px rgba(61,214,245,0.4)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Target summary chips */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { label: "Self", value: "$500+" },
+                  { label: "Team", value: "$25K" },
+                  { label: "Legs", value: "10K+10K+5K" },
+                ].map(chip => (
+                  <div
+                    key={chip.label}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                    style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.10)" }}
+                  >
+                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{chip.label}:</span>
+                    <span className="text-xs font-bold" style={{ color: TEAL }}>{chip.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Rank Progress */}
       {rankProgress?.nextRank && (

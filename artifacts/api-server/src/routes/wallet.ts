@@ -15,6 +15,7 @@ router.get("/settings/public", async (_req, res) => {
   const settings = await getSettings();
   res.json({
     hyperCoinMinPercent: parseFloat(settings?.hyperCoinMinPercent ?? "50"),
+    launchOfferActive: settings?.launchOfferActive ?? true,
   });
 });
 
