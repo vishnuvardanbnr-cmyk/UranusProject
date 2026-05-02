@@ -13,6 +13,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
 import AdminLayout from "@/components/AdminLayout";
+import DeviceGate from "@/components/DeviceGate";
 import SpaceBackground from "@/components/SpaceBackground";
 import NotFound from "@/pages/not-found";
 
@@ -84,7 +85,7 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
   const isAuth = ["/login", "/register"].includes(location);
 
   return (
-    <>
+    <DeviceGate user={user} path={location}>
       {isLoggedIn && !isAuth && (
         <TopNav user={user} onLogout={() => setUser(null)} />
       )}
@@ -213,7 +214,7 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
 
       {!location.startsWith("/admin") && <BottomNav isLoggedIn={isLoggedIn} />}
       <ScrollToTop />
-    </>
+    </DeviceGate>
   );
 }
 
