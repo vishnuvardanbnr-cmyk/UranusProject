@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { clearToken } from "@/lib/auth";
 import { useLogout } from "@workspace/api-client-react";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Shield, HeadphonesIcon } from "lucide-react";
 
 interface Props {
   user: any;
@@ -17,7 +17,6 @@ const navLinks = [
   { href: "/team",        label: "Team" },
   { href: "/withdrawals", label: "Withdraw" },
   { href: "/ranks",       label: "Ranks" },
-  { href: "/support",     label: "Support" },
 ];
 
 export default function TopNav({ user, onLogout }: Props) {
@@ -102,6 +101,26 @@ export default function TopNav({ user, onLogout }: Props) {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          <Link
+            href="/support"
+            data-testid="link-support"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+            style={{
+              background: "rgba(61,214,245,0.06)",
+              border: "1px solid rgba(61,214,245,0.18)",
+              color: "rgba(168,237,255,0.55)",
+            }}
+            onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+              (e.currentTarget as HTMLAnchorElement).style.color = "#3DD6F5";
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(61,214,245,0.45)";
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+              (e.currentTarget as HTMLAnchorElement).style.color = "rgba(168,237,255,0.55)";
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(61,214,245,0.18)";
+            }}
+          >
+            <HeadphonesIcon size={15} />
+          </Link>
           <Link
             href="/profile"
             data-testid="link-profile"
