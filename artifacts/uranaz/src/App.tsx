@@ -1,0 +1,215 @@
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useState, useEffect } from "react";
+import { getToken, clearToken } from "@/lib/auth";
+import { getMe, setAuthTokenGetter } from "@workspace/api-client-react";
+
+// Wire up the auth token getter so every API request includes Authorization: Bearer <token>
+setAuthTokenGetter(getToken);
+
+import ScrollToTop from "@/components/ScrollToTop";
+import BottomNav from "@/components/BottomNav";
+import TopNav from "@/components/TopNav";
+import NotFound from "@/pages/not-found";
+
+import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import ProfileSetup from "@/pages/ProfileSetup";
+import Dashboard from "@/pages/Dashboard";
+import Invest from "@/pages/Invest";
+import Income from "@/pages/Income";
+import Team from "@/pages/Team";
+import Share from "@/pages/Share";
+import Profile from "@/pages/Profile";
+import Withdrawals from "@/pages/Withdrawals";
+import Ranks from "@/pages/Ranks";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+
+import Admin from "@/pages/admin/Admin";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminInvestments from "@/pages/admin/AdminInvestments";
+import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
+import AdminSettings from "@/pages/admin/AdminSettings";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
+function RequireAuth({ children, user }: { children: React.ReactNode; user: any }) {
+  const [location] = useLocation();
+  if (!user) return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children, user }: { children: React.ReactNode; user: any }) {
+  if (!user) return <Redirect to="/login" />;
+  if (!user.isAdmin) return <Redirect to="/dashboard" />;
+  return <>{children}</>;
+}
+
+function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
+  const [location] = useLocation();
+  const isLoggedIn = !!user;
+  const isPublic = ["/", "/login", "/register", "/terms", "/privacy"].includes(location) ||
+    location.startsWith("/terms") || location.startsWith("/privacy");
+  const isAuth = ["/login", "/register"].includes(location);
+
+  return (
+    <>
+      {isLoggedIn && !isAuth && (
+        <TopNav user={user} onLogout={() => setUser(null)} />
+      )}
+      <Switch>
+        {/* Public */}
+        <Route path="/" component={Landing} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/login">
+          {isLoggedIn ? <Redirect to="/dashboard" /> : <Login onLogin={setUser} />}
+        </Route>
+        <Route path="/register">
+          {isLoggedIn ? <Redirect to="/dashboard" /> : <Register onLogin={setUser} />}
+        </Route>
+
+        {/* Profile Setup */}
+        <Route path="/profile-setup">
+          <RequireAuth user={user}>
+            <ProfileSetup onUpdate={setUser} />
+          </RequireAuth>
+        </Route>
+
+        {/* Protected User Pages */}
+        <Route path="/dashboard">
+          <RequireAuth user={user}>
+            <Dashboard user={user} />
+          </RequireAuth>
+        </Route>
+        <Route path="/invest">
+          <RequireAuth user={user}>
+            <Invest />
+          </RequireAuth>
+        </Route>
+        <Route path="/income">
+          <RequireAuth user={user}>
+            <Income />
+          </RequireAuth>
+        </Route>
+        <Route path="/team">
+          <RequireAuth user={user}>
+            <Team user={user} />
+          </RequireAuth>
+        </Route>
+        <Route path="/share">
+          <RequireAuth user={user}>
+            <Share />
+          </RequireAuth>
+        </Route>
+        <Route path="/profile">
+          <RequireAuth user={user}>
+            <Profile user={user} onUpdate={setUser} />
+          </RequireAuth>
+        </Route>
+        <Route path="/withdrawals">
+          <RequireAuth user={user}>
+            <Withdrawals user={user} />
+          </RequireAuth>
+        </Route>
+        <Route path="/ranks">
+          <RequireAuth user={user}>
+            <Ranks user={user} />
+          </RequireAuth>
+        </Route>
+
+        {/* Admin */}
+        <Route path="/admin">
+          <RequireAdmin user={user}>
+            <Admin />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/users">
+          <RequireAdmin user={user}>
+            <AdminUsers />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/investments">
+          <RequireAdmin user={user}>
+            <AdminInvestments />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/withdrawals">
+          <RequireAdmin user={user}>
+            <AdminWithdrawals />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/settings">
+          <RequireAdmin user={user}>
+            <AdminSettings />
+          </RequireAdmin>
+        </Route>
+
+        <Route component={NotFound} />
+      </Switch>
+
+      <BottomNav isLoggedIn={isLoggedIn} />
+      <ScrollToTop />
+    </>
+  );
+}
+
+function AppInner() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    getMe()
+      .then(me => setUser(me))
+      .catch(() => clearToken())
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+            <span className="text-primary font-bold">UT</span>
+          </div>
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <Router user={user} setUser={setUser} />
+    </WouterRouter>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AppInner />
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

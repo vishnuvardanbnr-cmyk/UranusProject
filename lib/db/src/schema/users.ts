@@ -1,0 +1,29 @@
+import { pgTable, serial, text, boolean, integer, numeric, timestamp, unique } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const usersTable = pgTable("users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  referralCode: text("referral_code").notNull().unique(),
+  sponsorId: integer("sponsor_id"),
+  walletAddress: text("wallet_address"),
+  country: text("country"),
+  idNumber: text("id_number"),
+  profileImage: text("profile_image"),
+  currentLevel: integer("current_level").notNull().default(0),
+  currentRankId: integer("current_rank_id"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  profileComplete: boolean("profile_complete").notNull().default(false),
+  totalEarnings: numeric("total_earnings", { precision: 20, scale: 6 }).notNull().default("0"),
+  totalInvested: numeric("total_invested", { precision: 20, scale: 6 }).notNull().default("0"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof usersTable.$inferSelect;
