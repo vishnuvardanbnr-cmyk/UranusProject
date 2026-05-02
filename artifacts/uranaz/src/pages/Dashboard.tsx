@@ -46,16 +46,12 @@ export default function Dashboard({ user }: { user: any }) {
   const { data: investments, isLoading: loadingInv } = useListInvestments();
   const { data: teamStats } = useGetTeamStats();
   const { data: rankProgress } = useGetMyRankProgress();
-  const [launchOfferActive, setLaunchOfferActive] = useState(false);
-  const [launchOfferEndDate, setLaunchOfferEndDate] = useState<string | null>(null);
+  const [activeOffers, setActiveOffers] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/settings/public")
+    fetch("/api/offers/active")
       .then(r => r.json())
-      .then(d => {
-        setLaunchOfferActive(!!d.launchOfferActive);
-        setLaunchOfferEndDate(d.launchOfferEndDate ?? null);
-      })
+      .then(d => setActiveOffers(Array.isArray(d) ? d : []))
       .catch(() => {});
   }, []);
 
@@ -212,26 +208,37 @@ export default function Dashboard({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Launch Offer — Singapore Trip */}
-      {launchOfferActive && (() => {
-        const selfInvested   = user?.totalInvested ?? 0;
-        const teamBusiness   = teamStats?.totalTeamBusiness ?? 0;
-        const legs           = teamStats?.lugsStats ?? [];
-        const leg1 = legs.find((l: any) => l.lugIndex === 1)?.business ?? 0;
-        const leg2 = legs.find((l: any) => l.lugIndex === 2)?.business ?? 0;
-        const leg3 = legs.find((l: any) => l.lugIndex === 3)?.business ?? 0;
+      {/* Dynamic Offers */}
+      {activeOffers.map(offer => {
+        const selfInvested = user?.totalInvested ?? 0;
+        const teamBusiness = teamStats?.totalTeamBusiness ?? 0;
+        const legs = teamStats?.lugsStats ?? [];
 
-        const criteria = [
-          { label: "Self Invest",    current: selfInvested, target: 500,   fmt: (v: number) => `$${v.toFixed(0)}` },
-          { label: "Team Business",  current: teamBusiness, target: 25000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
-          { label: "Leg 1",          current: leg1,         target: 10000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
-          { label: "Leg 2",          current: leg2,         target: 10000, fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
-          { label: "Leg 3",          current: leg3,         target: 5000,  fmt: (v: number) => `$${v >= 1000 ? (v/1000).toFixed(1)+"K" : v.toFixed(0)}` },
-        ];
-        const allDone = criteria.every(c => c.current >= c.target);
+        const fmtUsd = (v: number) => `$${v >= 1000 ? (v / 1000).toFixed(1) + "K" : v.toFixed(0)}`;
+
+        const criteria = (offer.criteria as any[]).map(c => {
+          let current = 0;
+          if (c.type === "self_invest") current = selfInvested;
+          else if (c.type === "team_business") current = teamBusiness;
+          else if (c.type === "leg") current = legs.find((l: any) => l.lugIndex === c.legIndex)?.business ?? 0;
+          return { label: c.label, current, target: c.target, fmt: fmtUsd };
+        });
+
+        const allDone = criteria.length > 0 && criteria.every(c => c.current >= c.target);
+
+        const countdown = (() => {
+          if (!offer.endDate) return null;
+          const diffMs = new Date(offer.endDate).getTime() - Date.now();
+          if (diffMs <= 0) return { expired: true, text: "Expired" };
+          const d = Math.floor(diffMs / 86400000);
+          const h = Math.floor((diffMs % 86400000) / 3600000);
+          const m = Math.floor((diffMs % 3600000) / 60000);
+          return { expired: false, text: `${d}d ${h}h ${m}m left` };
+        })();
 
         return (
           <div
+            key={offer.id}
             className="rounded-2xl overflow-hidden relative"
             style={{
               background: "linear-gradient(155deg, rgba(4,16,32,0.97) 0%, rgba(2,10,22,0.97) 100%)",
@@ -239,10 +246,7 @@ export default function Dashboard({ user }: { user: any }) {
               boxShadow: "0 0 40px rgba(61,214,245,0.07)",
             }}
           >
-            {/* Top accent line */}
             <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, #a855f7, transparent)" }} />
-
-            {/* Ambient glow */}
             <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.07) 0%, rgba(168,85,247,0.04) 50%, transparent 70%)" }} />
 
             <div className="relative p-5 space-y-4">
@@ -253,7 +257,7 @@ export default function Dashboard({ user }: { user: any }) {
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
                     style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.20)" }}
                   >
-                    ✈️
+                    {offer.emoji}
                   </div>
                   <div>
                     <div
@@ -266,9 +270,11 @@ export default function Dashboard({ user }: { user: any }) {
                         backgroundClip: "text",
                       }}
                     >
-                      Launch Offer
+                      {offer.title}
                     </div>
-                    <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Free Singapore Trip — 3-Day 5-Star Package</div>
+                    {offer.subtitle && (
+                      <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{offer.subtitle}</div>
+                    )}
                   </div>
                 </div>
                 {allDone && (
@@ -281,96 +287,78 @@ export default function Dashboard({ user }: { user: any }) {
                 )}
               </div>
 
+              {/* Reward */}
+              {offer.reward && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.10)" }}
+                >
+                  <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Reward:</span>
+                  <span className="text-xs font-bold" style={{ color: TEAL }}>{offer.reward}</span>
+                </div>
+              )}
+
               {/* Progress criteria */}
-              <div className="space-y-3">
-                {criteria.map(c => {
-                  const pct = Math.min(100, c.target > 0 ? (c.current / c.target) * 100 : 0);
-                  const done = c.current >= c.target;
-                  return (
-                    <div key={c.label}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          {done
-                            ? <CheckCircle size={12} style={{ color: "rgba(52,211,153,0.85)" }} />
-                            : <div className="w-3 h-3 rounded-full" style={{ border: "1.5px solid rgba(61,214,245,0.3)" }} />
-                          }
-                          <span className="text-xs font-medium" style={{ color: done ? "rgba(168,237,255,0.75)" : "rgba(168,237,255,0.5)" }}>
-                            {c.label}
+              {criteria.length > 0 && (
+                <div className="space-y-3">
+                  {criteria.map(c => {
+                    const pct = Math.min(100, c.target > 0 ? (c.current / c.target) * 100 : 0);
+                    const done = c.current >= c.target;
+                    return (
+                      <div key={c.label}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            {done
+                              ? <CheckCircle size={12} style={{ color: "rgba(52,211,153,0.85)" }} />
+                              : <div className="w-3 h-3 rounded-full" style={{ border: "1.5px solid rgba(61,214,245,0.3)" }} />
+                            }
+                            <span className="text-xs font-medium" style={{ color: done ? "rgba(168,237,255,0.75)" : "rgba(168,237,255,0.5)" }}>
+                              {c.label}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold" style={{ color: done ? "rgba(52,211,153,0.9)" : TEAL }}>
+                            {c.fmt(c.current)} <span style={{ color: "rgba(168,237,255,0.3)", fontWeight: 400 }}>/ {c.fmt(c.target)}</span>
                           </span>
                         </div>
-                        <span className="text-xs font-bold" style={{ color: done ? "rgba(52,211,153,0.9)" : TEAL }}>
-                          {c.fmt(c.current)} <span style={{ color: "rgba(168,237,255,0.3)", fontWeight: 400 }}>/ {c.fmt(c.target)}</span>
-                        </span>
+                        <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.07)" }}>
+                          <div
+                            className="h-1.5 rounded-full transition-all duration-700"
+                            style={{
+                              width: `${pct}%`,
+                              background: done
+                                ? "linear-gradient(90deg, rgba(52,211,153,0.8), rgba(52,211,153,0.6))"
+                                : "linear-gradient(90deg, #3DD6F5, #2AB3CF)",
+                              boxShadow: done ? "0 0 8px rgba(52,211,153,0.4)" : "0 0 8px rgba(61,214,245,0.4)",
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.07)" }}>
-                        <div
-                          className="h-1.5 rounded-full transition-all duration-700"
-                          style={{
-                            width: `${pct}%`,
-                            background: done
-                              ? "linear-gradient(90deg, rgba(52,211,153,0.8), rgba(52,211,153,0.6))"
-                              : "linear-gradient(90deg, #3DD6F5, #2AB3CF)",
-                            boxShadow: done ? "0 0 8px rgba(52,211,153,0.4)" : "0 0 8px rgba(61,214,245,0.4)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
-              {/* End date / countdown */}
-              {launchOfferEndDate && (() => {
-                const end = new Date(launchOfferEndDate);
-                const now = new Date();
-                const diffMs = end.getTime() - now.getTime();
-                const expired = diffMs <= 0;
-                const days    = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                const hours   = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins    = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                return (
-                  <div
-                    className="flex items-center justify-between px-3 py-2 rounded-xl"
-                    style={{
-                      background: expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
-                      border: `1px solid ${expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
-                    }}
-                  >
-                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
-                      {expired ? "Offer ended" : "Offer ends"}
-                    </span>
-                    {expired ? (
-                      <span className="text-xs font-bold" style={{ color: "rgba(248,113,113,0.8)" }}>Expired</span>
-                    ) : (
-                      <span className="text-xs font-bold" style={{ color: TEAL }}>
-                        {days}d {hours}h {mins}m left
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Target summary chips */}
-              <div className="flex flex-wrap gap-2 pt-1">
-                {[
-                  { label: "Self", value: "$500+" },
-                  { label: "Team", value: "$25K" },
-                  { label: "Legs", value: "10K+10K+5K" },
-                ].map(chip => (
-                  <div
-                    key={chip.label}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-                    style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.10)" }}
-                  >
-                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{chip.label}:</span>
-                    <span className="text-xs font-bold" style={{ color: TEAL }}>{chip.value}</span>
-                  </div>
-                ))}
-              </div>
+              {/* Countdown */}
+              {countdown && (
+                <div
+                  className="flex items-center justify-between px-3 py-2 rounded-xl"
+                  style={{
+                    background: countdown.expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
+                    border: `1px solid ${countdown.expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
+                  }}
+                >
+                  <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+                    {countdown.expired ? "Offer ended" : "Offer ends"}
+                  </span>
+                  <span className="text-xs font-bold" style={{ color: countdown.expired ? "rgba(248,113,113,0.8)" : TEAL }}>
+                    {countdown.text}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
-      })()}
+      })}
 
       {/* Rank Progress */}
       {rankProgress?.nextRank && (

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable } from "@workspace/db";
 import { eq, desc, ilike, or, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -563,6 +563,76 @@ router.put("/admin/income-settings", requireAdmin, async (req, res) => {
     levelUnlockL7: parseFloat(s.levelUnlockL7),
     levelUnlockL8: parseFloat(s.levelUnlockL8),
   });
+});
+
+// ── Offers CRUD ──────────────────────────────────────────────────────────────
+
+const OfferBody = z.object({
+  title: z.string().min(1),
+  subtitle: z.string().default(""),
+  emoji: z.string().default("🎁"),
+  reward: z.string().default(""),
+  endDate: z.string().nullable().optional(),
+  active: z.boolean().default(true),
+  criteria: z.array(z.union([
+    z.object({ type: z.literal("self_invest"),    label: z.string(), target: z.number() }),
+    z.object({ type: z.literal("team_business"),  label: z.string(), target: z.number() }),
+    z.object({ type: z.literal("leg"), legIndex: z.number().int(), label: z.string(), target: z.number() }),
+  ])).default([]),
+});
+
+function offerToResponse(o: typeof offersTable.$inferSelect) {
+  return {
+    id: o.id,
+    title: o.title,
+    subtitle: o.subtitle,
+    emoji: o.emoji,
+    reward: o.reward,
+    endDate: o.endDate ? o.endDate.toISOString().slice(0, 16) : null,
+    active: o.active,
+    criteria: o.criteria,
+    createdAt: o.createdAt,
+  };
+}
+
+// GET /api/admin/offers
+router.get("/admin/offers", requireAdmin, async (_req, res) => {
+  const offers = await db.select().from(offersTable).orderBy(offersTable.createdAt);
+  res.json(offers.map(offerToResponse));
+});
+
+// POST /api/admin/offers
+router.post("/admin/offers", requireAdmin, async (req, res) => {
+  const parsed = OfferBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const { endDate, ...rest } = parsed.data;
+  const [created] = await db.insert(offersTable).values({
+    ...rest,
+    endDate: endDate ? new Date(endDate) : null,
+  }).returning();
+  res.json(offerToResponse(created));
+});
+
+// PUT /api/admin/offers/:id
+router.put("/admin/offers/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
+  const parsed = OfferBody.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const { endDate, ...rest } = parsed.data;
+  const updates: any = { ...rest };
+  if (endDate !== undefined) updates.endDate = endDate ? new Date(endDate) : null;
+  const [updated] = await db.update(offersTable).set(updates).where(eq(offersTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ message: "Offer not found" }); return; }
+  res.json(offerToResponse(updated));
+});
+
+// DELETE /api/admin/offers/:id
+router.delete("/admin/offers/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
+  await db.delete(offersTable).where(eq(offersTable.id, id));
+  res.json({ success: true });
 });
 
 // POST /api/admin/run-daily-payout — manual trigger for testing

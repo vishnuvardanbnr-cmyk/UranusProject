@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, platformSettingsTable } from "@workspace/db";
+import { db, usersTable, platformSettingsTable, offersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -18,6 +18,21 @@ router.get("/settings/public", async (_req, res) => {
     launchOfferActive: settings?.launchOfferActive ?? true,
     launchOfferEndDate: settings?.launchOfferEndDate ? settings.launchOfferEndDate.toISOString() : null,
   });
+});
+
+// GET /api/offers/active — public, returns active offers for user dashboard
+router.get("/offers/active", async (_req, res) => {
+  const offers = await db.select().from(offersTable).orderBy(offersTable.createdAt);
+  const active = offers.filter(o => o.active);
+  res.json(active.map(o => ({
+    id: o.id,
+    title: o.title,
+    subtitle: o.subtitle,
+    emoji: o.emoji,
+    reward: o.reward,
+    endDate: o.endDate ? o.endDate.toISOString() : null,
+    criteria: o.criteria,
+  })));
 });
 
 // POST /api/wallet/internal-transfer

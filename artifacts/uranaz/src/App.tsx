@@ -38,6 +38,7 @@ import AdminInvestments from "@/pages/admin/AdminInvestments";
 import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminSupport from "@/pages/admin/AdminSupport";
+import AdminOffers from "@/pages/admin/AdminOffers";
 import Support from "@/pages/Support";
 import Deposit from "@/pages/Deposit";
 
@@ -184,6 +185,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/admin/support">
           <RequireAdmin user={user}>
             <AdminSupport />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/offers">
+          <RequireAdmin user={user}>
+            <AdminOffers />
           </RequireAdmin>
         </Route>
 
