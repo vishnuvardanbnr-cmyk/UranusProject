@@ -191,9 +191,10 @@ export default function AdminUsers() {
         <EditUserDrawer
           user={editing}
           onClose={() => setEditing(null)}
-          onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey: getListAdminUsersQueryKey() });
-            setEditing(null);
+          onSaved={async (updated?: AdminUser) => {
+            if (updated) setEditing(updated);
+            await queryClient.refetchQueries({ queryKey: getListAdminUsersQueryKey(), exact: false });
+            if (!updated) setEditing(null);
           }}
         />
       )}
@@ -203,7 +204,7 @@ export default function AdminUsers() {
 
 /* ───────────────────────── Edit Drawer ───────────────────────── */
 
-function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: () => void; onSaved: () => void }) {
+function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: () => void; onSaved: (updated?: AdminUser) => void }) {
   const { toast } = useToast();
   const updateUser = useUpdateAdminUser();
 
@@ -259,9 +260,9 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     }
 
     try {
-      await updateUser.mutateAsync({ id: user.id, data: body as any });
+      const updated = await updateUser.mutateAsync({ id: user.id, data: body as any });
       toast({ title: "User updated" });
-      onSaved();
+      onSaved(updated as unknown as AdminUser);
     } catch (err: any) {
       toast({
         title: "Update failed",
