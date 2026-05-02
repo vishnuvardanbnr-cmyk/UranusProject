@@ -43,6 +43,7 @@ import AdminNotices from "@/pages/admin/AdminNotices";
 import Support from "@/pages/Support";
 import Deposit from "@/pages/Deposit";
 import Notifications from "@/pages/Notifications";
+import NotificationDetail from "@/pages/NotificationDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -168,6 +169,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/notifications">
           <RequireAuth user={user}>
             <Notifications />
+          </RequireAuth>
+        </Route>
+        <Route path="/notifications/:id">
+          <RequireAuth user={user}>
+            <NotificationDetail />
           </RequireAuth>
         </Route>
 

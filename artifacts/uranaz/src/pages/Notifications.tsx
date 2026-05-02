@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Bell, Pin, X, ExternalLink, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
+import { ArrowLeft, Bell, Pin, X, ChevronRight, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 
@@ -92,29 +92,6 @@ export default function Notifications() {
   const restoreAll = () => {
     setDismissed([]);
     saveDismissed([]);
-  };
-
-  const renderCta = (n: Notice, s: typeof TYPE_STYLES[Notice["type"]]) => {
-    if (!n.ctaLabel || !n.ctaUrl) return null;
-    const isExternal = /^https?:\/\//.test(n.ctaUrl);
-    const cls = "text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all";
-    const styleObj = { background: s.bg, color: s.color, border: `1px solid ${s.border}` };
-    const onMouseEnter = (e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.filter = "brightness(1.2)"; };
-    const onMouseLeave = (e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.filter = "none"; };
-
-    if (isExternal) {
-      return (
-        <a href={n.ctaUrl} target="_blank" rel="noopener noreferrer" className={cls} style={styleObj}
-           onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-          {n.ctaLabel} <ExternalLink size={11} />
-        </a>
-      );
-    }
-    return (
-      <Link href={n.ctaUrl} className={cls} style={styleObj} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-        {n.ctaLabel} <ExternalLink size={11} />
-      </Link>
-    );
   };
 
   const unreadCount = notices.filter(n => !dismissed.includes(n.id)).length;
@@ -222,9 +199,10 @@ export default function Notifications() {
             const Icon = s.Icon;
             const isUnread = !dismissed.includes(n.id);
             return (
-              <div
+              <Link
                 key={n.id}
-                className="rounded-2xl p-4 transition-all"
+                href={`/notifications/${n.id}`}
+                className="block rounded-2xl p-4 transition-all cursor-pointer"
                 style={{
                   background: isUnread
                     ? `linear-gradient(155deg, rgba(4,16,32,0.97), rgba(2,10,22,0.97))`
@@ -232,6 +210,8 @@ export default function Notifications() {
                   border: `1px solid ${isUnread ? s.border : "rgba(61,214,245,0.07)"}`,
                   boxShadow: isUnread ? `0 0 24px ${s.bg}` : "none",
                 }}
+                onMouseEnter={(e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.borderColor = s.color; }}
+                onMouseLeave={(e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.borderColor = isUnread ? s.border : "rgba(61,214,245,0.07)"; }}
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -241,7 +221,7 @@ export default function Notifications() {
                     {n.icon ? <span className="text-base">{n.icon}</span> : <Icon size={16} style={{ color: s.color }} />}
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
                       {n.pinned && <Pin size={11} style={{ color: TEAL }} />}
                       <span className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.95)" }}>{n.title}</span>
@@ -274,31 +254,41 @@ export default function Notifications() {
                       <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.35)" }}>
                         {timeAgo(n.createdAt)}
                       </span>
-                      {renderCta(n, s)}
+                      <span
+                        className="text-[11px] font-semibold flex items-center gap-1"
+                        style={{ color: s.color }}
+                      >
+                        View details <ChevronRight size={11} />
+                      </span>
                       <div className="flex-1" />
                       {n.dismissible && !n.pinned && (
                         isUnread ? (
-                          <button
-                            onClick={() => dismiss(n.id)}
-                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); dismiss(n.id); }}
+                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all cursor-pointer"
                             style={{ color: "rgba(168,237,255,0.4)", background: "rgba(168,237,255,0.04)" }}
                           >
                             <X size={11} /> Dismiss
-                          </button>
+                          </span>
                         ) : (
-                          <button
-                            onClick={() => restore(n.id)}
-                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); restore(n.id); }}
+                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all cursor-pointer"
                             style={{ color: "rgba(168,237,255,0.4)", background: "rgba(168,237,255,0.04)" }}
                           >
                             <RotateCcw size={11} /> Restore
-                          </button>
+                          </span>
                         )
                       )}
                     </div>
                   </div>
+                  <ChevronRight size={16} className="flex-shrink-0 mt-3" style={{ color: "rgba(168,237,255,0.3)" }} />
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
