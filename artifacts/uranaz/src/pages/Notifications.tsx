@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft, Bell, Pin, X, ExternalLink, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -94,13 +94,27 @@ export default function Notifications() {
     saveDismissed([]);
   };
 
-  const handleCta = (n: Notice) => {
-    if (!n.ctaUrl) return;
-    if (/^https?:\/\//.test(n.ctaUrl)) {
-      window.open(n.ctaUrl, "_blank", "noopener,noreferrer");
-    } else {
-      setLocation(n.ctaUrl);
+  const renderCta = (n: Notice, s: typeof TYPE_STYLES[Notice["type"]]) => {
+    if (!n.ctaLabel || !n.ctaUrl) return null;
+    const isExternal = /^https?:\/\//.test(n.ctaUrl);
+    const cls = "text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all";
+    const styleObj = { background: s.bg, color: s.color, border: `1px solid ${s.border}` };
+    const onMouseEnter = (e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.filter = "brightness(1.2)"; };
+    const onMouseLeave = (e: React.MouseEvent<HTMLElement>) => { (e.currentTarget as HTMLElement).style.filter = "none"; };
+
+    if (isExternal) {
+      return (
+        <a href={n.ctaUrl} target="_blank" rel="noopener noreferrer" className={cls} style={styleObj}
+           onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+          {n.ctaLabel} <ExternalLink size={11} />
+        </a>
+      );
     }
+    return (
+      <Link href={n.ctaUrl} className={cls} style={styleObj} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+        {n.ctaLabel} <ExternalLink size={11} />
+      </Link>
+    );
   };
 
   const unreadCount = notices.filter(n => !dismissed.includes(n.id)).length;
@@ -260,22 +274,7 @@ export default function Notifications() {
                       <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.35)" }}>
                         {timeAgo(n.createdAt)}
                       </span>
-                      {n.ctaLabel && n.ctaUrl && (
-                        <button
-                          onClick={() => handleCta(n)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
-                          style={{
-                            background: s.bg,
-                            color: s.color,
-                            border: `1px solid ${s.border}`,
-                          }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.2)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = "none"; }}
-                        >
-                          {n.ctaLabel}
-                          <ExternalLink size={11} />
-                        </button>
-                      )}
+                      {renderCta(n, s)}
                       <div className="flex-1" />
                       {n.dismissible && !n.pinned && (
                         isUnread ? (
