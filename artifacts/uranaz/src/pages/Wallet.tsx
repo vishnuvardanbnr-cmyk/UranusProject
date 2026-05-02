@@ -1,33 +1,25 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   useGetIncomeSummary,
-  useListIncome,
+  useListInvestments,
   useListWithdrawals,
-  useCreateWithdrawal,
-  getListWithdrawalsQueryKey,
-  getGetIncomeSummaryQueryKey,
-  getListIncomeQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Wallet,
   ArrowDownLeft,
   ArrowUpRight,
-  Copy,
+  X,
   CheckCircle,
-  AlertCircle,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Award,
   Clock,
   XCircle,
+  TrendingUp,
+  Calendar,
+  Hash,
+  DollarSign,
+  Percent,
+  Timer,
+  MapPin,
+  AlertCircle,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -36,108 +28,196 @@ const GLASS = {
   backdropFilter: "blur(14px)",
   border: "1px solid rgba(61,214,245,0.10)",
 } as const;
-const INPUT_STYLE = {
-  background: "rgba(0,20,40,0.6)",
-  border: "1px solid rgba(61,214,245,0.18)",
-  color: "rgba(168,237,255,0.9)",
+
+const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
+  pending:   { icon: Clock,        color: "#fbbf24", label: "Pending"  },
+  approved:  { icon: CheckCircle,  color: "#34d399", label: "Approved" },
+  rejected:  { icon: XCircle,      color: "#f87171", label: "Rejected" },
+  active:    { icon: TrendingUp,   color: TEAL,      label: "Active"   },
+  completed: { icon: CheckCircle,  color: "#34d399", label: "Completed"},
 };
 
-const PLATFORM_WALLETS = {
-  usdt:      { label: "USDT (TRC20)",   address: "TUranazDeposit1234567890USDT" },
-  hypercoin: { label: "HYPERCOIN (TRC20)", address: "TUranazDeposit1234567890HCOIN" },
+const planLabels: Record<string, string> = {
+  tier1: "Starter — 0.6%/day · 300 days",
+  tier2: "Growth  — 0.7%/day · 260 days",
+  tier3: "Premium — 0.8%/day · 225 days",
 };
 
-const withdrawSchema = z.object({
-  amount: z.coerce.number().min(10, "Minimum withdrawal is $10"),
-  walletAddress: z.string().min(10, "Valid wallet address required"),
-});
-
-const typeIcons: Record<string, any> = {
-  daily_return:     TrendingUp,
-  spot_referral:    Users,
-  level_commission: DollarSign,
-  rank_bonus:       Award,
-};
-const typeColors: Record<string, string> = {
-  daily_return:     "#34d399",
-  spot_referral:    "#60a5fa",
-  level_commission: "#c084fc",
-  rank_bonus:       TEAL,
-};
-const statusConfig: Record<string, { icon: any; color: string }> = {
-  pending:  { icon: Clock,       color: "#fbbf24" },
-  approved: { icon: CheckCircle, color: "#34d399" },
-  rejected: { icon: XCircle,     color: "#f87171" },
-};
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatDate(iso: string, full = false) {
+  const d = new Date(iso);
+  return full
+    ? d.toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+function shortId(id: string | number) {
+  return String(id).slice(0, 8).toUpperCase();
+}
+
+/* ────────────────────────────────────────────────
+   DETAIL MODAL
+   ──────────────────────────────────────────────── */
+function DetailModal({ item, type, onClose }: { item: any; type: "deposit" | "withdraw"; onClose: () => void }) {
+  const cfg = statusConfig[item.status] || statusConfig.pending;
+
+  const rows =
+    type === "deposit"
+      ? [
+          { icon: Hash,        label: "Transaction ID",   value: `#${shortId(item.id)}` },
+          { icon: Calendar,    label: "Date",             value: formatDate(item.createdAt, true) },
+          { icon: DollarSign,  label: "Total Amount",     value: `$${item.amount?.toFixed(2)}` },
+          { icon: DollarSign,  label: "USDT",             value: `$${item.usdtAmount?.toFixed(2) ?? "—"}` },
+          { icon: DollarSign,  label: "HYPERCOIN",        value: `$${item.hyperCoinAmount?.toFixed(2) ?? "—"}` },
+          { icon: Percent,     label: "Plan",             value: planLabels[item.plan] ?? item.plan ?? "—" },
+          { icon: TrendingUp,  label: "Expected Return",  value: item.expectedReturn ? `$${item.expectedReturn.toFixed(2)}` : "—" },
+          { icon: Timer,       label: "Duration",         value: item.durationDays ? `${item.durationDays} days` : "—" },
+          { icon: Calendar,    label: "Maturity Date",    value: item.maturityDate ? formatDate(item.maturityDate) : "—" },
+        ]
+      : [
+          { icon: Hash,        label: "Transaction ID",   value: `#${shortId(item.id)}` },
+          { icon: Calendar,    label: "Requested",        value: formatDate(item.createdAt, true) },
+          { icon: DollarSign,  label: "Amount",           value: `$${item.amount?.toFixed(2)}` },
+          { icon: MapPin,      label: "Wallet Address",   value: item.walletAddress ?? "—" },
+          { icon: Calendar,    label: "Processed",        value: item.processedAt ? formatDate(item.processedAt, true) : "Awaiting" },
+          ...(item.rejectionReason
+            ? [{ icon: AlertCircle, label: "Reason", value: item.rejectionReason }]
+            : []),
+        ];
+
   return (
-    <button
-      onClick={copy}
-      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg transition-all shrink-0"
-      style={copied
-        ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }
-        : { background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }
-      }
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(1,8,16,0.85)", backdropFilter: "blur(8px)" }}
+      onClick={onClose}
     >
-      {copied ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-    </button>
+      <div
+        className="w-full max-w-sm rounded-2xl p-5 space-y-4"
+        style={{
+          background: "rgba(3,14,28,0.97)",
+          border: "1px solid rgba(61,214,245,0.18)",
+          boxShadow: "0 0 60px rgba(61,214,245,0.12)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: `${cfg.color}18`, border: `1px solid ${cfg.color}33` }}
+            >
+              {type === "deposit"
+                ? <ArrowDownLeft size={16} style={{ color: cfg.color }} />
+                : <ArrowUpRight  size={16} style={{ color: cfg.color }} />}
+            </div>
+            <div>
+              <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.9)" }}>
+                {type === "deposit" ? "Deposit Details" : "Withdrawal Details"}
+              </div>
+              <div className="flex items-center gap-1 text-xs mt-0.5">
+                <cfg.icon size={10} style={{ color: cfg.color }} />
+                <span style={{ color: cfg.color }}>{cfg.label}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "rgba(168,237,255,0.05)", border: "1px solid rgba(168,237,255,0.1)" }}
+          >
+            <X size={14} style={{ color: "rgba(168,237,255,0.5)" }} />
+          </button>
+        </div>
+
+        {/* Amount highlight */}
+        <div
+          className="rounded-xl py-4 text-center"
+          style={{
+            background: type === "deposit"
+              ? "linear-gradient(135deg, rgba(61,214,245,0.08), rgba(42,179,215,0.04))"
+              : "linear-gradient(135deg, rgba(248,113,113,0.08), rgba(220,80,80,0.04))",
+            border: `1px solid ${type === "deposit" ? "rgba(61,214,245,0.15)" : "rgba(248,113,113,0.15)"}`,
+          }}
+        >
+          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>
+            {type === "deposit" ? "Deposited" : "Withdrawn"}
+          </div>
+          <div
+            className="text-2xl font-black"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              color: type === "deposit" ? TEAL : "#f87171",
+            }}
+          >
+            {type === "deposit" ? "+" : "-"}${item.amount?.toFixed(2)}
+          </div>
+        </div>
+
+        {/* Detail rows */}
+        <div className="space-y-2">
+          {rows.map(row => (
+            <div
+              key={row.label}
+              className="flex items-start gap-3 rounded-xl px-3.5 py-2.5"
+              style={{ background: "rgba(0,10,24,0.5)", border: "1px solid rgba(61,214,245,0.06)" }}
+            >
+              <row.icon size={13} className="mt-0.5 shrink-0" style={{ color: "rgba(168,237,255,0.3)" }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{row.label}</div>
+                <div
+                  className="text-sm font-medium break-all mt-0.5"
+                  style={{ color: "rgba(168,237,255,0.8)" }}
+                >
+                  {row.value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-type Tab = "deposit" | "withdraw" | "history";
+/* ────────────────────────────────────────────────
+   EMPTY STATE
+   ──────────────────────────────────────────────── */
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl p-12 text-center" style={GLASS}>
+      <Wallet size={36} className="mx-auto mb-3" style={{ color: "rgba(168,237,255,0.15)" }} />
+      <p className="text-sm" style={{ color: "rgba(168,237,255,0.3)" }}>No {label} yet</p>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────
+   MAIN PAGE
+   ──────────────────────────────────────────────── */
+type Tab = "deposit" | "withdraw";
 
 export default function WalletPage({ user }: { user: any }) {
-  const [tab, setTab] = useState<Tab>("deposit");
-  const { data: summary } = useGetIncomeSummary();
-  const { data: incomeData } = useListIncome({ page: 1, limit: 20 });
-  const { data: withdrawals } = useListWithdrawals();
-  const createWithdrawal = useCreateWithdrawal();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const [tab, setTab]         = useState<Tab>("deposit");
+  const [selected, setSelected] = useState<{ item: any; type: Tab } | null>(null);
 
-  const form = useForm({
-    resolver: zodResolver(withdrawSchema),
-    defaultValues: { amount: 0, walletAddress: user?.walletAddress || "" },
-  });
+  const { data: summary }     = useGetIncomeSummary();
+  const { data: investments }  = useListInvestments();
+  const { data: withdrawals }  = useListWithdrawals();
 
-  const onWithdraw = async (data: z.infer<typeof withdrawSchema>) => {
-    try {
-      await createWithdrawal.mutateAsync({ data });
-      await queryClient.invalidateQueries({ queryKey: getListWithdrawalsQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getGetIncomeSummaryQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getListIncomeQueryKey() });
-      toast({ title: "Withdrawal requested!", description: "Your request is being processed." });
-      form.reset({ amount: 0, walletAddress: user?.walletAddress || "" });
-    } catch (err: any) {
-      toast({ title: "Failed", description: err?.message || "Could not submit withdrawal", variant: "destructive" });
-    }
-  };
+  const deposits = [...(investments ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const withdrawList = [...(withdrawals ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
-  // Merge income + withdrawals into one timeline, sorted newest first
-  const allTxns = [
-    ...(incomeData?.records ?? []).map(r => ({ type: "income" as const,    data: r, ts: new Date(r.createdAt).getTime() })),
-    ...(withdrawals ?? []).map(w =>            ({ type: "withdrawal" as const, data: w, ts: new Date(w.createdAt).getTime() })),
-  ].sort((a, b) => b.ts - a.ts);
-
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: "deposit",  label: "Deposit",  icon: ArrowDownLeft },
-    { id: "withdraw", label: "Withdraw", icon: ArrowUpRight },
-    { id: "history",  label: "History",  icon: Wallet },
+  const tabs = [
+    { id: "deposit"  as Tab, label: "Deposit History",  icon: ArrowDownLeft },
+    { id: "withdraw" as Tab, label: "Withdraw History", icon: ArrowUpRight  },
   ];
 
   return (
-    <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
+    <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-28 md:pb-8">
       {/* Header */}
       <h1
         className="text-xl font-bold"
@@ -155,7 +235,7 @@ export default function WalletPage({ user }: { user: any }) {
       {/* Balance Cards */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Available Balance",  value: summary?.availableBalance,  highlight: true },
+          { label: "Available Balance",  value: summary?.availableBalance,  highlight: true  },
           { label: "Total Earnings",     value: summary?.totalEarnings,     highlight: false },
           { label: "Pending Withdrawal", value: summary?.pendingWithdrawal, highlight: false },
           { label: "Total Withdrawn",    value: summary?.withdrawnTotal,    highlight: false },
@@ -169,13 +249,13 @@ export default function WalletPage({ user }: { user: any }) {
               boxShadow: "0 0 20px rgba(61,214,245,0.07)",
             } : GLASS}
           >
-            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.42)" }}>{item.label}</div>
+            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>{item.label}</div>
             <div
-              className="font-black text-xl"
+              className="font-black"
               style={{
                 fontFamily: "'Orbitron', sans-serif",
                 color: item.highlight ? TEAL : "rgba(168,237,255,0.88)",
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
               }}
             >
               ${item.value?.toFixed(2) ?? "0.00"}
@@ -193,7 +273,7 @@ export default function WalletPage({ user }: { user: any }) {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all"
             style={tab === t.id ? {
               background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
               color: "#010810",
@@ -208,214 +288,120 @@ export default function WalletPage({ user }: { user: any }) {
         ))}
       </div>
 
-      {/* ── DEPOSIT TAB ── */}
+      {/* ── DEPOSIT HISTORY ── */}
       {tab === "deposit" && (
-        <div className="space-y-4">
-          <div
-            className="flex items-start gap-2.5 rounded-xl p-3.5"
-            style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.14)" }}
-          >
-            <AlertCircle size={15} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.55)" }}>
-              Send only the supported currencies to these addresses. Deposits are credited after network confirmation.
-              Minimum deposit is <strong style={{ color: "rgba(168,237,255,0.8)" }}>$100 USDT</strong> and at least
-              <strong style={{ color: "rgba(168,237,255,0.8)" }}> 50% must be HYPERCOIN</strong>.
-            </p>
-          </div>
-
-          {Object.entries(PLATFORM_WALLETS).map(([key, wallet]) => (
-            <div key={key} className="rounded-2xl p-5 space-y-3" style={GLASS}>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-                  style={{ background: "rgba(61,214,245,0.12)", border: "1px solid rgba(61,214,245,0.22)", color: TEAL }}
-                >
-                  {key === "usdt" ? "₮" : "HC"}
-                </div>
-                <span className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>{wallet.label}</span>
-              </div>
-
-              {/* Fake QR placeholder */}
-              <div
-                className="w-28 h-28 mx-auto rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(0,10,24,0.7)", border: "1px solid rgba(61,214,245,0.15)" }}
-              >
-                <div className="grid grid-cols-5 gap-0.5 opacity-60">
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-3.5 h-3.5 rounded-sm"
-                      style={{ background: Math.random() > 0.4 ? TEAL : "transparent" }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-                style={{ background: "rgba(0,10,24,0.6)", border: "1px solid rgba(61,214,245,0.12)" }}
-              >
-                <span
-                  className="flex-1 text-xs font-mono truncate"
-                  style={{ color: "rgba(168,237,255,0.6)" }}
-                >
-                  {wallet.address}
-                </span>
-                <CopyButton text={wallet.address} />
-              </div>
-              <p className="text-xs text-center" style={{ color: "rgba(168,237,255,0.3)" }}>
-                Network: TRC20 (TRON)
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── WITHDRAW TAB ── */}
-      {tab === "withdraw" && (
-        <div className="space-y-4">
-          {/* Balance reminder */}
-          <div
-            className="flex items-center justify-between rounded-xl px-4 py-3"
-            style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.14)" }}
-          >
-            <span className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>Available</span>
-            <span className="font-bold" style={{ color: TEAL, fontFamily: "'Orbitron', sans-serif", fontSize: "0.95rem" }}>
-              ${summary?.availableBalance?.toFixed(2) ?? "0.00"}
-            </span>
-          </div>
-
-          <div
-            className="flex items-start gap-2 rounded-xl p-3.5"
-            style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.14)" }}
-          >
-            <AlertCircle size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
-            <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-              Processed within 24–48 hours. Minimum $10. Ensure the wallet address is correct — transactions are irreversible.
-            </p>
-          </div>
-
-          <div className="rounded-2xl p-5" style={GLASS}>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onWithdraw)} className="space-y-4">
-                <FormField control={form.control} name="amount" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>Amount (USDT)</FormLabel>
-                    <FormControl>
-                      <Input data-testid="input-withdraw-amount" type="number" min="10" step="0.01" placeholder="0.00" {...field} style={INPUT_STYLE} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                {/* Quick amount buttons */}
-                <div className="flex gap-2">
-                  {[50, 100, 200, 500].map(amt => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => form.setValue("amount", amt)}
-                      className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all"
-                      style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.14)", color: "rgba(168,237,255,0.5)" }}
-                    >
-                      ${amt}
-                    </button>
-                  ))}
-                </div>
-
-                <FormField control={form.control} name="walletAddress" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Wallet Address (TRC20)</FormLabel>
-                    <FormControl>
-                      <Input data-testid="input-withdraw-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} style={INPUT_STYLE} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
+        <div className="space-y-2.5">
+          {deposits.length === 0 ? (
+            <EmptyState label="deposits" />
+          ) : (
+            deposits.map(inv => {
+              const cfg = statusConfig[inv.status] || statusConfig.pending;
+              return (
                 <button
-                  data-testid="button-submit-withdrawal"
-                  type="submit"
-                  disabled={createWithdrawal.isPending}
-                  className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60"
+                  key={inv.id}
+                  onClick={() => setSelected({ item: inv, type: "deposit" })}
+                  className="w-full rounded-xl px-4 py-3.5 flex items-center justify-between text-left transition-all hover:brightness-125 active:scale-[0.99]"
                   style={{
-                    background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                    color: "#010810",
-                    letterSpacing: "0.04em",
-                    boxShadow: "0 0 20px rgba(61,214,245,0.3)",
+                    ...GLASS,
+                    cursor: "pointer",
                   }}
                 >
-                  {createWithdrawal.isPending ? "Submitting…" : "Request Withdrawal"}
-                </button>
-              </form>
-            </Form>
-          </div>
-        </div>
-      )}
-
-      {/* ── HISTORY TAB ── */}
-      {tab === "history" && (
-        <div className="space-y-2">
-          {allTxns.length === 0 ? (
-            <div className="rounded-xl p-10 text-center" style={GLASS}>
-              <Wallet size={36} className="mx-auto mb-2" style={{ color: "rgba(168,237,255,0.2)" }} />
-              <p className="text-sm" style={{ color: "rgba(168,237,255,0.35)" }}>No transactions yet</p>
-            </div>
-          ) : (
-            allTxns.map((txn, idx) => {
-              if (txn.type === "income") {
-                const r = txn.data as any;
-                const Icon  = typeIcons[r.type]  || DollarSign;
-                const color = typeColors[r.type] || TEAL;
-                return (
-                  <div
-                    key={`inc-${r.id}`}
-                    className="rounded-xl px-4 py-3.5 flex items-center justify-between"
-                    style={GLASS}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: "rgba(0,10,24,0.6)", border: `1px solid ${color}33` }}>
-                        <Icon size={15} style={{ color }} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.8)" }}>{r.description}</div>
-                        <div className="text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>{formatDate(r.createdAt)}</div>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${TEAL}12`, border: `1px solid ${TEAL}28` }}
+                    >
+                      <ArrowDownLeft size={16} style={{ color: TEAL }} />
                     </div>
-                    <div className="font-bold text-sm" style={{ color }}>+${r.amount.toFixed(2)}</div>
-                  </div>
-                );
-              } else {
-                const w = txn.data as any;
-                const cfg = statusConfig[w.status] || statusConfig.pending;
-                return (
-                  <div
-                    key={`wd-${w.id}`}
-                    className="rounded-xl px-4 py-3.5 flex items-center justify-between"
-                    style={GLASS}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: `${cfg.color}14`, border: `1px solid ${cfg.color}33` }}>
-                        <ArrowUpRight size={15} style={{ color: cfg.color }} />
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
+                        Deposit <span className="font-mono text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>#{shortId(inv.id)}</span>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.8)" }}>Withdrawal</div>
-                        <div className="flex items-center gap-1.5 text-xs mt-0.5">
-                          <cfg.icon size={10} style={{ color: cfg.color }} />
-                          <span style={{ color: cfg.color, fontWeight: 600 }}>{w.status}</span>
-                          <span style={{ color: "rgba(168,237,255,0.3)" }}>· {formatDate(w.createdAt)}</span>
+                      <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                        <cfg.icon size={10} style={{ color: cfg.color }} />
+                        <span style={{ color: cfg.color }}>{cfg.label}</span>
+                        <span style={{ color: "rgba(168,237,255,0.25)" }}>·</span>
+                        <span style={{ color: "rgba(168,237,255,0.35)" }}>{formatDate(inv.createdAt)}</span>
+                      </div>
+                      {inv.plan && (
+                        <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.25)" }}>
+                          {planLabels[inv.plan] ?? inv.plan}
                         </div>
-                      </div>
+                      )}
                     </div>
-                    <div className="font-bold text-sm" style={{ color: "#f87171" }}>-${w.amount.toFixed(2)}</div>
                   </div>
-                );
-              }
+                  <div className="text-right shrink-0 ml-3">
+                    <div className="font-bold text-sm" style={{ color: TEAL }}>+${inv.amount?.toFixed(2)}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.28)" }}>Tap for details</div>
+                  </div>
+                </button>
+              );
             })
           )}
         </div>
+      )}
+
+      {/* ── WITHDRAWAL HISTORY ── */}
+      {tab === "withdraw" && (
+        <div className="space-y-2.5">
+          {withdrawList.length === 0 ? (
+            <EmptyState label="withdrawals" />
+          ) : (
+            withdrawList.map(w => {
+              const cfg = statusConfig[w.status] || statusConfig.pending;
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => setSelected({ item: w, type: "withdraw" })}
+                  className="w-full rounded-xl px-4 py-3.5 flex items-center justify-between text-left transition-all hover:brightness-125 active:scale-[0.99]"
+                  style={{
+                    ...GLASS,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${cfg.color}12`, border: `1px solid ${cfg.color}28` }}
+                    >
+                      <ArrowUpRight size={16} style={{ color: cfg.color }} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
+                        Withdrawal <span className="font-mono text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>#{shortId(w.id)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                        <cfg.icon size={10} style={{ color: cfg.color }} />
+                        <span style={{ color: cfg.color }}>{cfg.label}</span>
+                        <span style={{ color: "rgba(168,237,255,0.25)" }}>·</span>
+                        <span style={{ color: "rgba(168,237,255,0.35)" }}>{formatDate(w.createdAt)}</span>
+                      </div>
+                      <div
+                        className="text-xs mt-0.5 truncate max-w-[160px]"
+                        style={{ color: "rgba(168,237,255,0.25)" }}
+                      >
+                        {w.walletAddress}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <div className="font-bold text-sm" style={{ color: "#f87171" }}>-${w.amount?.toFixed(2)}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.28)" }}>Tap for details</div>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selected && (
+        <DetailModal
+          item={selected.item}
+          type={selected.type}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
