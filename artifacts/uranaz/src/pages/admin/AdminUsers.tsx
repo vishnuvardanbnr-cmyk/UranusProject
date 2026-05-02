@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useListAdminUsers, useUpdateAdminUser, getListAdminUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, CheckCircle, XCircle, Shield } from "lucide-react";
+import { Users, Search, CheckCircle, XCircle, Shield, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const TEAL = "#3DD6F5";
@@ -13,6 +14,7 @@ function formatDate(iso: string) {
 }
 
 export default function AdminUsers() {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const { data: users, isLoading } = useListAdminUsers();
   const updateUser = useUpdateAdminUser();
@@ -38,6 +40,14 @@ export default function AdminUsers() {
   return (
     <div className="px-4 py-6 max-w-4xl mx-auto space-y-5 pb-24 md:pb-8">
       <div className="flex items-center gap-3">
+        <button
+          data-testid="button-back-admin"
+          onClick={() => setLocation("/admin")}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+          style={GLASS}
+        >
+          <ArrowLeft size={16} style={{ color: TEAL }} />
+        </button>
         <h1
           className="text-xl font-bold"
           style={{

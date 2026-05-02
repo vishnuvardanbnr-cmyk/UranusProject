@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp } from "lucide-react";
+import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, ArrowLeft } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -91,6 +92,7 @@ async function saveSmtpSettings(data: SmtpForm): Promise<SmtpForm> {
 }
 
 export default function AdminSettings() {
+  const [, setLocation] = useLocation();
   const { data: settings, isLoading } = useGetAdminSettings();
   const updateSettings = useUpdateAdminSettings();
   const queryClient = useQueryClient();
@@ -339,6 +341,14 @@ export default function AdminSettings() {
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
       <div className="flex items-center gap-3">
+        <button
+          data-testid="button-back-admin"
+          onClick={() => setLocation("/admin")}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+          style={GLASS}
+        >
+          <ArrowLeft size={16} style={{ color: TEAL }} />
+        </button>
         <Settings size={20} style={{ color: TEAL }} />
         <h1
           className="text-xl font-bold"

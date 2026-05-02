@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import {
   ArrowDownToLine, ArrowUpFromLine, Wallet as WalletIcon, Search, X,
-  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck,
+  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck, ArrowLeft,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,6 +82,7 @@ function downloadCSV(filename: string, rows: any[]) {
 }
 
 export default function AdminReports() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("deposits");
   const [page, setPage] = useState(1);
@@ -164,20 +166,30 @@ export default function AdminReports() {
     <div className="px-4 py-6 max-w-5xl mx-auto space-y-5 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1
-            className="text-xl font-bold"
-            style={{
-              fontFamily: "'Orbitron', sans-serif",
-              background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
+        <div className="flex items-center gap-3">
+          <button
+            data-testid="button-back-admin"
+            onClick={() => setLocation("/admin")}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={GLASS}
           >
-            Reports
-          </h1>
-          <p className="text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>Detailed deposit, withdrawal & wallet-update history</p>
+            <ArrowLeft size={16} style={{ color: TEAL }} />
+          </button>
+          <div>
+            <h1
+              className="text-xl font-bold"
+              style={{
+                fontFamily: "'Orbitron', sans-serif",
+                background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Reports
+            </h1>
+            <p className="text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>Detailed deposit, withdrawal & wallet-update history</p>
+          </div>
         </div>
         <button
           onClick={handleExport}
