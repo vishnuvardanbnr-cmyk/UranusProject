@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable } from "@workspace/db";
 import { eq, desc, ilike, or, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -635,6 +635,81 @@ router.delete("/admin/offers/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
   await db.delete(offersTable).where(eq(offersTable.id, id));
+  res.json({ success: true });
+});
+
+// ========== Notices ==========
+const NoticeBody = z.object({
+  title: z.string().min(1),
+  message: z.string().min(1),
+  type: z.enum(["info", "success", "warning", "critical", "announcement", "promo"]).default("info"),
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  icon: z.string().default(""),
+  ctaLabel: z.string().default(""),
+  ctaUrl: z.string().default(""),
+  audience: z.enum(["all", "active", "inactive", "admin"]).default("all"),
+  active: z.boolean().default(true),
+  pinned: z.boolean().default(false),
+  dismissible: z.boolean().default(true),
+  startsAt: z.string().nullable().optional(),
+  endsAt: z.string().nullable().optional(),
+});
+
+function noticeToResponse(n: typeof noticesTable.$inferSelect) {
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    type: n.type,
+    priority: n.priority,
+    icon: n.icon,
+    ctaLabel: n.ctaLabel,
+    ctaUrl: n.ctaUrl,
+    audience: n.audience,
+    active: n.active,
+    pinned: n.pinned,
+    dismissible: n.dismissible,
+    startsAt: n.startsAt ? n.startsAt.toISOString().slice(0, 16) : null,
+    endsAt: n.endsAt ? n.endsAt.toISOString().slice(0, 16) : null,
+    createdAt: n.createdAt.toISOString(),
+  };
+}
+
+router.get("/admin/notices", requireAdmin, async (_req, res) => {
+  const notices = await db.select().from(noticesTable).orderBy(desc(noticesTable.createdAt));
+  res.json(notices.map(noticeToResponse));
+});
+
+router.post("/admin/notices", requireAdmin, async (req, res) => {
+  const parsed = NoticeBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input", issues: parsed.error.issues }); return; }
+  const { startsAt, endsAt, ...rest } = parsed.data;
+  const [created] = await db.insert(noticesTable).values({
+    ...rest,
+    startsAt: startsAt ? new Date(startsAt) : null,
+    endsAt: endsAt ? new Date(endsAt) : null,
+  }).returning();
+  res.json(noticeToResponse(created));
+});
+
+router.put("/admin/notices/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
+  const parsed = NoticeBody.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const { startsAt, endsAt, ...rest } = parsed.data;
+  const updates: any = { ...rest };
+  if (startsAt !== undefined) updates.startsAt = startsAt ? new Date(startsAt) : null;
+  if (endsAt !== undefined)   updates.endsAt   = endsAt ? new Date(endsAt) : null;
+  const [updated] = await db.update(noticesTable).set(updates).where(eq(noticesTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ message: "Notice not found" }); return; }
+  res.json(noticeToResponse(updated));
+});
+
+router.delete("/admin/notices/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
+  await db.delete(noticesTable).where(eq(noticesTable.id, id));
   res.json({ success: true });
 });
 

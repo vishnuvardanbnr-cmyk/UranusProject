@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { clearToken } from "@/lib/auth";
 import { useLogout } from "@workspace/api-client-react";
 import { LogOut, Shield, HeadphonesIcon } from "lucide-react";
+import NoticesBell from "@/components/NoticesBell";
 
 interface Props {
   user: any;
@@ -101,6 +102,7 @@ export default function TopNav({ user, onLogout }: Props) {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          <NoticesBell />
           <Link
             href="/support"
             data-testid="link-support"

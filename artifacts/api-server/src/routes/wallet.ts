@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, platformSettingsTable, offersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, platformSettingsTable, offersTable, noticesTable } from "@workspace/db";
+import { eq, or, isNull, lte, gte, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
@@ -19,6 +19,50 @@ router.get("/settings/public", async (_req, res) => {
     launchOfferActive: settings?.launchOfferActive ?? true,
     launchOfferEndDate: settings?.launchOfferEndDate ? settings.launchOfferEndDate.toISOString() : null,
   });
+});
+
+// GET /api/notices/active — returns currently-visible notices for the signed-in user
+router.get("/notices/active", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const now = new Date();
+  const rows = await db.select().from(noticesTable).where(
+    and(
+      eq(noticesTable.active, true),
+      or(isNull(noticesTable.startsAt), lte(noticesTable.startsAt, now)),
+      or(isNull(noticesTable.endsAt),   gte(noticesTable.endsAt, now)),
+    )
+  );
+
+  const visible = rows.filter(n => {
+    if (n.audience === "all") return true;
+    if (n.audience === "active")   return !!user.isActive;
+    if (n.audience === "inactive") return !user.isActive;
+    if (n.audience === "admin")    return !!user.isAdmin;
+    return true;
+  });
+
+  const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+  visible.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    const pa = priorityRank[a.priority] ?? 2;
+    const pb = priorityRank[b.priority] ?? 2;
+    if (pa !== pb) return pa - pb;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  res.json(visible.map(n => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    type: n.type,
+    priority: n.priority,
+    icon: n.icon,
+    ctaLabel: n.ctaLabel,
+    ctaUrl: n.ctaUrl,
+    pinned: n.pinned,
+    dismissible: n.dismissible,
+    createdAt: n.createdAt.toISOString(),
+  })));
 });
 
 // GET /api/offers/active — public, returns active offers for user dashboard
