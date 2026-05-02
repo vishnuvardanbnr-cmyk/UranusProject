@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   useListIncome,
-  useGetIncomeSummary,
   getListIncomeQueryKey,
 } from "@workspace/api-client-react";
 import {
@@ -194,7 +193,6 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState("");
   const [selected, setSelected]     = useState<any>(null);
 
-  const { data: summary, isLoading: sumLoading } = useGetIncomeSummary();
   const { data: incomeData, isLoading } = useListIncome(
     typeFilter
       ? { type: typeFilter as any, page: 1, limit: 100 }
@@ -217,62 +215,6 @@ export default function Transactions() {
       >
         Transactions
       </h1>
-
-      {/* Hero total */}
-      <div
-        className="rounded-2xl p-5 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(61,214,245,0.12), rgba(42,179,215,0.06), rgba(100,60,200,0.05))",
-          border: "1px solid rgba(61,214,245,0.28)",
-          boxShadow: "0 0 40px rgba(61,214,245,0.08)",
-        }}
-      >
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.16) 0%, transparent 60%)" }}
-        />
-        <div className="relative">
-          <div className="text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(168,237,255,0.45)" }}>
-            Total Earnings
-          </div>
-          <div
-            className="text-4xl font-black"
-            style={{
-              fontFamily: "'Orbitron', sans-serif",
-              background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            ${sumLoading ? "—" : (summary?.totalEarnings ?? 0).toFixed(2)}
-          </div>
-          <div className="flex gap-4 mt-2 text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>
-            <span>Available: <strong style={{ color: "rgba(168,237,255,0.8)" }}>${summary?.availableBalance?.toFixed(2) ?? "—"}</strong></span>
-            <span>Withdrawn: <strong style={{ color: "rgba(168,237,255,0.8)" }}>${summary?.withdrawnTotal?.toFixed(2) ?? "—"}</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Breakdown mini-cards */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: "Daily Returns",    value: summary?.dailyReturnTotal,     icon: TrendingUp, color: "#34d399" },
-          { label: "Spot Referral",    value: summary?.spotReferralTotal,    icon: Users,      color: "#60a5fa" },
-          { label: "Level Commission", value: summary?.levelCommissionTotal, icon: DollarSign, color: "#c084fc" },
-          { label: "Rank Bonus",       value: summary?.rankBonusTotal,       icon: Award,      color: TEAL     },
-        ].map(item => (
-          <div key={item.label} className="rounded-xl p-3.5" style={GLASS}>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <item.icon size={12} style={{ color: item.color }} />
-              <span className="text-xs" style={{ color: "rgba(168,237,255,0.38)" }}>{item.label}</span>
-            </div>
-            <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>
-              ${item.value?.toFixed(2) ?? "0.00"}
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Filter pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
