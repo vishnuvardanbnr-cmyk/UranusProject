@@ -359,6 +359,17 @@ export default function Withdrawals({ user }: { user: any }) {
                       TX: {txHash.slice(0, 18)}…{txHash.slice(-6)}
                     </a>
                   )}
+                  {status === "rejected" && (w as any).note && (
+                    <div
+                      className="flex items-start gap-2 mt-2 pt-2 rounded-lg px-3 py-2"
+                      style={{ borderTop: "1px solid rgba(248,113,113,0.12)", background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.15)" }}
+                    >
+                      <AlertCircle size={12} className="shrink-0 mt-0.5" style={{ color: "#f87171" }} />
+                      <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.85)" }}>
+                        {(w as any).note}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

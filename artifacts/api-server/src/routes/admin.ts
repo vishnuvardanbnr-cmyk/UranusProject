@@ -254,8 +254,9 @@ router.post("/admin/withdrawals/:id/approve", requireAdmin, async (req, res) => 
 // POST /api/admin/withdrawals/:id/reject
 router.post("/admin/withdrawals/:id/reject", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
+  const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
   const [updated] = await db.update(withdrawalsTable)
-    .set({ status: "rejected", processedAt: new Date() })
+    .set({ status: "rejected", processedAt: new Date(), note: note || null })
     .where(eq(withdrawalsTable.id, id))
     .returning();
   if (!updated) {

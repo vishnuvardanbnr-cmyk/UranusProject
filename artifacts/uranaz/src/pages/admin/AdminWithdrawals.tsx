@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useListAdminWithdrawals, useApproveWithdrawal, useRejectWithdrawal, getListAdminWithdrawalsQueryKey } from "@workspace/api-client-react";
+import { useListAdminWithdrawals, useApproveWithdrawal, getListAdminWithdrawalsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, CheckCircle, XCircle, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Wallet, CheckCircle, XCircle, ExternalLink, Loader2, AlertCircle, MessageSquare } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -18,15 +18,23 @@ const statusConfig: Record<string, { color: string; bg: string; label: string; i
   rejected:   { color: "#f87171", bg: "rgba(248,113,113,0.10)", label: "Rejected",   icon: XCircle },
 };
 
+function getToken() {
+  return localStorage.getItem("uranaz_token") || "";
+}
+
 export default function AdminWithdrawals() {
   const [filter, setFilter] = useState<"all" | "pending" | "processing" | "approved" | "rejected">("pending");
   const { data: withdrawals, isLoading } = useListAdminWithdrawals(
     filter === "all" ? undefined : { status: filter }
   );
   const approveWithdrawal = useApproveWithdrawal();
-  const rejectWithdrawal = useRejectWithdrawal();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Rejection note state — keyed by withdrawal id
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [rejectLoading, setRejectLoading] = useState(false);
 
   const handleApprove = async (id: number) => {
     try {
@@ -38,13 +46,32 @@ export default function AdminWithdrawals() {
     }
   };
 
-  const handleReject = async (id: number) => {
+  const startReject = (id: number) => {
+    setRejectingId(id);
+    setRejectNote("");
+  };
+
+  const cancelReject = () => {
+    setRejectingId(null);
+    setRejectNote("");
+  };
+
+  const confirmReject = async (id: number) => {
+    setRejectLoading(true);
     try {
-      await rejectWithdrawal.mutateAsync({ id });
+      await fetch(`/api/admin/withdrawals/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ note: rejectNote }),
+      });
       await queryClient.invalidateQueries({ queryKey: getListAdminWithdrawalsQueryKey() });
       toast({ title: "Withdrawal rejected" });
+      setRejectingId(null);
+      setRejectNote("");
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setRejectLoading(false);
     }
   };
 
@@ -155,26 +182,67 @@ export default function AdminWithdrawals() {
                 </div>
 
                 {(w as any).status === "pending" ? (
-                  <div className="flex gap-2 pt-2" style={{ borderTop: "1px solid rgba(61,214,245,0.07)" }}>
-                    <button
-                      data-testid={`button-approve-${w.id}`}
-                      onClick={() => handleApprove(w.id)}
-                      disabled={approveWithdrawal.isPending || rejectWithdrawal.isPending}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                      style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#34d399" }}
-                    >
-                      <CheckCircle size={13} />
-                      {approveWithdrawal.isPending ? "Sending…" : "Approve & Send"}
-                    </button>
-                    <button
-                      data-testid={`button-reject-${w.id}`}
-                      onClick={() => handleReject(w.id)}
-                      disabled={approveWithdrawal.isPending || rejectWithdrawal.isPending}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                      style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", color: "#f87171" }}
-                    >
-                      <XCircle size={13} /> Reject
-                    </button>
+                  <div className="pt-2" style={{ borderTop: "1px solid rgba(61,214,245,0.07)" }}>
+                    {rejectingId === w.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#f87171" }}>
+                          <MessageSquare size={12} /> Rejection reason (shown to user)
+                        </div>
+                        <textarea
+                          autoFocus
+                          rows={2}
+                          placeholder="e.g. Wallet address is invalid, please resubmit with a correct BEP-20 address."
+                          value={rejectNote}
+                          onChange={e => setRejectNote(e.target.value)}
+                          className="w-full rounded-xl px-3 py-2 text-xs resize-none focus:outline-none"
+                          style={{
+                            background: "rgba(0,15,30,0.8)",
+                            border: "1px solid rgba(248,113,113,0.3)",
+                            color: "rgba(168,237,255,0.8)",
+                          }}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => confirmReject(w.id)}
+                            disabled={rejectLoading}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
+                            style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+                          >
+                            {rejectLoading ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                            Confirm Reject
+                          </button>
+                          <button
+                            onClick={cancelReject}
+                            className="px-4 py-2 rounded-lg text-xs font-medium"
+                            style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.6)" }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          data-testid={`button-approve-${w.id}`}
+                          onClick={() => handleApprove(w.id)}
+                          disabled={approveWithdrawal.isPending}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                          style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", color: "#34d399" }}
+                        >
+                          <CheckCircle size={13} />
+                          {approveWithdrawal.isPending ? "Sending…" : "Approve & Send"}
+                        </button>
+                        <button
+                          data-testid={`button-reject-${w.id}`}
+                          onClick={() => startReject(w.id)}
+                          disabled={approveWithdrawal.isPending}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                          style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", color: "#f87171" }}
+                        >
+                          <XCircle size={13} /> Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (w as any).status === "processing" ? (
                   <div className="flex items-center gap-2 pt-2 text-xs"
