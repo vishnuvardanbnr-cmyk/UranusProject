@@ -702,37 +702,22 @@ export default function WalletPage({ user }: { user: any }) {
         Wallet
       </h1>
 
-      {/* ── USDT & HYPERCOIN Balances ── */}
-      <div className={`grid gap-3 ${hyperEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
+      {/* ── HYPERCOIN Balance (only when enabled) ── */}
+      {hyperEnabled && (
         <div
           className="rounded-xl p-4"
           style={{
-            background: "linear-gradient(135deg, rgba(61,214,245,0.12), rgba(42,179,215,0.06))",
-            border: "1px solid rgba(61,214,245,0.28)",
-            boxShadow: "0 0 20px rgba(61,214,245,0.07)",
+            background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
+            border: "1px solid rgba(184,127,255,0.28)",
+            boxShadow: "0 0 20px rgba(184,127,255,0.07)",
           }}
         >
-          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>USDT Balance</div>
-          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: TEAL, fontSize: "1.05rem" }}>
-            ${usdtBalance.toFixed(2)}
+          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
+            ${hyperBalance.toFixed(2)}
           </div>
         </div>
-        {hyperEnabled && (
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
-              border: "1px solid rgba(184,127,255,0.28)",
-              boxShadow: "0 0 20px rgba(184,127,255,0.07)",
-            }}
-          >
-            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
-            <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
-              ${hyperBalance.toFixed(2)}
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* ── Earnings Stats ── */}
       <div className="grid grid-cols-2 gap-3">
