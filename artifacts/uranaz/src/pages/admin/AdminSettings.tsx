@@ -1,18 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode, ComponentType } from "react";
 import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp } from "lucide-react";
+import {
+  Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database,
+  AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, SlidersHorizontal, Coins,
+  Layers, BadgeDollarSign,
+} from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
-const INPUT_CLS = "w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none";
+const INPUT_CLS = "w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none transition-colors";
 const INPUT_STYLE = {
   background: "rgba(0,20,40,0.7)",
   border: "1px solid rgba(61,214,245,0.18)",
   color: "rgba(168,237,255,0.9)",
 };
+const SAVE_BTN_STYLE = {
+  background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+  color: "#010810",
+  letterSpacing: "0.04em",
+  boxShadow: "0 0 20px rgba(61,214,245,0.3)",
+};
+const ORBITRON_GRADIENT_STYLE = {
+  fontFamily: "'Orbitron', sans-serif",
+  background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent" as const,
+  backgroundClip: "text",
+};
+
+type TabKey = "general" | "blockchain" | "withdrawals" | "income" | "email" | "maintenance";
+
+const TABS: { key: TabKey; label: string; icon: ComponentType<{ size?: number; style?: any }>; desc: string }[] = [
+  { key: "general",     label: "General",       icon: SlidersHorizontal, desc: "Deposit limits, platform toggles, launch offer countdown" },
+  { key: "blockchain",  label: "Blockchain",    icon: Wallet,            desc: "Master wallet, gas wallet, BSC RPC and minimum deposit" },
+  { key: "withdrawals", label: "Withdrawals",   icon: ArrowUpRight,      desc: "Processing mode and the withdrawal wallet that pays users" },
+  { key: "income",      label: "Income",        icon: TrendingUp,        desc: "Spot referral, daily tier rates, level commissions and unlocks" },
+  { key: "email",       label: "Email & SMTP",  icon: Mail,              desc: "SMTP credentials and which user actions trigger email OTPs" },
+  { key: "maintenance", label: "Maintenance",   icon: RefreshCw,         desc: "Regenerate user deposit addresses and review backed-up keys" },
+];
 
 type SettingsForm = {
   maintenanceMode: boolean;
@@ -90,11 +118,115 @@ async function saveSmtpSettings(data: SmtpForm): Promise<SmtpForm> {
   return res.json();
 }
 
+/** A standardized section card with icon header + description + body. */
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+  accent = TEAL,
+}: {
+  icon: ComponentType<{ size?: number; style?: any }>;
+  title: string;
+  description: string;
+  children: ReactNode;
+  accent?: string;
+}) {
+  return (
+    <section className="rounded-2xl overflow-hidden" style={GLASS}>
+      <header
+        className="px-5 md:px-6 py-4 flex items-start gap-3"
+        style={{ borderBottom: `1px solid ${accent}1A` }}
+      >
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{
+            background: `linear-gradient(135deg, ${accent}25, ${accent}10)`,
+            border: `1px solid ${accent}40`,
+          }}
+        >
+          <Icon size={17} style={{ color: accent }} />
+        </div>
+        <div className="min-w-0">
+          <h2
+            className="text-base md:text-lg font-bold leading-tight"
+            style={{
+              ...ORBITRON_GRADIENT_STYLE,
+              letterSpacing: "0.03em",
+            }}
+          >
+            {title}
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.5)" }}>
+            {description}
+          </p>
+        </div>
+      </header>
+      <div className="p-5 md:p-6">{children}</div>
+    </section>
+  );
+}
+
+/** A subsection rule: small uppercase label with a teal divider. */
+function SubHeader({ children, hint }: { children: ReactNode; hint?: string }) {
+  return (
+    <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.10)" }}>
+      <h3
+        className="font-semibold text-[11px] tracking-[0.18em] uppercase"
+        style={{ color: "rgba(168,237,255,0.55)" }}
+      >
+        {children}
+      </h3>
+      {hint && (
+        <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.35)" }}>
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.6)" }}>
+      {children}
+    </label>
+  );
+}
+
+function FieldHint({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.35)" }}>
+      {children}
+    </p>
+  );
+}
+
+function SaveButton({
+  pending,
+  pendingLabel = "Saving…",
+  label = "Save Settings",
+}: { pending: boolean; pendingLabel?: string; label?: string }) {
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full md:w-auto md:px-8 py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+      style={SAVE_BTN_STYLE}
+    >
+      <Save size={16} />
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
 export default function AdminSettings() {
   const { data: settings, isLoading } = useGetAdminSettings();
   const updateSettings = useUpdateAdminSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = useState<TabKey>("general");
 
   const { register, handleSubmit, reset } = useForm<SettingsForm>();
 
@@ -325,869 +457,765 @@ export default function AdminSettings() {
   };
 
   const withdrawalMode = withdrawalForm.watch("withdrawalMode");
+  const smtpEnabled = smtpForm.watch("smtpEnabled");
+  const activeTabMeta = TABS.find(t => t.key === activeTab) ?? TABS[0];
 
   if (isLoading) {
     return (
-      <div className="px-4 py-6 max-w-2xl mx-auto space-y-4">
-        {[1,2,3].map(i => <div key={i} className="rounded-xl h-20 animate-pulse" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }} />)}
+      <div className="px-4 md:px-6 py-6 max-w-5xl mx-auto space-y-4">
+        {[1,2,3].map(i => (
+          <div key={i} className="rounded-2xl h-24 animate-pulse" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }} />
+        ))}
       </div>
     );
   }
 
-  const smtpEnabled = smtpForm.watch("smtpEnabled");
-
   return (
-    <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
-      <div className="flex items-center gap-3">
-        <Settings size={20} style={{ color: TEAL }} />
-        <h1
-          className="text-xl font-bold"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Platform Settings
-        </h1>
-      </div>
-
-      {/* Platform Settings Form */}
-      <div className="rounded-2xl p-5" style={GLASS}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div className="pb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-            <h2 className="font-semibold text-sm" style={{ color: TEAL }}>Deposit Limits</h2>
+    <div className="px-4 md:px-6 py-6 max-w-5xl mx-auto pb-24 md:pb-10">
+      {/* Page Header */}
+      <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(42,179,215,0.08))",
+              border: "1px solid rgba(61,214,245,0.35)",
+              boxShadow: "0 0 20px rgba(61,214,245,0.18)",
+            }}
+          >
+            <Settings size={20} style={{ color: TEAL }} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: "Min Deposit (USDT)",      testId: "input-min-deposit",    name: "minDeposit" as const,         type: "number", extra: {} },
-              { label: "Max Deposit (USDT)",      testId: "input-max-deposit",    name: "maxDeposit" as const,         type: "number", extra: {} },
-              { label: "Min HYPERCOIN % (0–100)", testId: "input-hypercoin-pct",  name: "hyperCoinMinPercent" as const, type: "number", extra: { step: "1", min: "0", max: "100" } },
-              { label: "HYPERCOIN Price (USDT)",  testId: "input-hypercoin-price", name: "hyperCoinPrice" as const,      type: "number", extra: { step: "0.0001", min: "0.0001" } },
-              { label: "Spot Referral Rate (%)",  testId: "input-spot-commission",name: "spotReferralRate" as const,   type: "number", extra: { step: "0.01" } },
-            ].map(f => (
-              <div key={f.name}>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>{f.label}</label>
-                <input
-                  data-testid={f.testId}
-                  type={f.type}
-                  {...f.extra}
-                  {...register(f.name, { valueAsNumber: true })}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="pb-3 pt-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-            <h2 className="font-semibold text-sm" style={{ color: TEAL }}>Platform Toggles</h2>
-          </div>
-          <div className="space-y-3">
-            {[
-              { key: "maintenanceMode" as const,   label: "Maintenance Mode",    desc: "Disable all user logins temporarily" },
-              { key: "launchOfferActive" as const,  label: "Launch Offer Active", desc: "Show Singapore trip offer to users" },
-              { key: "withdrawalEnabled" as const,  label: "Withdrawals Enabled", desc: "Allow users to submit withdrawal requests" },
-            ].map(item => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between p-3 rounded-xl"
-                style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.08)" }}
-              >
-                <div>
-                  <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.8)" }}>{item.label}</div>
-                  <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{item.desc}</div>
-                </div>
-                <input
-                  type="checkbox"
-                  data-testid={`toggle-${item.key}`}
-                  {...register(item.key)}
-                  className="w-4 h-4"
-                  style={{ accentColor: TEAL }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Launch offer end date */}
           <div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
-              Launch Offer End Date &amp; Time
-            </label>
-            <input
-              type="datetime-local"
-              {...register("launchOfferEndDate")}
-              className={INPUT_CLS}
-              style={INPUT_STYLE}
-            />
-            <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>
-              Shown as a countdown on users' dashboards. Leave blank for no deadline.
+            <h1 className="text-xl md:text-2xl font-bold leading-tight" style={ORBITRON_GRADIENT_STYLE}>
+              Platform Settings
+            </h1>
+            <p className="text-xs md:text-sm" style={{ color: "rgba(168,237,255,0.5)" }}>
+              Configure how the platform behaves, from deposit limits to email delivery.
             </p>
           </div>
-
-          <button
-            data-testid="button-save-settings"
-            type="submit"
-            disabled={updateSettings.isPending}
-            className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-            style={{
-              background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-              color: "#010810",
-              letterSpacing: "0.04em",
-              boxShadow: "0 0 20px rgba(61,214,245,0.3)",
-            }}
-          >
-            <Save size={16} />
-            {updateSettings.isPending ? "Saving..." : "Save Settings"}
-          </button>
-        </form>
-      </div>
-
-      {/* Blockchain / Wallet Settings */}
-      <div className="flex items-center gap-3 pt-2">
-        <Wallet size={20} style={{ color: TEAL }} />
-        <h2
-          className="text-lg font-bold"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Blockchain & Wallets
-        </h2>
-      </div>
-
-      <div className="rounded-2xl p-5" style={GLASS}>
-        {walletLoading ? (
-          <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
-          </div>
-        ) : (
-          <form onSubmit={walletForm.handleSubmit(onWalletSubmit)} className="space-y-5">
-
-            {/* Security notice */}
-            <div
-              className="flex gap-3 p-3 rounded-xl"
-              style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}
-            >
-              <ShieldAlert size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.8)" }} />
-              <div className="text-xs" style={{ color: "rgba(251,191,36,0.75)" }}>
-                <strong>Security Notice:</strong> Private keys are stored encrypted in the database. The gas wallet should hold only enough BNB to cover sweep fees. Do not use a wallet with large BNB holdings.
-              </div>
-            </div>
-
-            <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                Master Wallet (receives all user USDT deposits)
-              </h3>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Admin Master Wallet Address (BEP-20)</label>
-              <input
-                type="text"
-                placeholder="0x..."
-                {...walletForm.register("adminMasterWallet")}
-                className={INPUT_CLS}
-                style={INPUT_STYLE}
-              />
-              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>All swept USDT will be sent here.</p>
-            </div>
-
-            <div className="pb-2 pt-1" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                Gas Wallet (pays BNB fees for sweeping)
-              </h3>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Gas Wallet Private Key</label>
-              <div className="relative">
-                <input
-                  type={showGasKey ? "text" : "password"}
-                  placeholder="0x... (private key with BNB for gas)"
-                  {...walletForm.register("gasWalletPrivateKey")}
-                  className={INPUT_CLS + " pr-10"}
-                  style={INPUT_STYLE}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowGasKey(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "rgba(168,237,255,0.4)" }}
-                >
-                  {showGasKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>This wallet's BNB is used to fund deposit addresses before sweeping USDT.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Min Deposit (USDT)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...walletForm.register("minDepositUsdt", { valueAsNumber: true })}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>BSC RPC URL</label>
-                <input
-                  type="text"
-                  placeholder="https://bsc-dataseed.binance.org/"
-                  {...walletForm.register("bscRpcUrl")}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={walletSaving}
-              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{
-                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                color: "#010810",
-                letterSpacing: "0.04em",
-                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
-              }}
-            >
-              <Save size={16} />
-              {walletSaving ? "Saving..." : "Save Wallet Settings"}
-            </button>
-          </form>
-        )}
-      </div>
-
-      {/* Regenerate Deposit Addresses */}
-      <div className="flex items-center gap-3 pt-1">
-        <RefreshCw size={18} style={{ color: TEAL }} />
-        <h2
-          className="text-base font-bold"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Regenerate Deposit Addresses
-        </h2>
-      </div>
-
-      <div className="rounded-2xl p-5 space-y-4" style={GLASS}>
-        {/* Stats row */}
-        {walletStats && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
-              <div className="text-xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.totalWithAddress}</div>
-              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>Users with wallets</div>
-            </div>
-            <div className="p-3 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
-              <div className="text-xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.backupCount}</div>
-              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>Backed-up old keys</div>
-            </div>
-          </div>
-        )}
-
-        <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-          Generates a new independent BEP-20 wallet for every existing user. Each wallet is freshly created (not HD/seed-derived). All old private keys are archived to the backup table before being replaced.
-        </p>
-
-        {/* Confirm prompt */}
-        {!confirmRegen ? (
-          <button
-            type="button"
-            onClick={() => setConfirmRegen(true)}
-            disabled={regenerating}
-            className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-            style={{
-              background: "rgba(248,113,113,0.08)",
-              border: "1px solid rgba(248,113,113,0.35)",
-              color: "rgba(248,113,113,0.9)",
-              letterSpacing: "0.03em",
-            }}
-          >
-            <RefreshCw size={15} />
-            Regenerate All Deposit Addresses
-          </button>
-        ) : (
-          <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}>
-            <div className="flex gap-2 items-start">
-              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.85)" }} />
-              <p className="text-xs font-medium" style={{ color: "rgba(248,113,113,0.85)" }}>
-                This will assign a brand-new wallet address to every user. Old addresses are backed up. Users must use their new address for future deposits. Continue?
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={doRegenerate}
-                disabled={regenerating}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-                style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
-              >
-                {regenerating ? <><RefreshCw size={13} className="animate-spin" /> Regenerating…</> : "Yes, Regenerate"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmRegen(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
-                style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Result */}
-        {regenResult && (
-          <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
-            <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
-            <span className="text-xs" style={{ color: "rgba(52,211,153,0.9)" }}>{regenResult.message}</span>
-          </div>
-        )}
-
-        {/* Old Key Backups Viewer */}
-        <div style={{ borderTop: "1px solid rgba(61,214,245,0.08)", paddingTop: "12px" }}>
-          <button
-            type="button"
-            onClick={() => { setShowBackups(v => !v); if (!showBackups) loadBackups(); }}
-            className="flex items-center gap-2 text-xs font-medium"
-            style={{ color: "rgba(168,237,255,0.5)" }}
-          >
-            <Database size={13} />
-            {showBackups ? "Hide" : "View"} Old Key Backups
-            {walletStats && walletStats.backupCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-xs" style={{ background: "rgba(61,214,245,0.15)", color: TEAL }}>
-                {walletStats.backupCount}
-              </span>
-            )}
-          </button>
-
-          {showBackups && (
-            <div className="mt-3 space-y-2">
-              {backupsLoading ? (
-                <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
-              ) : backups.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.3)" }}>No backups yet</p>
-              ) : (
-                backups.map(b => (
-                  <div
-                    key={b.id}
-                    className="p-3 rounded-xl space-y-1.5"
-                    style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.07)" }}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.6)" }}>User #{b.userId}</span>
-                      <span className="text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.5)" }}>
-                      <span style={{ color: "rgba(168,237,255,0.3)" }}>Addr: </span>{b.oldAddress}
-                    </div>
-                    <div className="text-xs font-mono break-all" style={{ color: "rgba(248,113,113,0.5)" }}>
-                      <span style={{ color: "rgba(168,237,255,0.3)" }}>Key: </span>{b.oldPrivateKey}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
-      </div>
+      </header>
 
-      {/* Withdrawal Settings */}
-      <div className="flex items-center gap-3 pt-2">
-        <ArrowUpRight size={20} style={{ color: TEAL }} />
-        <h2
-          className="text-lg font-bold"
+      {/* Tab Strip — sticky just under the global TopNav (h-14) */}
+      <div
+        className="sticky top-14 z-10 -mx-4 md:mx-0 px-4 md:px-0 pt-2 pb-2 mb-5"
+        style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(10px)" }}
+      >
+        <div
+          className="flex gap-1 overflow-x-auto rounded-2xl p-1.5 scrollbar-none"
           style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            background: "rgba(5,18,32,0.85)",
+            border: "1px solid rgba(61,214,245,0.14)",
+            backdropFilter: "blur(14px)",
           }}
         >
-          Withdrawal Settings
-        </h2>
+          {TABS.map(t => {
+            const isActive = activeTab === t.key;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all"
+                style={
+                  isActive
+                    ? {
+                        background: "linear-gradient(135deg, rgba(61,214,245,0.22), rgba(42,179,215,0.10))",
+                        color: TEAL,
+                        border: `1px solid ${TEAL}60`,
+                        boxShadow: `0 0 12px ${TEAL}30`,
+                      }
+                    : {
+                        color: "rgba(168,237,255,0.55)",
+                        border: "1px solid transparent",
+                      }
+                }
+              >
+                <Icon size={15} style={{ color: isActive ? TEAL : "rgba(168,237,255,0.55)" }} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs mt-2 px-1" style={{ color: "rgba(168,237,255,0.4)" }}>
+          {activeTabMeta.desc}
+        </p>
       </div>
 
-      <div className="rounded-2xl p-5" style={GLASS}>
-        {withdrawalLoading ? (
-          <div className="space-y-3">
-            {[1,2].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
-          </div>
-        ) : (
-          <form onSubmit={withdrawalForm.handleSubmit(onWithdrawalSubmit)} className="space-y-5">
-
-            {/* Security notice */}
-            <div className="flex gap-3 p-3 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}>
-              <ShieldAlert size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.8)" }} />
-              <div className="text-xs" style={{ color: "rgba(251,191,36,0.75)" }}>
-                <strong>Security Notice:</strong> The withdrawal wallet private key is stored in the database. This wallet should hold USDT for payouts. BNB top-ups come from the gas wallet above when balance is low.
-              </div>
+      {/* ============ GENERAL ============ */}
+      {activeTab === "general" && (
+        <SectionCard
+          icon={SlidersHorizontal}
+          title="General Platform"
+          description="Deposit boundaries, hyper coin pricing, master toggles and the launch offer countdown."
+        >
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <SubHeader>Deposit & Pricing</SubHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { label: "Min Deposit (USDT)",      testId: "input-min-deposit",     name: "minDeposit" as const,         type: "number", extra: {} },
+                { label: "Max Deposit (USDT)",      testId: "input-max-deposit",     name: "maxDeposit" as const,         type: "number", extra: {} },
+                { label: "Min HYPERCOIN % (0–100)", testId: "input-hypercoin-pct",   name: "hyperCoinMinPercent" as const, type: "number", extra: { step: "1", min: "0", max: "100" } },
+                { label: "HYPERCOIN Price (USDT)",  testId: "input-hypercoin-price", name: "hyperCoinPrice" as const,      type: "number", extra: { step: "0.0001", min: "0.0001" } },
+                { label: "Spot Referral Rate (%)",  testId: "input-spot-commission", name: "spotReferralRate" as const,    type: "number", extra: { step: "0.01" } },
+              ].map(f => (
+                <div key={f.name}>
+                  <FieldLabel>{f.label}</FieldLabel>
+                  <input
+                    data-testid={f.testId}
+                    type={f.type}
+                    {...f.extra}
+                    {...register(f.name, { valueAsNumber: true })}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+              ))}
             </div>
 
-            {/* Mode toggle */}
-            <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                Processing Mode
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {(["manual", "auto"] as const).map(mode => (
+            <SubHeader>Platform Toggles</SubHeader>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { key: "maintenanceMode" as const,   label: "Maintenance Mode",    desc: "Disable all user logins temporarily" },
+                { key: "launchOfferActive" as const, label: "Launch Offer Active", desc: "Show Singapore trip offer to users" },
+                { key: "withdrawalEnabled" as const, label: "Withdrawals Enabled", desc: "Allow users to submit withdrawal requests" },
+              ].map(item => (
                 <label
-                  key={mode}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    background: withdrawalMode === mode ? "rgba(61,214,245,0.12)" : "rgba(0,15,30,0.5)",
-                    border: `1px solid ${withdrawalMode === mode ? "rgba(61,214,245,0.4)" : "rgba(61,214,245,0.1)"}`,
-                  }}
+                  key={item.key}
+                  htmlFor={`toggle-${item.key}`}
+                  className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                  style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.10)" }}
                 >
                   <input
-                    type="radio"
-                    value={mode}
-                    {...withdrawalForm.register("withdrawalMode")}
-                    className="sr-only"
+                    id={`toggle-${item.key}`}
+                    type="checkbox"
+                    data-testid={`toggle-${item.key}`}
+                    {...register(item.key)}
+                    className="w-4 h-4 mt-0.5"
+                    style={{ accentColor: TEAL }}
                   />
-                  <div className="text-sm font-bold capitalize" style={{ color: withdrawalMode === mode ? TEAL : "rgba(168,237,255,0.5)" }}>
-                    {mode}
-                  </div>
-                  <div className="text-xs text-center" style={{ color: "rgba(168,237,255,0.35)" }}>
-                    {mode === "manual" ? "Admin approves each request" : "On-chain send on submit"}
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.85)" }}>{item.label}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>{item.desc}</div>
                   </div>
                 </label>
               ))}
             </div>
 
-            {withdrawalMode === "auto" && (
-              <div className="flex gap-2 p-3 rounded-xl" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.14)" }}>
-                <div className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-                  In <strong style={{ color: TEAL }}>Auto</strong> mode, USDT is sent on-chain immediately when a user submits a withdrawal request. Make sure the withdrawal wallet has sufficient USDT balance.
-                </div>
-              </div>
-            )}
-
-            {/* Withdrawal Wallet Key */}
-            <div className="pb-2 pt-1" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                Withdrawal Wallet (sends USDT to users)
-              </h3>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Withdrawal Wallet Private Key</label>
-              <div className="relative">
+            <SubHeader>Launch Offer Countdown</SubHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+              <div>
+                <FieldLabel>End Date &amp; Time</FieldLabel>
                 <input
-                  type={showWithdrawKey ? "text" : "password"}
-                  placeholder="0x... (private key of wallet holding USDT for payouts)"
-                  {...withdrawalForm.register("withdrawWalletPrivateKey")}
-                  className={INPUT_CLS + " pr-10"}
+                  type="datetime-local"
+                  {...register("launchOfferEndDate")}
+                  className={INPUT_CLS}
                   style={INPUT_STYLE}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawKey(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "rgba(168,237,255,0.4)" }}
-                >
-                  {showWithdrawKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+                <FieldHint>Shown as a countdown on users&apos; dashboards. Leave blank for no deadline.</FieldHint>
               </div>
-              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>
-                This wallet sends USDT to users. If its BNB runs low, the gas wallet tops it up automatically.
-              </p>
             </div>
 
-            <button
-              type="submit"
-              disabled={withdrawalSaving}
-              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{
-                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                color: "#010810",
-                letterSpacing: "0.04em",
-                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
-              }}
-            >
-              <Save size={16} />
-              {withdrawalSaving ? "Saving..." : "Save Withdrawal Settings"}
-            </button>
+            <div className="pt-2 flex justify-end">
+              <SaveButton pending={updateSettings.isPending} label="Save General Settings" />
+            </div>
           </form>
-        )}
-      </div>
+        </SectionCard>
+      )}
 
-      {/* Income Settings */}
-      <div className="flex items-center gap-3 pt-2">
-        <TrendingUp size={20} style={{ color: TEAL }} />
-        <h2
-          className="text-lg font-bold"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
+      {/* ============ BLOCKCHAIN ============ */}
+      {activeTab === "blockchain" && (
+        <SectionCard
+          icon={Wallet}
+          title="Blockchain & Wallets"
+          description="Master wallet for sweeping USDT, gas wallet for paying BSC fees, RPC endpoint and the on-chain minimum deposit."
         >
-          Income Settings
-        </h2>
-      </div>
-
-      <div className="rounded-2xl p-5" style={GLASS}>
-        {incomeLoading ? (
-          <div className="space-y-3">
-            {[1,2,3,4].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
-          </div>
-        ) : (
-          <form onSubmit={incomeForm.handleSubmit(onIncomeSubmit)} className="space-y-6">
-
-            {/* Spot Referral */}
-            <div>
-              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Spot Referral Commission</h3>
+          {walletLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4].map(i => <div key={i} className="h-11 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+            </div>
+          ) : (
+            <form onSubmit={walletForm.handleSubmit(onWalletSubmit)} className="space-y-6">
+              {/* Security notice */}
+              <div className="flex gap-3 p-3.5 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
+                <ShieldAlert size={16} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.85)" }} />
+                <div className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.8)" }}>
+                  <strong>Security Notice:</strong> Private keys are stored encrypted in the database. The gas wallet should hold only enough BNB to cover sweep fees. Do not use a wallet with large BNB holdings.
+                </div>
               </div>
+
+              <SubHeader hint="All swept USDT will be sent here.">Master Wallet — receives all user USDT deposits</SubHeader>
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Rate (%) — paid to sponsor when referral invests</label>
-                <input
-                  type="number" step="0.1" min="0" max="100"
-                  {...incomeForm.register("spotReferralRate", { valueAsNumber: true })}
-                  className={INPUT_CLS} style={INPUT_STYLE}
-                />
-              </div>
-            </div>
-
-            {/* Investment Tier Daily Rates */}
-            <div>
-              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Daily Return Rates per Tier</h3>
-              </div>
-              <div className="grid grid-cols-3 gap-3 mb-3">
-                {([
-                  { label: "Tier 1 Rate (%)", name: "tier1DailyRate" as const, hint: "$100–$400" },
-                  { label: "Tier 2 Rate (%)", name: "tier2DailyRate" as const, hint: "$500–$900" },
-                  { label: "Tier 3 Rate (%)", name: "tier3DailyRate" as const, hint: "$1000–$1500" },
-                ]).map(f => (
-                  <div key={f.name}>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>{f.label}</label>
-                    <input type="number" step="0.01" min="0" max="100"
-                      {...incomeForm.register(f.name, { valueAsNumber: true })}
-                      className={INPUT_CLS} style={INPUT_STYLE}
-                    />
-                    <span className="text-xs mt-0.5 block" style={{ color: "rgba(168,237,255,0.3)" }}>{f.hint}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {([
-                  { label: "Tier 1 Days", name: "tier1Days" as const },
-                  { label: "Tier 2 Days", name: "tier2Days" as const },
-                  { label: "Tier 3 Days", name: "tier3Days" as const },
-                ]).map(f => (
-                  <div key={f.name}>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>{f.label}</label>
-                    <input type="number" min="1"
-                      {...incomeForm.register(f.name, { valueAsNumber: true })}
-                      className={INPUT_CLS} style={INPUT_STYLE}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Level Commission Rates */}
-            <div>
-              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Level Commission Rates (%)</h3>
-                <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>% of the investor's daily return credited to each upline level</p>
-              </div>
-              <div className="grid grid-cols-4 gap-3">
-                {([1,2,3,4,5,6,7,8] as const).map(lvl => (
-                  <div key={lvl}>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>L{lvl}</label>
-                    <input type="number" step="0.1" min="0" max="100"
-                      {...incomeForm.register(`levelCommL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
-                      className={INPUT_CLS} style={INPUT_STYLE}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Level Unlock Thresholds */}
-            <div>
-              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Level Unlock Thresholds ($)</h3>
-                <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>Total earnings required to unlock each level (L1 is always unlocked)</p>
-              </div>
-              <div className="grid grid-cols-4 gap-3">
-                <div className="p-2.5 rounded-xl flex flex-col items-center justify-center" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }}>
-                  <span className="text-xs font-bold" style={{ color: TEAL }}>L1</span>
-                  <span className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>Always</span>
-                </div>
-                {([2,3,4,5,6,7,8] as const).map(lvl => (
-                  <div key={lvl}>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>L{lvl} ($)</label>
-                    <input type="number" min="0"
-                      {...incomeForm.register(`levelUnlockL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
-                      className={INPUT_CLS} style={INPUT_STYLE}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={incomeSaving}
-              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{
-                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                color: "#010810",
-                letterSpacing: "0.04em",
-                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
-              }}
-            >
-              <Save size={16} />
-              {incomeSaving ? "Saving..." : "Save Income Settings"}
-            </button>
-          </form>
-        )}
-      </div>
-
-      {/* SMTP Settings */}
-      <div className="flex items-center gap-3 pt-2">
-        <Mail size={20} style={{ color: TEAL }} />
-        <h2
-          className="text-lg font-bold"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Email & SMTP
-        </h2>
-      </div>
-
-      <div className="rounded-2xl p-5" style={GLASS}>
-        {smtpLoading ? (
-          <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
-          </div>
-        ) : (
-          <form onSubmit={smtpForm.handleSubmit(onSmtpSubmit)} className="space-y-5">
-
-            {/* Global SMTP Toggle */}
-            <div
-              className="flex items-center justify-between p-4 rounded-xl"
-              style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)" }}
-            >
-              <div>
-                <div className="text-sm font-bold" style={{ color: "rgba(168,237,255,0.9)" }}>SMTP Enabled</div>
-                <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>
-                  Master switch — must be ON for any email to send
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only" {...smtpForm.register("smtpEnabled")} />
-                <div
-                  className="w-11 h-6 rounded-full transition-colors"
-                  style={{
-                    background: smtpEnabled ? TEAL : "rgba(61,214,245,0.15)",
-                    border: `1px solid ${smtpEnabled ? TEAL : "rgba(61,214,245,0.25)"}`,
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    className="absolute top-0.5 w-5 h-5 rounded-full transition-transform"
-                    style={{
-                      left: smtpEnabled ? "calc(100% - 22px)" : "2px",
-                      background: smtpEnabled ? "#010810" : "rgba(168,237,255,0.4)",
-                    }}
-                  />
-                </div>
-              </label>
-            </div>
-
-            {/* SMTP Credentials */}
-            <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                SMTP Credentials
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 sm:col-span-1">
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>SMTP Host</label>
+                <FieldLabel>Admin Master Wallet Address (BEP-20)</FieldLabel>
                 <input
                   type="text"
-                  placeholder="smtp.gmail.com"
-                  {...smtpForm.register("smtpHost")}
-                  className={INPUT_CLS}
+                  placeholder="0x..."
+                  {...walletForm.register("adminMasterWallet")}
+                  className={INPUT_CLS + " font-mono"}
                   style={INPUT_STYLE}
                 />
               </div>
+
+              <SubHeader hint="This wallet's BNB is used to fund deposit addresses before sweeping USDT.">Gas Wallet — pays BNB fees for sweeping</SubHeader>
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Port</label>
-                <input
-                  type="number"
-                  placeholder="587"
-                  {...smtpForm.register("smtpPort", { valueAsNumber: true })}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>SMTP Username</label>
-                <input
-                  type="text"
-                  placeholder="you@gmail.com"
-                  {...smtpForm.register("smtpUser")}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Password / App Key</label>
+                <FieldLabel>Gas Wallet Private Key</FieldLabel>
                 <div className="relative">
                   <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    {...smtpForm.register("smtpPassword")}
-                    className={INPUT_CLS + " pr-10"}
+                    type={showGasKey ? "text" : "password"}
+                    placeholder="0x... (private key with BNB for gas)"
+                    {...walletForm.register("gasWalletPrivateKey")}
+                    className={INPUT_CLS + " pr-10 font-mono"}
                     style={INPUT_STYLE}
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(v => !v)}
+                    onClick={() => setShowGasKey(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ color: "rgba(168,237,255,0.4)" }}
+                    style={{ color: "rgba(168,237,255,0.5)" }}
+                    aria-label={showGasKey ? "Hide key" : "Show key"}
                   >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showGasKey ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>From Email</label>
-                <input
-                  type="email"
-                  placeholder="noreply@uranaz.com"
-                  {...smtpForm.register("smtpFrom")}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>From Name</label>
-                <input
-                  type="text"
-                  placeholder="URANAZ TRADES"
-                  {...smtpForm.register("smtpFromName")}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-              </div>
-            </div>
 
-            {/* Email Feature Toggles */}
-            <div className="pb-2 pt-1" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
-              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
-                Email Features
-              </h3>
-            </div>
+              <SubHeader>Network</SubHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel>Min Deposit (USDT)</FieldLabel>
+                  <input
+                    type="number" step="0.01" min="0"
+                    {...walletForm.register("minDepositUsdt", { valueAsNumber: true })}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>BSC RPC URL</FieldLabel>
+                  <input
+                    type="text"
+                    placeholder="https://bsc-dataseed.binance.org/"
+                    {...walletForm.register("bscRpcUrl")}
+                    className={INPUT_CLS + " font-mono"}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+              </div>
 
+              <div className="pt-2 flex justify-end">
+                <SaveButton pending={walletSaving} label="Save Wallet Settings" />
+              </div>
+            </form>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ============ WITHDRAWALS ============ */}
+      {activeTab === "withdrawals" && (
+        <SectionCard
+          icon={ArrowUpRight}
+          title="Withdrawal Settings"
+          description="Choose how user payouts are processed and which wallet sends USDT to users."
+        >
+          {withdrawalLoading ? (
             <div className="space-y-3">
-              {[
-                {
-                  key: "otpRegistrationEnabled" as const,
-                  label: "OTP on Registration",
-                  desc: "Send email OTP to verify new accounts before they're created",
-                },
-                {
-                  key: "otpWithdrawalEnabled" as const,
-                  label: "OTP on Withdrawal",
-                  desc: "Require email OTP verification before processing withdrawal requests",
-                },
-                {
-                  key: "otpWalletUpdateEnabled" as const,
-                  label: "OTP on Wallet Address Change",
-                  desc: "Require email OTP when a user updates their withdrawal wallet address",
-                },
-                {
-                  key: "depositConfirmationEnabled" as const,
-                  label: "Deposit Confirmation Email",
-                  desc: "Send a confirmation email when a new investment is activated",
-                },
-              ].map(item => {
-                const val = smtpForm.watch(item.key);
-                return (
-                  <div
-                    key={item.key}
-                    className="flex items-center justify-between p-3 rounded-xl"
-                    style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.08)" }}
-                  >
-                    <div className="flex-1 pr-3">
-                      <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.8)" }}>{item.label}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>{item.desc}</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                      <input type="checkbox" className="sr-only" {...smtpForm.register(item.key)} />
-                      <div
-                        className="w-10 h-5 rounded-full transition-colors"
-                        style={{
-                          background: val ? TEAL : "rgba(61,214,245,0.12)",
-                          border: `1px solid ${val ? TEAL : "rgba(61,214,245,0.20)"}`,
-                          position: "relative",
-                        }}
-                      >
-                        <div
-                          className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
-                          style={{
-                            left: val ? "calc(100% - 18px)" : "2px",
-                            background: val ? "#010810" : "rgba(168,237,255,0.35)",
-                          }}
-                        />
-                      </div>
-                    </label>
-                  </div>
-                );
-              })}
+              {[1,2].map(i => <div key={i} className="h-11 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
             </div>
+          ) : (
+            <form onSubmit={withdrawalForm.handleSubmit(onWithdrawalSubmit)} className="space-y-6">
+              <div className="flex gap-3 p-3.5 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
+                <ShieldAlert size={16} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.85)" }} />
+                <div className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.8)" }}>
+                  <strong>Security Notice:</strong> The withdrawal wallet private key is stored in the database. This wallet should hold USDT for payouts. BNB top-ups come from the gas wallet above when balance is low.
+                </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={smtpSaving}
-              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{
-                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                color: "#010810",
-                letterSpacing: "0.04em",
-                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
-              }}
-            >
-              <Save size={16} />
-              {smtpSaving ? "Saving..." : "Save SMTP Settings"}
-            </button>
-          </form>
-        )}
-      </div>
+              <SubHeader>Processing Mode</SubHeader>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(["manual", "auto"] as const).map(mode => (
+                  <label
+                    key={mode}
+                    className="flex flex-col items-center justify-center gap-2 p-5 rounded-xl cursor-pointer transition-all"
+                    style={{
+                      background: withdrawalMode === mode ? "rgba(61,214,245,0.14)" : "rgba(0,15,30,0.5)",
+                      border: `1px solid ${withdrawalMode === mode ? "rgba(61,214,245,0.5)" : "rgba(61,214,245,0.10)"}`,
+                      boxShadow: withdrawalMode === mode ? "0 0 16px rgba(61,214,245,0.18)" : "none",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      value={mode}
+                      {...withdrawalForm.register("withdrawalMode")}
+                      className="sr-only"
+                    />
+                    <div className="text-base font-bold capitalize" style={{ color: withdrawalMode === mode ? TEAL : "rgba(168,237,255,0.6)" }}>
+                      {mode}
+                    </div>
+                    <div className="text-xs text-center" style={{ color: "rgba(168,237,255,0.4)" }}>
+                      {mode === "manual" ? "Admin approves each request" : "On-chain send on submit"}
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {withdrawalMode === "auto" && (
+                <div className="flex gap-2 p-3 rounded-xl" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)" }}>
+                  <div className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.6)" }}>
+                    In <strong style={{ color: TEAL }}>Auto</strong> mode, USDT is sent on-chain immediately when a user submits a withdrawal request. Make sure the withdrawal wallet has sufficient USDT balance.
+                  </div>
+                </div>
+              )}
+
+              <SubHeader hint="If its BNB runs low, the gas wallet tops it up automatically.">Withdrawal Wallet — sends USDT to users</SubHeader>
+              <div>
+                <FieldLabel>Withdrawal Wallet Private Key</FieldLabel>
+                <div className="relative">
+                  <input
+                    type={showWithdrawKey ? "text" : "password"}
+                    placeholder="0x... (private key of wallet holding USDT for payouts)"
+                    {...withdrawalForm.register("withdrawWalletPrivateKey")}
+                    className={INPUT_CLS + " pr-10 font-mono"}
+                    style={INPUT_STYLE}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowWithdrawKey(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "rgba(168,237,255,0.5)" }}
+                    aria-label={showWithdrawKey ? "Hide key" : "Show key"}
+                  >
+                    {showWithdrawKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <SaveButton pending={withdrawalSaving} label="Save Withdrawal Settings" />
+              </div>
+            </form>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ============ INCOME ============ */}
+      {activeTab === "income" && (
+        <SectionCard
+          icon={TrendingUp}
+          title="Income Settings"
+          description="Spot referral, daily tier rates, level commission percentages and the unlock thresholds for each level."
+        >
+          {incomeLoading ? (
+            <div className="space-y-3">
+              {[1,2,3,4].map(i => <div key={i} className="h-11 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+            </div>
+          ) : (
+            <form onSubmit={incomeForm.handleSubmit(onIncomeSubmit)} className="space-y-7">
+              {/* Spot Referral */}
+              <div>
+                <SubHeader hint="Paid to the sponsor when their referral makes an investment.">
+                  <span className="inline-flex items-center gap-1.5"><BadgeDollarSign size={12} />Spot Referral Commission</span>
+                </SubHeader>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <FieldLabel>Rate (%)</FieldLabel>
+                    <input
+                      type="number" step="0.1" min="0" max="100"
+                      {...incomeForm.register("spotReferralRate", { valueAsNumber: true })}
+                      className={INPUT_CLS} style={INPUT_STYLE}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tier Daily Rates */}
+              <div>
+                <SubHeader>
+                  <span className="inline-flex items-center gap-1.5"><Coins size={12} />Daily Return Rates per Tier</span>
+                </SubHeader>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 mb-4">
+                  {([
+                    { label: "Tier 1 Rate (%)", name: "tier1DailyRate" as const, hint: "$100–$400" },
+                    { label: "Tier 2 Rate (%)", name: "tier2DailyRate" as const, hint: "$500–$900" },
+                    { label: "Tier 3 Rate (%)", name: "tier3DailyRate" as const, hint: "$1000–$1500" },
+                  ]).map(f => (
+                    <div key={f.name}>
+                      <FieldLabel>{f.label}</FieldLabel>
+                      <input type="number" step="0.01" min="0" max="100"
+                        {...incomeForm.register(f.name, { valueAsNumber: true })}
+                        className={INPUT_CLS} style={INPUT_STYLE}
+                      />
+                      <FieldHint>{f.hint}</FieldHint>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {([
+                    { label: "Tier 1 Days", name: "tier1Days" as const },
+                    { label: "Tier 2 Days", name: "tier2Days" as const },
+                    { label: "Tier 3 Days", name: "tier3Days" as const },
+                  ]).map(f => (
+                    <div key={f.name}>
+                      <FieldLabel>{f.label}</FieldLabel>
+                      <input type="number" min="1"
+                        {...incomeForm.register(f.name, { valueAsNumber: true })}
+                        className={INPUT_CLS} style={INPUT_STYLE}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Level Commission Rates */}
+              <div>
+                <SubHeader hint="% of the investor's daily return credited to each upline level">
+                  <span className="inline-flex items-center gap-1.5"><Layers size={12} />Level Commission Rates (%)</span>
+                </SubHeader>
+                <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mt-3">
+                  {([1,2,3,4,5,6,7,8] as const).map(lvl => (
+                    <div key={lvl}>
+                      <FieldLabel>L{lvl}</FieldLabel>
+                      <input type="number" step="0.1" min="0" max="100"
+                        {...incomeForm.register(`levelCommL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
+                        className={INPUT_CLS + " text-center"} style={INPUT_STYLE}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Level Unlock Thresholds */}
+              <div>
+                <SubHeader hint="Total earnings required to unlock each level (L1 is always unlocked)">
+                  <span className="inline-flex items-center gap-1.5"><Layers size={12} />Level Unlock Thresholds ($)</span>
+                </SubHeader>
+                <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mt-3">
+                  <div className="p-2.5 rounded-xl flex flex-col items-center justify-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.15)" }}>
+                    <span className="text-xs font-bold" style={{ color: TEAL }}>L1</span>
+                    <span className="text-[11px] mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>Always</span>
+                  </div>
+                  {([2,3,4,5,6,7,8] as const).map(lvl => (
+                    <div key={lvl}>
+                      <FieldLabel>L{lvl} ($)</FieldLabel>
+                      <input type="number" min="0"
+                        {...incomeForm.register(`levelUnlockL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
+                        className={INPUT_CLS + " text-center"} style={INPUT_STYLE}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <SaveButton pending={incomeSaving} label="Save Income Settings" />
+              </div>
+            </form>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ============ EMAIL & SMTP ============ */}
+      {activeTab === "email" && (
+        <SectionCard
+          icon={Mail}
+          title="Email & SMTP"
+          description="Connect your SMTP provider and choose which user actions trigger email OTPs and confirmations."
+        >
+          {smtpLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-11 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+            </div>
+          ) : (
+            <form onSubmit={smtpForm.handleSubmit(onSmtpSubmit)} className="space-y-6">
+              {/* Global SMTP Toggle */}
+              <div
+                className="flex items-center justify-between gap-4 p-4 rounded-xl"
+                style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.20)" }}
+              >
+                <div>
+                  <div className="text-sm font-bold" style={{ color: "rgba(168,237,255,0.95)" }}>SMTP Enabled</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.5)" }}>
+                    Master switch — must be ON for any email to send
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input type="checkbox" className="sr-only" {...smtpForm.register("smtpEnabled")} />
+                  <div
+                    className="w-11 h-6 rounded-full transition-colors"
+                    style={{
+                      background: smtpEnabled ? TEAL : "rgba(61,214,245,0.15)",
+                      border: `1px solid ${smtpEnabled ? TEAL : "rgba(61,214,245,0.25)"}`,
+                      position: "relative",
+                    }}
+                  >
+                    <div
+                      className="absolute top-0.5 w-5 h-5 rounded-full transition-transform"
+                      style={{
+                        left: smtpEnabled ? "calc(100% - 22px)" : "2px",
+                        background: smtpEnabled ? "#010810" : "rgba(168,237,255,0.4)",
+                      }}
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <SubHeader>SMTP Credentials</SubHeader>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2">
+                  <FieldLabel>SMTP Host</FieldLabel>
+                  <input
+                    type="text"
+                    placeholder="smtp.gmail.com"
+                    {...smtpForm.register("smtpHost")}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Port</FieldLabel>
+                  <input
+                    type="number"
+                    placeholder="587"
+                    {...smtpForm.register("smtpPort", { valueAsNumber: true })}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>SMTP Username</FieldLabel>
+                  <input
+                    type="text"
+                    placeholder="you@gmail.com"
+                    {...smtpForm.register("smtpUser")}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Password / App Key</FieldLabel>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...smtpForm.register("smtpPassword")}
+                      className={INPUT_CLS + " pr-10"}
+                      style={INPUT_STYLE}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: "rgba(168,237,255,0.5)" }}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <FieldLabel>From Email</FieldLabel>
+                  <input
+                    type="email"
+                    placeholder="noreply@uranaz.com"
+                    {...smtpForm.register("smtpFrom")}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>From Name</FieldLabel>
+                  <input
+                    type="text"
+                    placeholder="URANAZ TRADES"
+                    {...smtpForm.register("smtpFromName")}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+              </div>
+
+              <SubHeader>Email Features</SubHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { key: "otpRegistrationEnabled" as const,   label: "OTP on Registration",         desc: "Send email OTP to verify new accounts before they're created" },
+                  { key: "otpWithdrawalEnabled" as const,     label: "OTP on Withdrawal",           desc: "Require email OTP verification before processing withdrawal requests" },
+                  { key: "otpWalletUpdateEnabled" as const,   label: "OTP on Wallet Address Change", desc: "Require email OTP when a user updates their withdrawal wallet address" },
+                  { key: "depositConfirmationEnabled" as const, label: "Deposit Confirmation Email", desc: "Send a confirmation email when a new investment is activated" },
+                ].map(item => {
+                  const val = smtpForm.watch(item.key);
+                  return (
+                    <div
+                      key={item.key}
+                      className="flex items-center justify-between gap-4 p-3.5 rounded-xl"
+                      style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.10)" }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.85)" }}>{item.label}</div>
+                        <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>{item.desc}</div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" className="sr-only" {...smtpForm.register(item.key)} />
+                        <div
+                          className="w-10 h-5 rounded-full transition-colors"
+                          style={{
+                            background: val ? TEAL : "rgba(61,214,245,0.12)",
+                            border: `1px solid ${val ? TEAL : "rgba(61,214,245,0.20)"}`,
+                            position: "relative",
+                          }}
+                        >
+                          <div
+                            className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
+                            style={{
+                              left: val ? "calc(100% - 18px)" : "2px",
+                              background: val ? "#010810" : "rgba(168,237,255,0.35)",
+                            }}
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <SaveButton pending={smtpSaving} label="Save SMTP Settings" />
+              </div>
+            </form>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ============ MAINTENANCE ============ */}
+      {activeTab === "maintenance" && (
+        <SectionCard
+          icon={RefreshCw}
+          title="Wallet Maintenance"
+          description="Regenerate every user deposit address and review the archived backup keys. Use with caution — this is a destructive operation."
+          accent="#f87171"
+        >
+          <div className="space-y-5">
+            {/* Stats row */}
+            {walletStats && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.14)" }}>
+                  <div className="text-2xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.totalWithAddress}</div>
+                  <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.5)" }}>Users with wallets</div>
+                </div>
+                <div className="p-4 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.14)" }}>
+                  <div className="text-2xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.backupCount}</div>
+                  <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.5)" }}>Backed-up old keys</div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.55)" }}>
+              Generates a new independent BEP-20 wallet for every existing user. Each wallet is freshly created (not HD/seed-derived). All old private keys are archived to the backup table before being replaced.
+            </p>
+
+            {/* Confirm prompt */}
+            {!confirmRegen ? (
+              <button
+                type="button"
+                onClick={() => setConfirmRegen(true)}
+                disabled={regenerating}
+                className="w-full md:w-auto md:px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{
+                  background: "rgba(248,113,113,0.10)",
+                  border: "1px solid rgba(248,113,113,0.40)",
+                  color: "rgba(248,113,113,0.95)",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                <RefreshCw size={15} />
+                Regenerate All Deposit Addresses
+              </button>
+            ) : (
+              <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.35)" }}>
+                <div className="flex gap-2 items-start">
+                  <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.9)" }} />
+                  <p className="text-xs font-medium leading-relaxed" style={{ color: "rgba(248,113,113,0.9)" }}>
+                    This will assign a brand-new wallet address to every user. Old addresses are backed up. Users must use their new address for future deposits. Continue?
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={doRegenerate}
+                    disabled={regenerating}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                    style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+                  >
+                    {regenerating ? <><RefreshCw size={13} className="animate-spin" /> Regenerating…</> : "Yes, Regenerate"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRegen(false)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Result */}
+            {regenResult && (
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
+                <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+                <span className="text-xs" style={{ color: "rgba(52,211,153,0.9)" }}>{regenResult.message}</span>
+              </div>
+            )}
+
+            {/* Old Key Backups Viewer */}
+            <div style={{ borderTop: "1px solid rgba(61,214,245,0.10)", paddingTop: "16px" }}>
+              <button
+                type="button"
+                onClick={() => { setShowBackups(v => !v); if (!showBackups) loadBackups(); }}
+                className="flex items-center gap-2 text-xs font-medium"
+                style={{ color: "rgba(168,237,255,0.6)" }}
+              >
+                <Database size={13} />
+                {showBackups ? "Hide" : "View"} Old Key Backups
+                {walletStats && walletStats.backupCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-xs" style={{ background: "rgba(61,214,245,0.15)", color: TEAL }}>
+                    {walletStats.backupCount}
+                  </span>
+                )}
+              </button>
+
+              {showBackups && (
+                <div className="mt-4 space-y-2">
+                  {backupsLoading ? (
+                    <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
+                  ) : backups.length === 0 ? (
+                    <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.4)" }}>No backups yet</p>
+                  ) : (
+                    backups.map(b => (
+                      <div
+                        key={b.id}
+                        className="p-3 rounded-xl space-y-1.5"
+                        style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.10)" }}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>User #{b.userId}</span>
+                          <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.55)" }}>
+                          <span style={{ color: "rgba(168,237,255,0.4)" }}>Addr: </span>{b.oldAddress}
+                        </div>
+                        <div className="text-xs font-mono break-all" style={{ color: "rgba(248,113,113,0.55)" }}>
+                          <span style={{ color: "rgba(168,237,255,0.4)" }}>Key: </span>{b.oldPrivateKey}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </SectionCard>
+      )}
     </div>
   );
 }
