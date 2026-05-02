@@ -28,7 +28,7 @@ lib/
 ### User Pages
 - `/` — Landing page
 - `/login` — Login form
-- `/register` — Registration with referral code + OTP support
+- `/register` — Registration with referral code + OTP support. **First-user rule**: if the platform has zero users, the first registrant is auto-promoted to admin (`isAdmin = true`) and the referral code field is hidden + skipped. Once any user exists, the referral code becomes mandatory and the sponsor must resolve to an existing user (server returns 400 otherwise). Public endpoint `GET /api/auth/registration-info` returns `{ userCount, isFirstUser, requiresReferral }` and is used by the frontend to switch the Zod schema and UI between the two modes.
 - `/profile-setup` — Wallet address + country setup
 - `/dashboard` — Balance, active investments, income breakdown, quick links
 - `/deposit` — BEP-20 USDT deposit: unique wallet address, QR code, "Check Deposit" sweeper

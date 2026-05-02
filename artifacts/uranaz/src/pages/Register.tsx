@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,15 +8,28 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, ShieldCheck } from "lucide-react";
 
-const schema = z.object({
-  name: z.string().min(2, "Full name required"),
-  email: z.string().email("Valid email required"),
-  phone: z.string().min(7, "Phone required"),
-  password: z.string().min(6, "Min 6 characters"),
-  referralCode: z.string().optional(),
-});
+function buildSchema(requireReferral: boolean) {
+  return z.object({
+    name: z.string().min(2, "Full name required"),
+    email: z.string().email("Valid email required"),
+    phone: z.string().min(7, "Phone required"),
+    password: z.string().min(6, "Min 6 characters"),
+    referralCode: requireReferral
+      ? z.string().trim().min(1, "Referral code is required")
+      : z.string().optional(),
+  });
+}
+type RegisterValues = z.infer<ReturnType<typeof buildSchema>>;
+
+type RegistrationInfo = { userCount: number; isFirstUser: boolean; requiresReferral: boolean };
+
+async function fetchRegistrationInfo(): Promise<RegistrationInfo> {
+  const res = await fetch("/api/auth/registration-info");
+  if (!res.ok) throw new Error("Failed to load registration info");
+  return res.json();
+}
 
 interface Props { onLogin: (user: any) => void; }
 
@@ -53,14 +66,25 @@ export default function Register({ onLogin }: Props) {
   const [step, setStep] = useState<"form" | "otp">("form");
   const [otp, setOtp] = useState("");
   const [sending, setSending] = useState(false);
-  const [formData, setFormData] = useState<z.infer<typeof schema> | null>(null);
+  const [formData, setFormData] = useState<RegisterValues | null>(null);
+  const [regInfo, setRegInfo] = useState<RegistrationInfo | null>(null);
 
-  const form = useForm({
+  useEffect(() => {
+    fetchRegistrationInfo()
+      .then(setRegInfo)
+      .catch(() => setRegInfo({ userCount: 1, isFirstUser: false, requiresReferral: true }));
+  }, []);
+
+  const requireReferral = regInfo?.requiresReferral ?? true;
+  const isFirstUser = regInfo?.isFirstUser ?? false;
+  const schema = buildSchema(requireReferral);
+
+  const form = useForm<RegisterValues>({
     resolver: zodResolver(schema),
     defaultValues: { name: "", email: "", phone: "", password: "", referralCode: ref },
   });
 
-  const handleFormSubmit = async (data: z.infer<typeof schema>) => {
+  const handleFormSubmit = async (data: RegisterValues) => {
     try {
       const { registrationOtp } = await checkOtpRequired();
       if (registrationOtp) {
@@ -155,13 +179,34 @@ export default function Register({ onLogin }: Props) {
           {step === "form" ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+                {isFirstUser && (
+                  <div
+                    data-testid="banner-first-admin"
+                    className="flex items-start gap-3 p-3 rounded-xl"
+                    style={{
+                      background: "rgba(61,214,245,0.08)",
+                      border: "1px solid rgba(61,214,245,0.25)",
+                    }}
+                  >
+                    <ShieldCheck size={18} style={{ color: TEAL, flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <div className="text-xs font-semibold" style={{ color: TEAL, letterSpacing: "0.04em" }}>
+                        FIRST ACCOUNT — ADMIN ACCESS
+                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.65)" }}>
+                        You are the first user on this platform. This account will be created as the
+                        admin and a referral code is not required.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {[
-                  { name: "name" as const,         label: "Full Name",                testId: "input-name",     type: "text",     placeholder: "Your full name" },
-                  { name: "email" as const,        label: "Email Address",            testId: "input-email",    type: "email",    placeholder: "you@example.com" },
-                  { name: "phone" as const,        label: "Phone Number",             testId: "input-phone",    type: "tel",      placeholder: "+65 8123 4567" },
-                  { name: "password" as const,     label: "Password",                 testId: "input-password", type: "password", placeholder: "Min 6 characters" },
-                  { name: "referralCode" as const, label: "Referral Code (Optional)", testId: "input-referral", type: "text",     placeholder: "Enter referral code" },
-                ].map(f => (
+                  { name: "name" as const,         label: "Full Name",                                                testId: "input-name",     type: "text",     placeholder: "Your full name",        show: true },
+                  { name: "email" as const,        label: "Email Address",                                            testId: "input-email",    type: "email",    placeholder: "you@example.com",       show: true },
+                  { name: "phone" as const,        label: "Phone Number",                                             testId: "input-phone",    type: "tel",      placeholder: "+65 8123 4567",         show: true },
+                  { name: "password" as const,     label: "Password",                                                 testId: "input-password", type: "password", placeholder: "Min 6 characters",      show: true },
+                  { name: "referralCode" as const, label: requireReferral ? "Referral Code" : "Referral Code (Optional)", testId: "input-referral", type: "text",     placeholder: "Enter referral code",   show: !isFirstUser },
+                ].filter(f => f.show).map(f => (
                   <FormField key={f.name} control={form.control} name={f.name} render={({ field }) => (
                     <FormItem>
                       <FormLabel style={LABEL_STYLE}>{f.label}</FormLabel>

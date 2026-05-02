@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, otpCodesTable, walletAddressChangesTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
@@ -53,6 +53,21 @@ router.get("/auth/otp-required", async (_req, res) => {
   const withdrawalOtp = await isOtpWithdrawalEnabled();
   const walletUpdateOtp = await isOtpWalletUpdateEnabled();
   res.json({ registrationOtp, withdrawalOtp, walletUpdateOtp });
+});
+
+// GET /api/auth/registration-info
+// Public endpoint used by the Register page to know whether this signup is the
+// first one on the platform (which auto-promotes the user to admin and skips
+// the referral requirement) or a regular signup (where a referral code is
+// mandatory).
+router.get("/auth/registration-info", async (_req, res) => {
+  const [{ value }] = await db.select({ value: count() }).from(usersTable);
+  const userCount = Number(value ?? 0);
+  res.json({
+    userCount,
+    isFirstUser: userCount === 0,
+    requiresReferral: userCount > 0,
+  });
 });
 
 // POST /api/auth/send-otp
@@ -113,31 +128,82 @@ router.post("/auth/register", async (req, res) => {
     await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
   }
 
-  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (existing) {
-    res.status(409).json({ message: "Email already registered" });
+  // Generate the referral code for the new user OUTSIDE the transaction.
+  // Doing it here keeps the locked critical section short and avoids holding
+  // the advisory lock while doing extra reads.
+  const referralCodeGenerated = await generateUniqueReferralCode();
+
+  // Atomic registration:
+  // - Acquire a transaction-scoped Postgres advisory lock keyed to a fixed
+  //   value so only one /auth/register can execute the count+insert critical
+  //   section at a time. This eliminates the TOCTOU race where two concurrent
+  //   requests could both observe userCount === 0 and both be promoted to
+  //   admin.
+  // - Inside the lock we re-check email uniqueness, re-count users (to
+  //   determine first-user status), validate the referral code, and insert
+  //   the new user — all in one transaction.
+  const REGISTRATION_LOCK_KEY = 77888899; // arbitrary, app-wide constant
+  let result: { user: typeof usersTable.$inferSelect; isFirstUser: boolean } | null = null;
+  let conflictMessage: { status: number; message: string } | null = null;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${REGISTRATION_LOCK_KEY})`);
+
+      const [existing] = await tx.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+      if (existing) {
+        conflictMessage = { status: 409, message: "Email already registered" };
+        return;
+      }
+
+      const [{ value: existingCountValue }] = await tx.select({ value: count() }).from(usersTable);
+      const existingUserCount = Number(existingCountValue ?? 0);
+      const isFirstUser = existingUserCount === 0;
+
+      let sponsorId: number | undefined;
+      if (!isFirstUser) {
+        const trimmed = (referralCode ?? "").trim();
+        if (!trimmed) {
+          conflictMessage = { status: 400, message: "Referral code is required to register." };
+          return;
+        }
+        const [sponsor] = await tx.select().from(usersTable).where(eq(usersTable.referralCode, trimmed)).limit(1);
+        if (!sponsor) {
+          conflictMessage = { status: 400, message: "Invalid referral code. Please check with your sponsor." };
+          return;
+        }
+        sponsorId = sponsor.id;
+      }
+
+      const [user] = await tx.insert(usersTable).values({
+        name,
+        email,
+        phone,
+        passwordHash: hashPassword(password),
+        referralCode: referralCodeGenerated,
+        sponsorId: sponsorId ?? null,
+        isAdmin: isFirstUser,
+      }).returning();
+
+      result = { user, isFirstUser };
+    });
+  } catch (err: any) {
+    req.log?.error?.({ err }, "Registration transaction failed");
+    res.status(500).json({ message: "Registration failed. Please try again." });
     return;
   }
 
-  let sponsorId: number | undefined;
-  if (referralCode) {
-    const [sponsor] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode)).limit(1);
-    if (sponsor) sponsorId = sponsor.id;
+  if (conflictMessage) {
+    res.status(conflictMessage.status).json({ message: conflictMessage.message });
+    return;
+  }
+  if (!result) {
+    res.status(500).json({ message: "Registration failed. Please try again." });
+    return;
   }
 
-  const referralCodeGenerated = await generateUniqueReferralCode();
-
-  const [user] = await db.insert(usersTable).values({
-    name,
-    email,
-    phone,
-    passwordHash: hashPassword(password),
-    referralCode: referralCodeGenerated,
-    sponsorId: sponsorId ?? null,
-  }).returning();
-
-  const token = signToken(user.id);
-  res.status(201).json({ user: userToResponse(user), token });
+  const token = signToken(result.user.id);
+  res.status(201).json({ user: userToResponse(result.user), token });
 });
 
 // POST /api/auth/login
