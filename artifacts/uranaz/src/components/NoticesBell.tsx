@@ -154,7 +154,7 @@ export default function NoticesBell() {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-[340px] sm:w-[380px] rounded-2xl overflow-hidden z-50"
+          className="fixed sm:absolute left-2 right-2 top-[60px] sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-[380px] rounded-2xl overflow-hidden z-50"
           style={{
             background: "linear-gradient(155deg, rgba(4,16,32,0.98), rgba(2,10,22,0.98))",
             border: "1px solid rgba(61,214,245,0.22)",
