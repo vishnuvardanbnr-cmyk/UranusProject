@@ -46,7 +46,7 @@ export default function TopNav({ user, onLogout }: Props) {
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center group">
           <div
-            className="w-11 h-11 shrink-0"
+            className="w-16 h-16 shrink-0"
             style={{ filter: "drop-shadow(0 0 8px rgba(61,214,245,0.6))" }}
           >
             <img src="/logo.png" alt="URANAZ" className="w-full h-full object-contain" />

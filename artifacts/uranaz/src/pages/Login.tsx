@@ -38,7 +38,7 @@ export default function Login({ onLogin }: Props) {
         {/* Logo + heading */}
         <div className="text-center mb-8">
           <div
-            className="w-20 h-20 mx-auto mb-4 relative"
+            className="w-36 h-36 mx-auto mb-4 relative"
             style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
           >
             <img src="/logo.png" alt="URANAZ TRADES" className="w-full h-full object-contain" />
