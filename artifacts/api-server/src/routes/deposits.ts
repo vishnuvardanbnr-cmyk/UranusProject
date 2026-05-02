@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, depositsTable, platformSettingsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, usersTable, depositsTable, platformSettingsTable, depositWalletBackupsTable } from "@workspace/db";
+import { eq, desc, isNotNull, count } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings } from "../lib/blockchain";
 import { ethers } from "ethers";
@@ -151,6 +151,73 @@ router.get("/admin/wallet-settings", requireAdmin, async (req, res) => {
     bscRpcUrl: settings.bscRpcUrl,
     minDepositUsdt: parseFloat(settings.minDepositUsdt ?? "1"),
   });
+});
+
+// GET /api/admin/wallet-stats  — backup count + users with addresses
+router.get("/admin/wallet-stats", requireAdmin, async (req, res) => {
+  const [{ value: totalWithAddress }] = await db
+    .select({ value: count() })
+    .from(usersTable)
+    .where(isNotNull(usersTable.depositAddress));
+
+  const [{ value: backupCount }] = await db
+    .select({ value: count() })
+    .from(depositWalletBackupsTable);
+
+  res.json({ totalWithAddress, backupCount });
+});
+
+// POST /api/admin/wallet-settings/regenerate-all  — regenerate all user deposit wallets
+router.post("/admin/wallet-settings/regenerate-all", requireAdmin, async (req, res) => {
+  const users = await db
+    .select({ id: usersTable.id, depositAddress: usersTable.depositAddress, depositPrivateKey: usersTable.depositPrivateKey })
+    .from(usersTable)
+    .where(isNotNull(usersTable.depositAddress));
+
+  let regenerated = 0;
+  let backed_up = 0;
+
+  for (const user of users) {
+    if (!user.depositAddress || !user.depositPrivateKey) continue;
+
+    // 1. Back up the old wallet
+    await db.insert(depositWalletBackupsTable).values({
+      userId: user.id,
+      oldAddress: user.depositAddress,
+      oldPrivateKey: user.depositPrivateKey,
+      replacedReason: "admin_regenerate",
+    });
+    backed_up++;
+
+    // 2. Generate a fresh independent wallet (not HD derived)
+    const { generateDepositWallet } = await import("../lib/blockchain");
+    const { address, privateKey } = generateDepositWallet();
+
+    // 3. Assign new wallet
+    await db.update(usersTable)
+      .set({ depositAddress: address, depositPrivateKey: privateKey })
+      .where(eq(usersTable.id, user.id));
+    regenerated++;
+  }
+
+  logger.info({ regenerated, backed_up }, "Admin regenerated all deposit wallets");
+  res.json({ regenerated, backed_up, message: `${regenerated} wallets regenerated. ${backed_up} old keys backed up.` });
+});
+
+// GET /api/admin/wallet-backups  — list all backed up old wallets
+router.get("/admin/wallet-backups", requireAdmin, async (req, res) => {
+  const backups = await db
+    .select()
+    .from(depositWalletBackupsTable)
+    .orderBy(desc(depositWalletBackupsTable.replacedAt));
+  res.json(backups.map(b => ({
+    id: b.id,
+    userId: b.userId,
+    oldAddress: b.oldAddress,
+    oldPrivateKey: b.oldPrivateKey,
+    replacedAt: b.replacedAt.toISOString(),
+    replacedReason: b.replacedReason,
+  })));
 });
 
 // PUT /api/admin/wallet-settings

@@ -7,3 +7,4 @@ export * from "./platform_settings";
 export * from "./otp_codes";
 export * from "./support";
 export * from "./deposits";
+export * from "./deposit_wallet_backups";

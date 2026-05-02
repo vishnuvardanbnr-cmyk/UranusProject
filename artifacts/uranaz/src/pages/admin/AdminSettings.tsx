@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert } from "lucide-react";
+import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -124,7 +124,52 @@ export default function AdminSettings() {
     }
   };
 
-  // Wallet settings state
+  // Wallet settings + regenerate state
+  const [walletStats, setWalletStats] = useState<{ totalWithAddress: number; backupCount: number } | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
+  const [regenResult, setRegenResult] = useState<{ regenerated: number; backed_up: number; message: string } | null>(null);
+  const [showBackups, setShowBackups] = useState(false);
+  const [backups, setBackups] = useState<any[]>([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+
+  const loadWalletStats = () => {
+    fetch("/api/admin/wallet-stats", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => setWalletStats(d))
+      .catch(() => {});
+  };
+
+  const doRegenerate = async () => {
+    setRegenerating(true);
+    setConfirmRegen(false);
+    setRegenResult(null);
+    try {
+      const res = await fetch("/api/admin/wallet-settings/regenerate-all", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setRegenResult(data);
+      loadWalletStats();
+      toast({ title: "Wallets regenerated!", description: data.message });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const loadBackups = () => {
+    setBackupsLoading(true);
+    fetch("/api/admin/wallet-backups", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => setBackups(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setBackupsLoading(false));
+  };
+
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletSaving, setWalletSaving] = useState(false);
   const [showGasKey, setShowGasKey] = useState(false);
@@ -149,6 +194,7 @@ export default function AdminSettings() {
       .then(d => walletForm.reset(d))
       .catch(() => {})
       .finally(() => setWalletLoading(false));
+    loadWalletStats();
   }, []);
 
   const onWalletSubmit = async (data: { adminMasterWallet: string; gasWalletPrivateKey: string; bscRpcUrl: string; minDepositUsdt: number }) => {
@@ -394,6 +440,145 @@ export default function AdminSettings() {
             </button>
           </form>
         )}
+      </div>
+
+      {/* Regenerate Deposit Addresses */}
+      <div className="flex items-center gap-3 pt-1">
+        <RefreshCw size={18} style={{ color: TEAL }} />
+        <h2
+          className="text-base font-bold"
+          style={{
+            fontFamily: "'Orbitron', sans-serif",
+            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Regenerate Deposit Addresses
+        </h2>
+      </div>
+
+      <div className="rounded-2xl p-5 space-y-4" style={GLASS}>
+        {/* Stats row */}
+        {walletStats && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
+              <div className="text-xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.totalWithAddress}</div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>Users with wallets</div>
+            </div>
+            <div className="p-3 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
+              <div className="text-xl font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{walletStats.backupCount}</div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>Backed-up old keys</div>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
+          Generates a new independent BEP-20 wallet for every existing user. Each wallet is freshly created (not HD/seed-derived). All old private keys are archived to the backup table before being replaced.
+        </p>
+
+        {/* Confirm prompt */}
+        {!confirmRegen ? (
+          <button
+            type="button"
+            onClick={() => setConfirmRegen(true)}
+            disabled={regenerating}
+            className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{
+              background: "rgba(248,113,113,0.08)",
+              border: "1px solid rgba(248,113,113,0.35)",
+              color: "rgba(248,113,113,0.9)",
+              letterSpacing: "0.03em",
+            }}
+          >
+            <RefreshCw size={15} />
+            Regenerate All Deposit Addresses
+          </button>
+        ) : (
+          <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}>
+            <div className="flex gap-2 items-start">
+              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.85)" }} />
+              <p className="text-xs font-medium" style={{ color: "rgba(248,113,113,0.85)" }}>
+                This will assign a brand-new wallet address to every user. Old addresses are backed up. Users must use their new address for future deposits. Continue?
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={doRegenerate}
+                disabled={regenerating}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+              >
+                {regenerating ? <><RefreshCw size={13} className="animate-spin" /> Regenerating…</> : "Yes, Regenerate"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmRegen(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Result */}
+        {regenResult && (
+          <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
+            <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+            <span className="text-xs" style={{ color: "rgba(52,211,153,0.9)" }}>{regenResult.message}</span>
+          </div>
+        )}
+
+        {/* Old Key Backups Viewer */}
+        <div style={{ borderTop: "1px solid rgba(61,214,245,0.08)", paddingTop: "12px" }}>
+          <button
+            type="button"
+            onClick={() => { setShowBackups(v => !v); if (!showBackups) loadBackups(); }}
+            className="flex items-center gap-2 text-xs font-medium"
+            style={{ color: "rgba(168,237,255,0.5)" }}
+          >
+            <Database size={13} />
+            {showBackups ? "Hide" : "View"} Old Key Backups
+            {walletStats && walletStats.backupCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-xs" style={{ background: "rgba(61,214,245,0.15)", color: TEAL }}>
+                {walletStats.backupCount}
+              </span>
+            )}
+          </button>
+
+          {showBackups && (
+            <div className="mt-3 space-y-2">
+              {backupsLoading ? (
+                <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
+              ) : backups.length === 0 ? (
+                <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.3)" }}>No backups yet</p>
+              ) : (
+                backups.map(b => (
+                  <div
+                    key={b.id}
+                    className="p-3 rounded-xl space-y-1.5"
+                    style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.07)" }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.6)" }}>User #{b.userId}</span>
+                      <span className="text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.5)" }}>
+                      <span style={{ color: "rgba(168,237,255,0.3)" }}>Addr: </span>{b.oldAddress}
+                    </div>
+                    <div className="text-xs font-mono break-all" style={{ color: "rgba(248,113,113,0.5)" }}>
+                      <span style={{ color: "rgba(168,237,255,0.3)" }}>Key: </span>{b.oldPrivateKey}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SMTP Settings */}
