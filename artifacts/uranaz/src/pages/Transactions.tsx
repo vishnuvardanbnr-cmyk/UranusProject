@@ -3,6 +3,7 @@ import {
   useListIncome,
   getListIncomeQueryKey,
 } from "@workspace/api-client-react";
+import Pagination from "@/components/Pagination";
 import {
   DollarSign,
   TrendingUp,
@@ -189,16 +190,29 @@ function TxDetailModal({ record, onClose }: { record: any; onClose: () => void }
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
+const PAGE_SIZE = 10;
+
 export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState("");
+  const [page, setPage]             = useState(1);
   const [selected, setSelected]     = useState<any>(null);
 
+  const params = typeFilter
+    ? { type: typeFilter as any, page, limit: PAGE_SIZE }
+    : { page, limit: PAGE_SIZE };
+
   const { data: incomeData, isLoading } = useListIncome(
-    typeFilter
-      ? { type: typeFilter as any, page: 1, limit: 100 }
-      : { page: 1, limit: 100 },
-    { query: { queryKey: getListIncomeQueryKey(typeFilter ? { type: typeFilter as any, page: 1, limit: 100 } : { page: 1, limit: 100 }) } }
+    params,
+    { query: { queryKey: getListIncomeQueryKey(params) } }
   );
+
+  const total      = incomeData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function changeFilter(f: string) {
+    setTypeFilter(f);
+    setPage(1);
+  }
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-28 md:pb-8">
@@ -229,7 +243,7 @@ export default function Transactions() {
           return (
             <button
               key={f.value}
-              onClick={() => setTypeFilter(f.value)}
+              onClick={() => changeFilter(f.value)}
               className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97]"
               style={active ? {
                 background: `linear-gradient(135deg, ${f.color}22, ${f.color}0d)`,
@@ -340,6 +354,16 @@ export default function Transactions() {
           })}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPrev={() => setPage(p => Math.max(1, p - 1))}
+        onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      />
 
       {/* Detail modal */}
       {selected && (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import Pagination from "@/components/Pagination";
 import {
   useGetIncomeSummary,
   useListInvestments,
@@ -219,11 +220,13 @@ function EmptyState() {
 /* ────────────────────────────────────────────────
    MAIN PAGE
    ──────────────────────────────────────────────── */
+const WALLET_PAGE_SIZE = 10;
 type EntryType = "deposit" | "withdraw";
 
 export default function WalletPage({ user }: { user: any }) {
   const [, setLocation] = useLocation();
   const [selected, setSelected] = useState<{ item: any; type: EntryType } | null>(null);
+  const [page, setPage] = useState(1);
 
   const { data: summary }    = useGetIncomeSummary();
   const { data: investments } = useListInvestments();
@@ -234,6 +237,10 @@ export default function WalletPage({ user }: { user: any }) {
     ...(investments ?? []).map(inv => ({ item: inv, type: "deposit" as EntryType })),
     ...(withdrawals ?? []).map(w   => ({ item: w,   type: "withdraw" as EntryType })),
   ].sort((a, b) => new Date(b.item.createdAt).getTime() - new Date(a.item.createdAt).getTime());
+
+  const total      = combined.length;
+  const totalPages = Math.max(1, Math.ceil(total / WALLET_PAGE_SIZE));
+  const paginated  = combined.slice((page - 1) * WALLET_PAGE_SIZE, page * WALLET_PAGE_SIZE);
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-28 md:pb-8">
@@ -330,7 +337,7 @@ export default function WalletPage({ user }: { user: any }) {
         <EmptyState />
       ) : (
         <div className="space-y-2.5">
-          {combined.map(({ item, type }) => {
+          {paginated.map(({ item, type }) => {
             const isDeposit = type === "deposit";
             const cfg = statusConfig[item.status] || statusConfig.pending;
             const accentColor = isDeposit ? TEAL : "#f87171";
@@ -388,6 +395,16 @@ export default function WalletPage({ user }: { user: any }) {
           })}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={WALLET_PAGE_SIZE}
+        onPrev={() => setPage(p => Math.max(1, p - 1))}
+        onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      />
 
       {/* Detail Modal */}
       {selected && (
