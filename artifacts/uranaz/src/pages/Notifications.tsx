@@ -1,0 +1,309 @@
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import { ArrowLeft, Bell, Pin, X, ExternalLink, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
+
+const TEAL = "#3DD6F5";
+
+interface Notice {
+  id: number;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "critical" | "announcement" | "promo";
+  priority: "low" | "normal" | "high" | "urgent";
+  icon: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  pinned: boolean;
+  dismissible: boolean;
+  createdAt: string;
+}
+
+const TYPE_STYLES: Record<Notice["type"], { color: string; bg: string; border: string; Icon: any; label: string }> = {
+  info:         { color: "#3DD6F5", bg: "rgba(61,214,245,0.10)",  border: "rgba(61,214,245,0.28)",  Icon: Info,         label: "Info" },
+  success:      { color: "#34d399", bg: "rgba(52,211,153,0.10)",  border: "rgba(52,211,153,0.30)",  Icon: CheckCircle2, label: "Success" },
+  warning:      { color: "#fbbf24", bg: "rgba(251,191,36,0.10)",  border: "rgba(251,191,36,0.30)",  Icon: AlertTriangle,label: "Warning" },
+  critical:     { color: "#f87171", bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.30)", Icon: AlertOctagon, label: "Critical" },
+  announcement: { color: "#a78bfa", bg: "rgba(167,139,250,0.10)", border: "rgba(167,139,250,0.30)", Icon: Megaphone,    label: "Announcement" },
+  promo:        { color: "#f472b6", bg: "rgba(244,114,182,0.10)", border: "rgba(244,114,182,0.30)", Icon: Sparkles,     label: "Promo" },
+};
+
+const DISMISSED_KEY = "uranaz_dismissed_notices";
+function getDismissed(): number[] {
+  try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]"); } catch { return []; }
+}
+function saveDismissed(ids: number[]) {
+  localStorage.setItem(DISMISSED_KEY, JSON.stringify(ids));
+}
+
+function timeAgo(iso: string): string {
+  const d = new Date(iso).getTime();
+  const diff = Date.now() - d;
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+type Tab = "all" | "unread";
+
+export default function Notifications() {
+  const [, setLocation] = useLocation();
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [dismissed, setDismissed] = useState<number[]>(getDismissed());
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("all");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("uranaz_token");
+      const r = await fetch("/api/notices/active", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data)) setNotices(data);
+      }
+    } catch {/* ignore */} finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const dismiss = (id: number) => {
+    const next = Array.from(new Set([...dismissed, id]));
+    setDismissed(next);
+    saveDismissed(next);
+  };
+  const restore = (id: number) => {
+    const next = dismissed.filter(x => x !== id);
+    setDismissed(next);
+    saveDismissed(next);
+  };
+  const dismissAll = () => {
+    const ids = notices.filter(n => n.dismissible && !n.pinned).map(n => n.id);
+    const next = Array.from(new Set([...dismissed, ...ids]));
+    setDismissed(next);
+    saveDismissed(next);
+  };
+  const restoreAll = () => {
+    setDismissed([]);
+    saveDismissed([]);
+  };
+
+  const handleCta = (n: Notice) => {
+    if (!n.ctaUrl) return;
+    if (/^https?:\/\//.test(n.ctaUrl)) {
+      window.open(n.ctaUrl, "_blank", "noopener,noreferrer");
+    } else {
+      setLocation(n.ctaUrl);
+    }
+  };
+
+  const unreadCount = notices.filter(n => !dismissed.includes(n.id)).length;
+  const visible = tab === "unread"
+    ? notices.filter(n => !dismissed.includes(n.id))
+    : notices;
+
+  return (
+    <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/dashboard")}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+          style={{ background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" }}
+        >
+          <ArrowLeft size={16} style={{ color: TEAL }} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1
+            className="text-xl font-bold flex items-center gap-2"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            <Bell size={18} style={{ color: TEAL }} />
+            Notifications
+          </h1>
+          <p className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>
+            {notices.length} total · {unreadCount} unread
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs + Actions */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex rounded-xl overflow-hidden" style={{ background: "rgba(5,18,32,0.65)", border: "1px solid rgba(61,214,245,0.10)" }}>
+          {(["all", "unread"] as Tab[]).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="px-4 py-2 text-xs font-semibold transition-all capitalize"
+              style={{
+                background: tab === t ? "rgba(61,214,245,0.14)" : "transparent",
+                color: tab === t ? TEAL : "rgba(168,237,255,0.5)",
+                borderRight: t === "all" ? "1px solid rgba(61,214,245,0.10)" : "none",
+              }}
+            >
+              {t} {t === "unread" && unreadCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[9px]" style={{ background: TEAL, color: "#010810" }}>{unreadCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1" />
+        {unreadCount > 0 ? (
+          <button
+            onClick={dismissAll}
+            className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5"
+            style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.65)" }}
+          >
+            Mark all read
+          </button>
+        ) : dismissed.length > 0 && (
+          <button
+            onClick={restoreAll}
+            className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5"
+            style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.65)" }}
+          >
+            <RotateCcw size={11} /> Restore all
+          </button>
+        )}
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="rounded-2xl h-24 animate-pulse" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }} />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-2xl p-10 text-center" style={{ background: "rgba(5,18,32,0.65)", border: "1px dashed rgba(61,214,245,0.12)" }}>
+          <div
+            className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center"
+            style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}
+          >
+            <Inbox size={22} style={{ color: "rgba(168,237,255,0.4)" }} />
+          </div>
+          <div className="text-sm font-medium mb-1" style={{ color: "rgba(168,237,255,0.65)" }}>
+            {tab === "unread" ? "No unread notifications" : "No notifications yet"}
+          </div>
+          <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
+            {tab === "unread" ? "You're all caught up" : "We'll let you know when something happens"}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map(n => {
+            const s = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
+            const Icon = s.Icon;
+            const isUnread = !dismissed.includes(n.id);
+            return (
+              <div
+                key={n.id}
+                className="rounded-2xl p-4 transition-all"
+                style={{
+                  background: isUnread
+                    ? `linear-gradient(155deg, rgba(4,16,32,0.97), rgba(2,10,22,0.97))`
+                    : "rgba(5,18,32,0.5)",
+                  border: `1px solid ${isUnread ? s.border : "rgba(61,214,245,0.07)"}`,
+                  boxShadow: isUnread ? `0 0 24px ${s.bg}` : "none",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: s.bg, border: `1px solid ${s.border}` }}
+                  >
+                    {n.icon ? <span className="text-base">{n.icon}</span> : <Icon size={16} style={{ color: s.color }} />}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      {n.pinned && <Pin size={11} style={{ color: TEAL }} />}
+                      <span className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.95)" }}>{n.title}</span>
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                        style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+                      >
+                        {s.label}
+                      </span>
+                      {n.priority === "urgent" && (
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                          style={{ background: "rgba(248,113,113,0.15)", color: "#f87171", border: "1px solid rgba(248,113,113,0.3)" }}
+                        >
+                          Urgent
+                        </span>
+                      )}
+                      {!isUnread && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(168,237,255,0.04)", color: "rgba(168,237,255,0.4)", border: "1px solid rgba(168,237,255,0.08)" }}>
+                          Read
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-sm leading-relaxed" style={{ color: "rgba(168,237,255,0.72)" }}>
+                      {n.message}
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-3 flex-wrap">
+                      <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.35)" }}>
+                        {timeAgo(n.createdAt)}
+                      </span>
+                      {n.ctaLabel && n.ctaUrl && (
+                        <button
+                          onClick={() => handleCta(n)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
+                          style={{
+                            background: s.bg,
+                            color: s.color,
+                            border: `1px solid ${s.border}`,
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.2)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.filter = "none"; }}
+                        >
+                          {n.ctaLabel}
+                          <ExternalLink size={11} />
+                        </button>
+                      )}
+                      <div className="flex-1" />
+                      {n.dismissible && !n.pinned && (
+                        isUnread ? (
+                          <button
+                            onClick={() => dismiss(n.id)}
+                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                            style={{ color: "rgba(168,237,255,0.4)", background: "rgba(168,237,255,0.04)" }}
+                          >
+                            <X size={11} /> Dismiss
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => restore(n.id)}
+                            className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                            style={{ color: "rgba(168,237,255,0.4)", background: "rgba(168,237,255,0.04)" }}
+                          >
+                            <RotateCcw size={11} /> Restore
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
