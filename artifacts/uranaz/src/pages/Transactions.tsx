@@ -240,63 +240,89 @@ export default function Transactions() {
 
       {/* List */}
       {isLoading ? (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {[1,2,3,4,5].map(i => (
             <div
               key={i}
-              className="rounded-xl h-[68px] animate-pulse"
+              className="rounded-2xl h-[76px] animate-pulse"
               style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.07)" }}
             />
           ))}
         </div>
       ) : !incomeData?.records?.length ? (
-        <div className="rounded-xl p-12 text-center" style={GLASS}>
-          <ArrowDownLeft size={36} className="mx-auto mb-3" style={{ color: "rgba(168,237,255,0.15)" }} />
-          <p className="text-sm" style={{ color: "rgba(168,237,255,0.3)" }}>No transactions yet</p>
+        <div className="rounded-2xl p-14 text-center" style={GLASS}>
+          <ArrowDownLeft size={36} className="mx-auto mb-3" style={{ color: "rgba(168,237,255,0.12)" }} />
+          <p className="text-sm" style={{ color: "rgba(168,237,255,0.28)" }}>No transactions yet</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {incomeData.records.map(record => {
             const cfg = typeConfig[record.type] || { icon: DollarSign, color: TEAL, label: record.type };
             return (
               <button
                 key={record.id}
                 onClick={() => setSelected(record)}
-                className="w-full rounded-xl px-4 py-3.5 flex items-center justify-between text-left transition-all hover:brightness-125 active:scale-[0.99]"
+                className="w-full rounded-2xl px-4 py-4 flex items-center gap-3.5 text-left transition-all hover:brightness-110 active:scale-[0.99]"
                 style={{ ...GLASS, cursor: "pointer" }}
               >
-                <div className="flex items-center gap-3">
+                {/* Icon */}
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${cfg.color}18, ${cfg.color}08)`,
+                    border: `1px solid ${cfg.color}30`,
+                    boxShadow: `0 0 14px ${cfg.color}12`,
+                  }}
+                >
+                  <cfg.icon size={17} style={{ color: cfg.color }} />
+                </div>
+
+                {/* Middle content */}
+                <div className="flex-1 min-w-0">
+                  {/* Type label */}
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${cfg.color}12`, border: `1px solid ${cfg.color}28` }}
+                    className="text-xs font-bold uppercase tracking-wider mb-0.5"
+                    style={{ color: cfg.color, letterSpacing: "0.06em" }}
                   >
-                    <cfg.icon size={15} style={{ color: cfg.color }} />
+                    {cfg.label}
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
+                  {/* Description — single truncated line */}
+                  {record.description && (
+                    <div
+                      className="text-sm font-medium truncate leading-snug"
+                      style={{ color: "rgba(168,237,255,0.75)" }}
+                    >
                       {record.description}
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs mt-0.5">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: cfg.color }}
-                      />
-                      <span style={{ color: cfg.color }}>{cfg.label}</span>
-                      <span style={{ color: "rgba(168,237,255,0.22)" }}>·</span>
-                      <span style={{ color: "rgba(168,237,255,0.32)" }}>{formatDate(record.createdAt)}</span>
-                    </div>
+                  )}
+                  {/* From user + date row */}
+                  <div className="flex items-center gap-1.5 mt-1">
                     {record.fromUserName && (
-                      <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.28)" }}>
-                        From: {record.fromUserName}
-                      </div>
+                      <>
+                        <span className="text-xs" style={{ color: "rgba(168,237,255,0.38)" }}>
+                          {record.fromUserName}
+                        </span>
+                        <span style={{ color: "rgba(168,237,255,0.18)" }}>·</span>
+                      </>
                     )}
+                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>
+                      {formatDate(record.createdAt)}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right shrink-0 ml-3">
-                  <div className="font-bold text-sm" style={{ color: cfg.color }}>
+
+                {/* Amount */}
+                <div className="shrink-0 text-right">
+                  <div
+                    className="font-black text-base"
+                    style={{
+                      color: cfg.color,
+                      fontFamily: "'Orbitron', sans-serif",
+                      textShadow: `0 0 12px ${cfg.color}40`,
+                    }}
+                  >
                     +${record.amount.toFixed(2)}
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.25)" }}>Tap for details</div>
                 </div>
               </button>
             );
