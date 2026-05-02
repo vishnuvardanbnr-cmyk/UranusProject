@@ -269,25 +269,6 @@ export default function Team({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Leg stats */}
-      {stats?.lugsStats && stats.lugsStats.length > 0 && (
-        <div>
-          <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>Leg Business</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {[1, 2, 3].map(leg => {
-              const lugData = stats.lugsStats.find(l => l.lugIndex === leg);
-              return (
-                <div key={leg} className="rounded-xl p-3 text-center" style={GLASS}>
-                  <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Leg {leg}</div>
-                  <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>
-                    ${(lugData?.business ?? 0).toFixed(0)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Team members by level */}
       {loadingTeam ? (
