@@ -1,9 +1,10 @@
 import { useLocation, Link } from "wouter";
-import { LayoutDashboard, TrendingUp, Users, DollarSign } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Users, DollarSign, Wallet } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/invest",    icon: TrendingUp,      label: "Invest" },
+  { path: "/wallet",    icon: Wallet,          label: "Wallet" },
   { path: "/team",      icon: Users,           label: "Team" },
   { path: "/income",    icon: DollarSign,      label: "Income" },
 ];

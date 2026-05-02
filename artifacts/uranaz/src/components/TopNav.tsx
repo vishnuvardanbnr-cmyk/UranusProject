@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/dashboard",   label: "Dashboard" },
   { href: "/invest",      label: "Invest" },
   { href: "/income",      label: "Income" },
+  { href: "/wallet",      label: "Wallet" },
   { href: "/team",        label: "Team" },
   { href: "/withdrawals", label: "Withdraw" },
   { href: "/ranks",       label: "Ranks" },

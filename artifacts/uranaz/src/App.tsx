@@ -27,6 +27,7 @@ import Share from "@/pages/Share";
 import Profile from "@/pages/Profile";
 import Withdrawals from "@/pages/Withdrawals";
 import Ranks from "@/pages/Ranks";
+import WalletPage from "@/pages/Wallet";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 
@@ -117,6 +118,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/profile">
           <RequireAuth user={user}>
             <Profile user={user} onUpdate={setUser} />
+          </RequireAuth>
+        </Route>
+        <Route path="/wallet">
+          <RequireAuth user={user}>
+            <WalletPage user={user} />
           </RequireAuth>
         </Route>
         <Route path="/withdrawals">
