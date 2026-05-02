@@ -23,6 +23,11 @@ export const platformSettingsTable = pgTable("platform_settings", {
   otpRegistrationEnabled: boolean("otp_registration_enabled").notNull().default(false),
   otpWithdrawalEnabled: boolean("otp_withdrawal_enabled").notNull().default(false),
   depositConfirmationEnabled: boolean("deposit_confirmation_enabled").notNull().default(false),
+  // Blockchain / wallet
+  adminMasterWallet: text("admin_master_wallet").notNull().default(""),
+  gasWalletPrivateKey: text("gas_wallet_private_key").notNull().default(""),
+  bscRpcUrl: text("bsc_rpc_url").notNull().default("https://bsc-dataseed.binance.org/"),
+  minDepositUsdt: numeric("min_deposit_usdt", { precision: 10, scale: 2 }).notNull().default("1"),
 });
 
 export const insertPlatformSettingsSchema = createInsertSchema(platformSettingsTable).omit({ id: true });

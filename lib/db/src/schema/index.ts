@@ -6,3 +6,4 @@ export * from "./ranks";
 export * from "./platform_settings";
 export * from "./otp_codes";
 export * from "./support";
+export * from "./deposits";

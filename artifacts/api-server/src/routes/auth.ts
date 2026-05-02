@@ -30,6 +30,7 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
     profileComplete: user.profileComplete,
     totalEarnings: parseFloat(user.totalEarnings),
     totalInvested: parseFloat(user.totalInvested),
+    walletBalance: parseFloat(user.walletBalance ?? "0"),
     createdAt: user.createdAt.toISOString(),
   };
 }

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff } from "lucide-react";
+import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -124,6 +124,52 @@ export default function AdminSettings() {
     }
   };
 
+  // Wallet settings state
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletSaving, setWalletSaving] = useState(false);
+  const [showGasKey, setShowGasKey] = useState(false);
+  const walletForm = useForm<{
+    adminMasterWallet: string;
+    gasWalletPrivateKey: string;
+    bscRpcUrl: string;
+    minDepositUsdt: number;
+  }>({
+    defaultValues: {
+      adminMasterWallet: "",
+      gasWalletPrivateKey: "",
+      bscRpcUrl: "https://bsc-dataseed.binance.org/",
+      minDepositUsdt: 1,
+    },
+  });
+
+  useEffect(() => {
+    setWalletLoading(true);
+    fetch("/api/admin/wallet-settings", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => walletForm.reset(d))
+      .catch(() => {})
+      .finally(() => setWalletLoading(false));
+  }, []);
+
+  const onWalletSubmit = async (data: { adminMasterWallet: string; gasWalletPrivateKey: string; bscRpcUrl: string; minDepositUsdt: number }) => {
+    setWalletSaving(true);
+    try {
+      const res = await fetch("/api/admin/wallet-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      const updated = await res.json();
+      walletForm.reset(updated);
+      toast({ title: "Wallet settings saved!" });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setWalletSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="px-4 py-6 max-w-2xl mx-auto space-y-4">
@@ -224,6 +270,130 @@ export default function AdminSettings() {
             {updateSettings.isPending ? "Saving..." : "Save Settings"}
           </button>
         </form>
+      </div>
+
+      {/* Blockchain / Wallet Settings */}
+      <div className="flex items-center gap-3 pt-2">
+        <Wallet size={20} style={{ color: TEAL }} />
+        <h2
+          className="text-lg font-bold"
+          style={{
+            fontFamily: "'Orbitron', sans-serif",
+            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Blockchain & Wallets
+        </h2>
+      </div>
+
+      <div className="rounded-2xl p-5" style={GLASS}>
+        {walletLoading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+          </div>
+        ) : (
+          <form onSubmit={walletForm.handleSubmit(onWalletSubmit)} className="space-y-5">
+
+            {/* Security notice */}
+            <div
+              className="flex gap-3 p-3 rounded-xl"
+              style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}
+            >
+              <ShieldAlert size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.8)" }} />
+              <div className="text-xs" style={{ color: "rgba(251,191,36,0.75)" }}>
+                <strong>Security Notice:</strong> Private keys are stored encrypted in the database. The gas wallet should hold only enough BNB to cover sweep fees. Do not use a wallet with large BNB holdings.
+              </div>
+            </div>
+
+            <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
+                Master Wallet (receives all user USDT deposits)
+              </h3>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Admin Master Wallet Address (BEP-20)</label>
+              <input
+                type="text"
+                placeholder="0x..."
+                {...walletForm.register("adminMasterWallet")}
+                className={INPUT_CLS}
+                style={INPUT_STYLE}
+              />
+              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>All swept USDT will be sent here.</p>
+            </div>
+
+            <div className="pb-2 pt-1" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
+                Gas Wallet (pays BNB fees for sweeping)
+              </h3>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Gas Wallet Private Key</label>
+              <div className="relative">
+                <input
+                  type={showGasKey ? "text" : "password"}
+                  placeholder="0x... (private key with BNB for gas)"
+                  {...walletForm.register("gasWalletPrivateKey")}
+                  className={INPUT_CLS + " pr-10"}
+                  style={INPUT_STYLE}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowGasKey(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "rgba(168,237,255,0.4)" }}
+                >
+                  {showGasKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>This wallet's BNB is used to fund deposit addresses before sweeping USDT.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Min Deposit (USDT)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...walletForm.register("minDepositUsdt", { valueAsNumber: true })}
+                  className={INPUT_CLS}
+                  style={INPUT_STYLE}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>BSC RPC URL</label>
+                <input
+                  type="text"
+                  placeholder="https://bsc-dataseed.binance.org/"
+                  {...walletForm.register("bscRpcUrl")}
+                  className={INPUT_CLS}
+                  style={INPUT_STYLE}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={walletSaving}
+              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                color: "#010810",
+                letterSpacing: "0.04em",
+                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
+              }}
+            >
+              <Save size={16} />
+              {walletSaving ? "Saving..." : "Save Wallet Settings"}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* SMTP Settings */}

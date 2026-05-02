@@ -1,7 +1,7 @@
 # URANAZ TRADES — Investment Platform
 
 ## Project Overview
-A full-featured investment platform with user and admin panels, dark navy + gold theme, mobile-first design with fixed bottom navigation.
+A full-featured investment platform with user and admin panels, dark space/Uranus aesthetic (teal/cyan #3DD6F5 on deep space #010810), glassmorphism cards, animated star field. Mobile-first with fixed bottom navigation.
 
 ## Architecture
 
@@ -14,114 +14,130 @@ lib/
   api-spec/        — OpenAPI spec + codegen config
   api-client-react/ — Generated React Query hooks
   api-zod/         — Generated Zod schemas
+  db/              — Drizzle schema + migrations
 ```
 
 ### Tech Stack
-- **Frontend**: React 18, Vite, TailwindCSS v4, Wouter (routing), TanStack Query, react-hook-form, Zod
-- **Backend**: Express, Drizzle ORM, PostgreSQL
+- **Frontend**: React 18, Vite, TailwindCSS v4, Wouter (routing), TanStack Query, react-hook-form, Zod, qrcode.react
+- **Backend**: Express, Drizzle ORM, PostgreSQL, ethers.js (BEP-20 blockchain), nodemailer, ws (WebSocket)
 - **Auth**: HMAC-SHA256 signed tokens (SESSION_SECRET), stored in localStorage as `uranaz_token`
 - **Codegen**: Orval (OpenAPI → React Query hooks + Zod schemas)
 
 ## Frontend Pages
 
 ### User Pages
-- `/` — Landing page (investment plans, ranks, Singapore trip offer)
+- `/` — Landing page
 - `/login` — Login form
-- `/register` — Registration with referral code support
-- `/profile-setup` — Wallet address + country setup (post-registration)
+- `/register` — Registration with referral code + OTP support
+- `/profile-setup` — Wallet address + country setup
 - `/dashboard` — Balance, active investments, income breakdown, quick links
-- `/invest` — Investment plan selection + calculator + new investment form
-- `/income` — Income history with type filters (daily/referral/commission/rank)
-- `/team` — Multi-level team structure with level commission details
-- `/share` — Referral link + code + commission rate reference
-- `/profile` — User profile edit (wallet, country, ID)
-- `/withdrawals` — Withdrawal request form + history
-- `/ranks` — 5-rank system with progress tracking
-- `/terms` — Terms & Conditions
-- `/privacy` — Privacy Policy
+- `/deposit` — BEP-20 USDT deposit: unique wallet address, QR code, "Check Deposit" sweeper
+- `/invest` — Investment plan selection + calculator
+- `/income` — Income history with type filters
+- `/wallet` — Wallet overview with transaction history
+- `/team` — Multi-level team structure
+- `/share` — Referral link + code
+- `/profile` — User profile edit
+- `/withdrawals` — Withdrawal request + history (with OTP)
+- `/ranks` — 5-rank system with progress
+- `/support` — Live chat support tickets (WebSocket)
+- `/transactions` — Transaction history
 
 ### Admin Pages
 - `/admin` — Platform stats overview
 - `/admin/users` — User list with status toggle
 - `/admin/investments` — All investments list
 - `/admin/withdrawals` — Withdrawal approval/rejection
-- `/admin/settings` — Platform settings (min/max deposit, toggles)
+- `/admin/settings` — Platform settings + SMTP config + Blockchain wallet config
+- `/admin/support` — Live support ticket management
 
 ## Backend API Routes
 
 ### Auth
-- `POST /api/auth/register` — Register user (optional referralCode)
+- `POST /api/auth/register` — Register user (optional referralCode + OTP)
 - `POST /api/auth/login` — Login, returns { user, token }
 - `POST /api/auth/logout` — Logout
-- `GET /api/auth/me` — Get current user
+- `GET /api/auth/me` — Get current user (includes walletBalance)
 - `POST /api/auth/profile-setup` — Set wallet/country/ID
+- `POST /api/auth/send-otp` — Send OTP email
+- `GET /api/auth/otp-required` — Check if OTP is required
+
+### Deposits (BEP-20 USDT)
+- `GET /api/deposits/address` — Get/create user's unique BSC deposit address
+- `POST /api/deposits/check` — Check BSC for USDT, sweep to admin wallet, credit balance
+- `GET /api/deposits` — User's deposit history
+- `GET /api/admin/deposits` — All deposits (admin)
+
+### Admin Wallet
+- `GET /api/admin/wallet-settings` — Get master wallet + gas wallet config
+- `PUT /api/admin/wallet-settings` — Save master wallet address + gas wallet private key + BSC RPC + min deposit
+
+### Support (WebSocket + REST)
+- `GET /api/support/tickets` — User's tickets
+- `POST /api/support/tickets` — Create ticket
+- `GET /api/support/tickets/:id` — Ticket + messages
+- `POST /api/support/tickets/:id/messages` — Send message
+- `GET /api/admin/support/tickets` — All tickets (admin)
+- `PUT /api/admin/support/tickets/:id/status` — Update ticket status
+- `WS /api/ws?token=TOKEN` — WebSocket live chat
 
 ### User
 - `GET /api/investments` — List user's investments
 - `POST /api/investments` — Create investment
-- `GET /api/income` — Income history with type filter
+- `GET /api/income` — Income history
 - `GET /api/income/summary` — Income summary + available balance
-- `GET /api/team` — Team levels with members
-- `GET /api/team/stats` — Team stats (total members, business, level progress)
+- `GET /api/team` — Team levels
+- `GET /api/team/stats` — Team stats
 - `GET /api/team/referral-link` — Referral code + link
-- `GET /api/withdrawals` — User's withdrawal history
-- `POST /api/withdrawals` — Submit withdrawal request
-- `GET /api/ranks` — List all 5 ranks
-- `GET /api/ranks/progress` — User's rank progress
+- `GET /api/withdrawals` — Withdrawal history
+- `POST /api/withdrawals` — Submit withdrawal
+- `GET /api/ranks` — All ranks
+- `GET /api/ranks/progress` — User rank progress
 
-### Admin (requireAdmin middleware)
+### Admin
 - `GET /api/admin/stats` — Platform statistics
-- `GET /api/admin/users` — All users (paginated)
+- `GET/PUT /api/admin/settings` — Platform settings
+- `GET /api/admin/users` — All users
 - `PUT /api/admin/users/:id` — Update user status
-- `GET /api/admin/investments` — All investments (paginated)
-- `GET /api/admin/withdrawals` — All withdrawals (with status filter)
+- `GET /api/admin/investments` — All investments
+- `GET /api/admin/withdrawals` — All withdrawals
 - `POST /api/admin/withdrawals/:id/approve` — Approve withdrawal
 - `POST /api/admin/withdrawals/:id/reject` — Reject withdrawal
-- `GET /api/admin/settings` — Platform settings
-- `PUT /api/admin/settings` — Update platform settings
+- `GET/PUT /api/admin/smtp-settings` — SMTP email configuration
 
 ## Database Schema (Drizzle ORM, PostgreSQL)
-- `users` — id, name, email, phone, password_hash, referral_code, sponsor_id, wallet_address, country, id_number, current_level, current_rank_id, is_admin, is_active, profile_complete, total_earnings, total_invested, created_at
+- `users` — id, name, email, phone, password_hash, referral_code, sponsor_id, wallet_address, country, id_number, current_level, current_rank_id, is_admin, is_active, profile_complete, total_earnings, total_invested, wallet_balance, deposit_address, deposit_private_key, created_at
 - `investments` — id, user_id, amount, plan_tier, daily_rate, duration_days, earned_so_far, remaining_days, start_date, end_date, status, hyper_coin_amount, usdt_amount
 - `income` — id, user_id, type, amount, description, from_user_id, created_at
 - `withdrawals` — id, user_id, amount, wallet_address, status, note, processed_at, created_at
 - `ranks` — id, rank_number, name, criteria, reward, requires_rank_id, requires_count, requires_levels
-- `platform_settings` — key, value (JSON)
+- `platform_settings` — id, maintenance_mode, min/max_deposit, hyper_coin_min_percent, spot_referral_rate, launch_offer_active, withdrawal_enabled, smtp_*, otp_*_enabled, admin_master_wallet, gas_wallet_private_key, bsc_rpc_url, min_deposit_usdt
+- `otp_codes` — id, email, code, purpose, used, expires_at, created_at
+- `support_tickets` — id, user_id, subject, status, created_at, updated_at
+- `support_messages` — id, ticket_id, user_id, is_admin, text, created_at
+- `deposits` — id, user_id, tx_hash, amount, status, sweep_tx_hash, note, created_at, credited_at
+
+## Deposit Flow (BEP-20 USDT on BSC)
+1. Each user gets a unique BEP-20 wallet address (generated with ethers.js, stored in DB)
+2. User sends USDT (BEP-20) to their address and clicks "Check Deposit"
+3. Server checks BSC for USDT balance via `ethers.js` + public RPC
+4. If USDT found: sends BNB from gas wallet to cover sweep gas → sweeps USDT to admin master wallet
+5. Only after confirmed sweep: credits user's `wallet_balance`
+6. Sweep tx hash linked to BSCScan for verification
+
+## SMTP / OTP System
+- Admin saves SMTP credentials in settings panel
+- Optional OTP on registration and withdrawal
+- OTP codes expire in 10 minutes, single-use
 
 ## Seed Data
 - Admin: admin@uranaz.com / admin123
-- Demo user: john@example.com / demo123 (Level 3, $1000 invested, 5 income records)
-- Alice referral: alice@example.com (sponsored by john)
+- Demo user: john@example.com / demo123
 
-## Investment Plans
-- Tier 1: $100–$400, 0.6%/day, 300 days
-- Tier 2: $500–$900, 0.7%/day, 260 days (POPULAR)
-- Tier 3: $1,000–$1,500, 0.8%/day, 225 days
-- Min 50% HYPERCOIN required
-- Multiples of $100
-
-## Commission Structure
-- L1: 20% of return, 80 days active, unlock $1k earned
-- L2: 10% of return, 80 days active, unlock $3k earned
-- L3: 10% of return, 60 days active, unlock $10k earned
-- L4-L8: 4% each, 60 days active, unlock $10k earned
-- Spot referral: 5% of investment amount (instant)
-
-## Rank System (5 ranks)
-1. Bronze Star → Smartphone (complete all 8 commission levels)
-2. Silver Star → Laptop (3 rank-1 achievers in 3 legs)
-3. Gold Star → Motor Bike (3 rank-2 achievers in 3 legs)
-4. Platinum Star → Apple product (3 rank-3 achievers in 3 legs)
-5. Diamond Star → Electric Car (3 rank-4 achievers in 3 legs)
-
-## Singapore Trip Launch Offer
-- Self investment ≥ $500
-- Team business ≥ $25,000 across 3 legs (10k + 10k + 5k)
-
-## Design
-- Dark navy background (#070f1e area, hsl 222 47% 7%)
-- Gold primary (#f6c343 area, hsl 43 96% 56%)
-- Mobile-first, fixed bottom nav (5 items: Home, Dashboard, Invest, Team, Income)
-- TopNav visible on desktop when logged in
-- ScrollToTop button appears after 300px scroll
-- Google Fonts: Inter + Rajdhani
+## Design Constants
+- Background: `#010810`
+- Primary: `#3DD6F5` (teal/cyan)
+- Glass: `rgba(5,18,32,0.65)` + `blur(14px)` + `1px solid rgba(61,214,245,0.10)`
+- Muted text: `rgba(168,237,255,0.4)`
+- Font: Orbitron (headings), system-ui (body)
+- Token key: `uranaz_token` in localStorage

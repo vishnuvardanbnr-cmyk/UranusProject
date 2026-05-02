@@ -39,6 +39,7 @@ import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminSupport from "@/pages/admin/AdminSupport";
 import Support from "@/pages/Support";
+import Deposit from "@/pages/Deposit";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,6 +142,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/ranks">
           <RequireAuth user={user}>
             <Ranks user={user} />
+          </RequireAuth>
+        </Route>
+        <Route path="/deposit">
+          <RequireAuth user={user}>
+            <Deposit user={user} />
           </RequireAuth>
         </Route>
         <Route path="/support">

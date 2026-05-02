@@ -10,9 +10,9 @@ interface Props {
 
 const navLinks = [
   { href: "/dashboard",   label: "Dashboard" },
+  { href: "/deposit",     label: "Deposit" },
   { href: "/invest",      label: "Invest" },
   { href: "/income",      label: "Income" },
-  { href: "/transactions",label: "Transactions" },
   { href: "/wallet",      label: "Wallet" },
   { href: "/team",        label: "Team" },
   { href: "/withdrawals", label: "Withdraw" },
