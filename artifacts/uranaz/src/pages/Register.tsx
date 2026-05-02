@@ -87,6 +87,13 @@ export default function Register({ onLogin }: Props) {
       .catch(() => setRegInfo({ userCount: 1, isFirstUser: false, requiresReferral: true }));
   }, []);
 
+  // Auto-fill referral code from URL ?ref= param
+  useEffect(() => {
+    if (ref) {
+      form.setValue("referralCode", ref, { shouldValidate: true });
+    }
+  }, [ref]);
+
   const requireReferral = regInfo?.requiresReferral ?? true;
   const isFirstUser = regInfo?.isFirstUser ?? false;
   const schema = buildSchema(requireReferral);
@@ -178,7 +185,7 @@ export default function Register({ onLogin }: Props) {
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
           <div
-            className="w-36 h-36 mx-auto mb-4 relative"
+            className="w-44 h-44 mx-auto mb-4 relative"
             style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
           >
             <img src="/logo.png" alt="URANAZ TRADES" className="w-full h-full object-contain" />
@@ -368,9 +375,20 @@ export default function Register({ onLogin }: Props) {
                     <FormItem>
                       <FormLabel style={LABEL_STYLE}>
                         {requireReferral ? "Referral Code" : "Referral Code (Optional)"}
+                        {ref && <span className="ml-2 text-xs" style={{ color: "#3DD6F5" }}>✓ Auto-filled</span>}
                       </FormLabel>
                       <FormControl>
-                        <Input data-testid="input-referral" type="text" placeholder="Enter referral code" {...field} style={INPUT_STYLE} />
+                        <Input
+                          data-testid="input-referral"
+                          type="text"
+                          placeholder="Enter referral code"
+                          readOnly={!!ref}
+                          {...field}
+                          style={{
+                            ...INPUT_STYLE,
+                            ...(ref ? { opacity: 0.75, cursor: "not-allowed", borderColor: "rgba(61,214,245,0.35)" } : {}),
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
