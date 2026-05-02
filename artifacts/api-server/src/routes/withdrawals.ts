@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { db, withdrawalsTable, usersTable, incomeTable } from "@workspace/db";
+import { db, withdrawalsTable, usersTable, incomeTable, otpCodesTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateWithdrawalBody } from "@workspace/api-zod";
+import { isOtpWithdrawalEnabled } from "../lib/email";
 
 const router = Router();
 
@@ -44,7 +45,30 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     return;
   }
 
-  // Calculate available balance
+  // OTP verification
+  const otpRequired = await isOtpWithdrawalEnabled();
+  if (otpRequired) {
+    const otp = req.body.otp as string | undefined;
+    if (!otp) {
+      res.status(400).json({ message: "OTP required for withdrawal" });
+      return;
+    }
+    const now = new Date();
+    const [otpRecord] = await db.select().from(otpCodesTable)
+      .where(and(
+        eq(otpCodesTable.email, user.email),
+        eq(otpCodesTable.purpose, "withdrawal"),
+        eq(otpCodesTable.used, false),
+      ))
+      .orderBy(desc(otpCodesTable.createdAt))
+      .limit(1);
+    if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+      res.status(400).json({ message: "Invalid or expired OTP" });
+      return;
+    }
+    await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
+  }
+
   const allIncome = await db.select().from(incomeTable).where(eq(incomeTable.userId, user.id));
   const totalEarnings = allIncome.reduce((s, r) => s + parseFloat(r.amount), 0);
   const allWithdrawals = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.userId, user.id));

@@ -1,4 +1,4 @@
-import { pgTable, serial, boolean, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, boolean, numeric, integer, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,6 +11,18 @@ export const platformSettingsTable = pgTable("platform_settings", {
   spotReferralRate: numeric("spot_referral_rate", { precision: 5, scale: 4 }).notNull().default("0.05"),
   launchOfferActive: boolean("launch_offer_active").notNull().default(true),
   withdrawalEnabled: boolean("withdrawal_enabled").notNull().default(true),
+  // SMTP
+  smtpEnabled: boolean("smtp_enabled").notNull().default(false),
+  smtpHost: text("smtp_host").notNull().default(""),
+  smtpPort: integer("smtp_port").notNull().default(587),
+  smtpUser: text("smtp_user").notNull().default(""),
+  smtpPassword: text("smtp_password").notNull().default(""),
+  smtpFrom: text("smtp_from").notNull().default(""),
+  smtpFromName: text("smtp_from_name").notNull().default("URANAZ TRADES"),
+  // Email feature toggles
+  otpRegistrationEnabled: boolean("otp_registration_enabled").notNull().default(false),
+  otpWithdrawalEnabled: boolean("otp_withdrawal_enabled").notNull().default(false),
+  depositConfirmationEnabled: boolean("deposit_confirmation_enabled").notNull().default(false),
 });
 
 export const insertPlatformSettingsSchema = createInsertSchema(platformSettingsTable).omit({ id: true });

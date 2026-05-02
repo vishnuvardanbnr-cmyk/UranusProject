@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { createHash, randomBytes } from "crypto";
+import { db, usersTable, otpCodesTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
+import { createHash } from "crypto";
 import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
+import { sendOtpEmail, isOtpRegistrationEnabled } from "../lib/email";
 
 const router = Router();
 
 function hashPassword(password: string): string {
   return createHash("sha256").update(password + "uranaz-salt").digest("hex");
 }
-
 
 function userToResponse(user: typeof usersTable.$inferSelect) {
   return {
@@ -34,6 +34,40 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
   };
 }
 
+// GET /api/auth/otp-required
+router.get("/auth/otp-required", async (_req, res) => {
+  const { isOtpWithdrawalEnabled } = await import("../lib/email");
+  const registrationOtp = await isOtpRegistrationEnabled();
+  const withdrawalOtp = await isOtpWithdrawalEnabled();
+  res.json({ registrationOtp, withdrawalOtp });
+});
+
+// POST /api/auth/send-otp
+router.post("/auth/send-otp", async (req, res) => {
+  const { email, purpose } = req.body;
+  if (!email || !["registration", "withdrawal"].includes(purpose)) {
+    res.status(400).json({ message: "Invalid input" });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await db.update(otpCodesTable)
+    .set({ used: true })
+    .where(and(eq(otpCodesTable.email, email), eq(otpCodesTable.purpose, purpose)));
+
+  await db.insert(otpCodesTable).values({ email, code, purpose, expiresAt });
+
+  try {
+    await sendOtpEmail(email, code, purpose);
+    res.json({ message: "OTP sent" });
+  } catch (err: any) {
+    req.log?.error?.(err);
+    res.status(500).json({ message: "Failed to send OTP email. Check SMTP settings." });
+  }
+});
+
 // POST /api/auth/register
 router.post("/auth/register", async (req, res) => {
   const parsed = RegisterBody.safeParse(req.body);
@@ -42,6 +76,29 @@ router.post("/auth/register", async (req, res) => {
     return;
   }
   const { name, email, phone, password, referralCode } = parsed.data;
+
+  const otpRequired = await isOtpRegistrationEnabled();
+  if (otpRequired) {
+    const otp = req.body.otp as string | undefined;
+    if (!otp) {
+      res.status(400).json({ message: "OTP required for registration" });
+      return;
+    }
+    const now = new Date();
+    const [otpRecord] = await db.select().from(otpCodesTable)
+      .where(and(
+        eq(otpCodesTable.email, email),
+        eq(otpCodesTable.purpose, "registration"),
+        eq(otpCodesTable.used, false),
+      ))
+      .orderBy(desc(otpCodesTable.createdAt))
+      .limit(1);
+    if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+      res.status(400).json({ message: "Invalid or expired OTP" });
+      return;
+    }
+    await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
+  }
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (existing) {
@@ -64,7 +121,6 @@ router.post("/auth/register", async (req, res) => {
     sponsorId: sponsorId ?? null,
   }).returning();
 
-  // Set referral code = user's own ID
   const [user] = await db.update(usersTable)
     .set({ referralCode: String(newUser.id) })
     .where(eq(usersTable.id, newUser.id))

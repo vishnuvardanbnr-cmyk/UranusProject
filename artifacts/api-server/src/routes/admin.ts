@@ -5,6 +5,20 @@ import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
 import { withdrawalToResponse } from "./withdrawals";
 import { investmentToResponse } from "./investments";
+import { z } from "zod";
+
+const SmtpSettingsBody = z.object({
+  smtpEnabled: z.boolean(),
+  smtpHost: z.string(),
+  smtpPort: z.number().int(),
+  smtpUser: z.string(),
+  smtpPassword: z.string(),
+  smtpFrom: z.string(),
+  smtpFromName: z.string(),
+  otpRegistrationEnabled: z.boolean(),
+  otpWithdrawalEnabled: z.boolean(),
+  depositConfirmationEnabled: z.boolean(),
+});
 
 const router = Router();
 
@@ -268,6 +282,79 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     spotReferralRate: parseFloat(updated.spotReferralRate),
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,
+  });
+});
+
+// GET /api/admin/smtp-settings
+router.get("/admin/smtp-settings", requireAdmin, async (req, res) => {
+  let [settings] = await db.select().from(platformSettingsTable).limit(1);
+  if (!settings) {
+    [settings] = await db.insert(platformSettingsTable).values({}).returning();
+  }
+  res.json({
+    smtpEnabled: settings.smtpEnabled,
+    smtpHost: settings.smtpHost,
+    smtpPort: settings.smtpPort,
+    smtpUser: settings.smtpUser,
+    smtpPassword: settings.smtpPassword,
+    smtpFrom: settings.smtpFrom,
+    smtpFromName: settings.smtpFromName,
+    otpRegistrationEnabled: settings.otpRegistrationEnabled,
+    otpWithdrawalEnabled: settings.otpWithdrawalEnabled,
+    depositConfirmationEnabled: settings.depositConfirmationEnabled,
+  });
+});
+
+// PUT /api/admin/smtp-settings
+router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
+  const parsed = SmtpSettingsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Invalid input" });
+    return;
+  }
+  const [existing] = await db.select().from(platformSettingsTable).limit(1);
+  let updated;
+  if (existing) {
+    [updated] = await db.update(platformSettingsTable)
+      .set({
+        smtpEnabled: parsed.data.smtpEnabled,
+        smtpHost: parsed.data.smtpHost,
+        smtpPort: parsed.data.smtpPort,
+        smtpUser: parsed.data.smtpUser,
+        smtpPassword: parsed.data.smtpPassword,
+        smtpFrom: parsed.data.smtpFrom,
+        smtpFromName: parsed.data.smtpFromName,
+        otpRegistrationEnabled: parsed.data.otpRegistrationEnabled,
+        otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
+        depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
+      })
+      .where(eq(platformSettingsTable.id, existing.id))
+      .returning();
+  } else {
+    [updated] = await db.insert(platformSettingsTable).values({
+      smtpEnabled: parsed.data.smtpEnabled,
+      smtpHost: parsed.data.smtpHost,
+      smtpPort: parsed.data.smtpPort,
+      smtpUser: parsed.data.smtpUser,
+      smtpPassword: parsed.data.smtpPassword,
+      smtpFrom: parsed.data.smtpFrom,
+      smtpFromName: parsed.data.smtpFromName,
+      otpRegistrationEnabled: parsed.data.otpRegistrationEnabled,
+      otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
+      depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
+    }).returning();
+  }
+  res.json({
+    smtpEnabled: updated.smtpEnabled,
+    smtpHost: updated.smtpHost,
+    smtpPort: updated.smtpPort,
+    smtpUser: updated.smtpUser,
+    smtpPassword: updated.smtpPassword,
+    smtpFrom: updated.smtpFrom,
+    smtpFromName: updated.smtpFromName,
+    otpRegistrationEnabled: updated.otpRegistrationEnabled,
+    otpWithdrawalEnabled: updated.otpWithdrawalEnabled,
+    depositConfirmationEnabled: updated.depositConfirmationEnabled,
   });
 });
 

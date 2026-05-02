@@ -3,6 +3,7 @@ import { db, investmentsTable, usersTable, incomeTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateInvestmentBody } from "@workspace/api-zod";
+import { sendDepositConfirmationEmail } from "../lib/email";
 
 const router = Router();
 
@@ -86,12 +87,10 @@ router.post("/investments", requireAuth, async (req, res) => {
     earnedSoFar: "0",
   }).returning();
 
-  // Update user's total invested
   await db.update(usersTable)
     .set({ totalInvested: (parseFloat(user.totalInvested) + amount).toString() })
     .where(eq(usersTable.id, user.id));
 
-  // Give sponsor spot referral commission (5%)
   if (user.sponsorId) {
     const spotCommission = amount * 0.05;
     await db.insert(incomeTable).values({
@@ -109,6 +108,10 @@ router.post("/investments", requireAuth, async (req, res) => {
         .where(eq(usersTable.id, user.sponsorId));
     }
   }
+
+  // Send deposit confirmation email (fire-and-forget)
+  const planLabel = `${plan.tier.toUpperCase()} — ${(plan.dailyRate * 100).toFixed(1)}%/day, ${plan.durationDays} days`;
+  sendDepositConfirmationEmail(user.email, user.name, amount, planLabel).catch(() => {});
 
   res.status(201).json(investmentToResponse(investment));
 });
