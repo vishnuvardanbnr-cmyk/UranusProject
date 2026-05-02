@@ -43,7 +43,7 @@ export default function TopNav({ user, onLogout }: Props) {
     >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link href="/dashboard" className="flex items-center gap-2 group">
           <div
             className="w-8 h-8 shrink-0"
             style={{ filter: "drop-shadow(0 0 6px rgba(61,214,245,0.55))" }}
