@@ -224,41 +224,6 @@ export default function Invest({ user }: { user: any }) {
         </Form>
       </div>
 
-      {/* Plan Tiers */}
-      <div>
-        <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>Select Plan</h2>
-        <div className="space-y-2">
-          {plans.map(p => (
-            <button
-              key={p.tier}
-              onClick={() => {
-                setSelectedTier(p.tier);
-                handleAmountChange(p.min);
-              }}
-              className="w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all"
-              style={selectedTier === p.tier ? {
-                background: "rgba(61,214,245,0.10)",
-                border: "1px solid rgba(61,214,245,0.35)",
-              } : {
-                ...GLASS,
-                opacity: 0.75,
-              }}
-            >
-              <div className="text-left">
-                <div className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>{p.range}</div>
-                <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>{p.days} days</div>
-              </div>
-              <div className="flex items-center gap-2">
-                {p.popular && (
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(61,214,245,0.15)", color: TEAL }}>Popular</span>
-                )}
-                <span className="font-bold text-sm" style={{ color: TEAL }}>{p.label}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Active Investments */}
       {activeInvestments.length > 0 && (
         <div>
