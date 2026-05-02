@@ -44,25 +44,13 @@ export default function TopNav({ user, onLogout }: Props) {
     >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2 group">
+        <Link href="/dashboard" className="flex items-center group">
           <div
-            className="w-8 h-8 shrink-0"
-            style={{ filter: "drop-shadow(0 0 6px rgba(61,214,245,0.55))" }}
+            className="w-11 h-11 shrink-0"
+            style={{ filter: "drop-shadow(0 0 8px rgba(61,214,245,0.6))" }}
           >
             <img src="/logo.png" alt="URANAZ" className="w-full h-full object-contain" />
           </div>
-          <span
-            className="font-bold text-sm tracking-widest"
-            style={{
-              fontFamily: "'Orbitron', sans-serif",
-              background: "linear-gradient(135deg, #a8edff 0%, #3DD6F5 60%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            URANAZ
-          </span>
         </Link>
 
         {/* Desktop Nav */}
