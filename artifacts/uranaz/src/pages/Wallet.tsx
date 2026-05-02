@@ -460,6 +460,223 @@ function TransferModal({
   );
 }
 
+/* ────────────────────────────────────────────────
+   P2P TRANSFER MODAL
+   ──────────────────────────────────────────────── */
+function P2PModal({ availableBalance, onClose, onSuccess }: {
+  availableBalance: number;
+  onClose: () => void;
+  onSuccess: (newBalance: number) => void;
+}) {
+  const [userId, setUserId] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState<{ id: number; name: string; email: string } | null>(null);
+  const [verifyError, setVerifyError] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState("");
+
+  const handleVerify = async () => {
+    setVerified(null);
+    setVerifyError("");
+    const id = parseInt(userId, 10);
+    if (!id || isNaN(id)) { setVerifyError("Enter a valid numeric user ID"); return; }
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/wallet/p2p/lookup?userId=${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("uranaz_token") || ""}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setVerifyError(data.message || "User not found"); return; }
+      setVerified(data);
+    } catch {
+      setVerifyError("Connection error");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!verified) return;
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setSendError("Enter a valid amount"); return; }
+    if (amt > availableBalance) { setSendError(`Insufficient balance. Available: $${availableBalance.toFixed(2)}`); return; }
+    setSending(true);
+    setSendError("");
+    try {
+      const res = await fetch("/api/wallet/p2p/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("uranaz_token") || ""}` },
+        body: JSON.stringify({ recipientId: verified.id, amount: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSendError(data.message || "Transfer failed"); return; }
+      setSent(true);
+      onSuccess(data.walletBalance);
+    } catch {
+      setSendError("Connection error");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(61,214,245,0.18)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, transparent)" }} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(61,214,245,0.06))", border: "1px solid rgba(61,214,245,0.28)" }}>
+              <ArrowUpRight size={17} style={{ color: TEAL }} />
+            </div>
+            <div>
+              <div className="font-bold" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.8rem" }}>P2P Transfer</div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>Send USDT to another user</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}>
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-6 space-y-4">
+          {sent ? (
+            <div className="text-center py-6">
+              <CheckCircle2 size={48} className="mx-auto mb-3" style={{ color: "#34d399" }} />
+              <div className="font-bold text-sm mb-1" style={{ color: "#34d399" }}>Transfer Successful!</div>
+              <div className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+                ${parseFloat(amount).toFixed(2)} sent to {verified?.name}
+              </div>
+              <button
+                onClick={onClose}
+                className="mt-5 w-full py-3 rounded-2xl font-bold text-xs"
+                style={{ background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)", color: "#010810" }}
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Available balance */}
+              <div className="rounded-xl px-4 py-2.5 text-center"
+                style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
+                <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>Available USDT</div>
+                <div className="font-bold text-sm" style={{ color: TEAL }}>${availableBalance.toFixed(2)}</div>
+              </div>
+
+              {/* User ID lookup */}
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Recipient User ID</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={userId}
+                    onChange={e => { setUserId(e.target.value); setVerified(null); setVerifyError(""); }}
+                    placeholder="Enter user ID..."
+                    className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none"
+                    style={{
+                      background: "rgba(0,20,40,0.6)",
+                      border: `1px solid ${verified ? "rgba(52,211,153,0.45)" : verifyError ? "rgba(248,113,113,0.35)" : "rgba(61,214,245,0.15)"}`,
+                      color: "rgba(200,240,255,0.9)",
+                    }}
+                    onKeyDown={e => e.key === "Enter" && handleVerify()}
+                  />
+                  <button
+                    onClick={handleVerify}
+                    disabled={verifying || !userId}
+                    className="px-4 rounded-xl font-bold text-xs transition-all"
+                    style={{
+                      background: verified
+                        ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.08))"
+                        : "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(61,214,245,0.08))",
+                      border: verified ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(61,214,245,0.25)",
+                      color: verified ? "#34d399" : TEAL,
+                      opacity: verifying || !userId ? 0.5 : 1,
+                    }}
+                  >
+                    {verifying ? "..." : verified ? <CheckCircle2 size={16} /> : "Verify"}
+                  </button>
+                </div>
+                {verifyError && <p className="text-xs mt-1.5" style={{ color: "#f87171" }}>{verifyError}</p>}
+                {verified && (
+                  <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-xl"
+                    style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)" }}>
+                    <CheckCircle2 size={14} style={{ color: "#34d399" }} />
+                    <div>
+                      <div className="text-xs font-semibold" style={{ color: "#34d399" }}>{verified.name}</div>
+                      <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{verified.email}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Amount */}
+              {verified && (
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Amount (USDT)</label>
+                  <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+                    style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.15)" }}>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={e => { setAmount(e.target.value); setSendError(""); }}
+                      placeholder="0.00"
+                      className="flex-1 bg-transparent outline-none text-sm"
+                      style={{ color: "rgba(200,240,255,0.9)" }}
+                    />
+                    <button
+                      onClick={() => setAmount(availableBalance.toFixed(2))}
+                      className="text-xs font-bold px-2 py-0.5 rounded-lg"
+                      style={{ background: "rgba(61,214,245,0.12)", color: TEAL }}
+                    >
+                      MAX
+                    </button>
+                  </div>
+                  {sendError && <p className="text-xs mt-1.5" style={{ color: "#f87171" }}>{sendError}</p>}
+                </div>
+              )}
+
+              {/* Send button */}
+              <button
+                onClick={handleSend}
+                disabled={!verified || !amount || sending}
+                className="w-full py-3 rounded-2xl font-bold text-xs transition-all"
+                style={{
+                  background: !verified || !amount
+                    ? "rgba(61,214,245,0.08)"
+                    : "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                  color: !verified || !amount ? "rgba(168,237,255,0.3)" : "#010810",
+                  boxShadow: verified && amount ? "0 0 24px rgba(61,214,245,0.3)" : "none",
+                  cursor: !verified || !amount || sending ? "not-allowed" : "pointer",
+                }}
+              >
+                {sending ? "Sending..." : `Send USDT${amount ? ` · $${parseFloat(amount || "0").toFixed(2)}` : ""}`}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
   pending:   { icon: Clock,        color: "#fbbf24", label: "Pending"   },
   approved:  { icon: CheckCircle,  color: "#34d399", label: "Approved"  },
@@ -656,6 +873,7 @@ export default function WalletPage({ user }: { user: any }) {
   const [selected, setSelected] = useState<{ item: any; type: EntryType } | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showP2PModal, setShowP2PModal] = useState(false);
   const [page, setPage] = useState(1);
   const [localUsdtBal, setLocalUsdtBal] = useState<number | null>(null);
   const [localHyperBal, setLocalHyperBal] = useState<number | null>(null);
@@ -757,7 +975,7 @@ export default function WalletPage({ user }: { user: any }) {
       </div>
 
       {/* ── Action Buttons ── */}
-      <div className={`grid gap-2 ${hyperEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
+      <div className={`grid gap-2 ${hyperEnabled ? "grid-cols-4" : "grid-cols-3"}`}>
         {/* Deposit */}
         <button
           onClick={() => setShowDepositModal(true)}
@@ -770,6 +988,21 @@ export default function WalletPage({ user }: { user: any }) {
         >
           <ArrowDownLeft size={16} strokeWidth={2.5} />
           Deposit
+        </button>
+
+        {/* P2P */}
+        <button
+          onClick={() => setShowP2PModal(true)}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
+          style={{
+            background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(16,185,129,0.10))",
+            border: "1px solid rgba(52,211,153,0.32)",
+            color: "#34d399",
+            boxShadow: "0 0 20px rgba(52,211,153,0.12)",
+          }}
+        >
+          <ArrowLeftRight size={16} strokeWidth={2.5} />
+          P2P
         </button>
 
         {/* Transfer — only when HYPERCOIN is active */}
@@ -785,7 +1018,7 @@ export default function WalletPage({ user }: { user: any }) {
             }}
           >
             <ArrowLeftRight size={16} strokeWidth={2.5} />
-            Transfer
+            Swap
           </button>
         )}
 
@@ -911,6 +1144,18 @@ export default function WalletPage({ user }: { user: any }) {
           onSuccess={(usdt, hyper) => {
             setLocalUsdtBal(usdt);
             setLocalHyperBal(hyper);
+          }}
+        />
+      )}
+
+      {/* P2P Modal */}
+      {showP2PModal && (
+        <P2PModal
+          availableBalance={usdtBalance}
+          onClose={() => setShowP2PModal(false)}
+          onSuccess={(newBalance) => {
+            setLocalUsdtBal(newBalance);
+            setShowP2PModal(false);
           }}
         />
       )}

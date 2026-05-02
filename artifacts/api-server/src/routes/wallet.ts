@@ -73,4 +73,78 @@ router.post("/wallet/internal-transfer", requireAuth, async (req, res) => {
   });
 });
 
+// GET /api/wallet/p2p/lookup?userId=X — verify recipient exists
+router.get("/wallet/p2p/lookup", requireAuth, async (req, res) => {
+  const sender = (req as any).user;
+  const userId = parseInt(req.query.userId as string, 10);
+
+  if (!userId || isNaN(userId)) {
+    res.status(400).json({ message: "Invalid user ID" });
+    return;
+  }
+  if (userId === sender.id) {
+    res.status(400).json({ message: "You cannot transfer to yourself" });
+    return;
+  }
+
+  const [recipient] = await db.select({
+    id: usersTable.id,
+    fullName: usersTable.fullName,
+    email: usersTable.email,
+  }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+
+  if (!recipient) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  res.json({ id: recipient.id, name: recipient.fullName, email: recipient.email });
+});
+
+// POST /api/wallet/p2p/transfer — send USDT to another user
+router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
+  const sender = (req as any).user;
+  const { recipientId, amount } = req.body;
+
+  const transferAmount = parseFloat(amount);
+  if (!recipientId || !transferAmount || transferAmount <= 0) {
+    res.status(400).json({ message: "Invalid request" });
+    return;
+  }
+  if (recipientId === sender.id) {
+    res.status(400).json({ message: "You cannot transfer to yourself" });
+    return;
+  }
+
+  const [freshSender] = await db.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
+  const [recipient] = await db.select().from(usersTable).where(eq(usersTable.id, recipientId)).limit(1);
+
+  if (!freshSender || !recipient) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  const senderBalance = parseFloat(freshSender.walletBalance ?? "0");
+  if (transferAmount > senderBalance) {
+    res.status(400).json({ message: `Insufficient USDT balance. Available: $${senderBalance.toFixed(2)}` });
+    return;
+  }
+
+  const recipientBalance = parseFloat(recipient.walletBalance ?? "0");
+
+  await db.update(usersTable)
+    .set({ walletBalance: (senderBalance - transferAmount).toString() })
+    .where(eq(usersTable.id, sender.id));
+
+  await db.update(usersTable)
+    .set({ walletBalance: (recipientBalance + transferAmount).toString() })
+    .where(eq(usersTable.id, recipientId));
+
+  const [updatedSender] = await db.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
+  res.json({
+    message: `$${transferAmount.toFixed(2)} sent to ${recipient.fullName}`,
+    walletBalance: parseFloat(updatedSender.walletBalance ?? "0"),
+  });
+});
+
 export default router;
