@@ -101,12 +101,14 @@ router.get("/wallet/p2p/lookup", requireAuth, async (req, res) => {
   res.json({ id: recipient.id, name: recipient.fullName, email: recipient.email });
 });
 
-// POST /api/wallet/p2p/transfer — send USDT to another user
+// POST /api/wallet/p2p/transfer — send USDT or HYPERCOIN to another user
 router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
   const sender = (req as any).user;
-  const { recipientId, amount } = req.body;
+  const { recipientId, amount, currency } = req.body;
 
   const transferAmount = parseFloat(amount);
+  const coin: "usdt" | "hypercoin" = currency === "hypercoin" ? "hypercoin" : "usdt";
+
   if (!recipientId || !transferAmount || transferAmount <= 0) {
     res.status(400).json({ message: "Invalid request" });
     return;
@@ -124,26 +126,31 @@ router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
     return;
   }
 
-  const senderBalance = parseFloat(freshSender.walletBalance ?? "0");
-  if (transferAmount > senderBalance) {
-    res.status(400).json({ message: `Insufficient USDT balance. Available: $${senderBalance.toFixed(2)}` });
-    return;
+  if (coin === "usdt") {
+    const senderBalance = parseFloat(freshSender.walletBalance ?? "0");
+    if (transferAmount > senderBalance) {
+      res.status(400).json({ message: `Insufficient USDT balance. Available: $${senderBalance.toFixed(2)}` });
+      return;
+    }
+    const recipientBalance = parseFloat(recipient.walletBalance ?? "0");
+    await db.update(usersTable).set({ walletBalance: (senderBalance - transferAmount).toString() }).where(eq(usersTable.id, sender.id));
+    await db.update(usersTable).set({ walletBalance: (recipientBalance + transferAmount).toString() }).where(eq(usersTable.id, recipientId));
+  } else {
+    const senderHyper = parseFloat(freshSender.hyperCoinBalance ?? "0");
+    if (transferAmount > senderHyper) {
+      res.status(400).json({ message: `Insufficient HYPERCOIN balance. Available: $${senderHyper.toFixed(2)}` });
+      return;
+    }
+    const recipientHyper = parseFloat(recipient.hyperCoinBalance ?? "0");
+    await db.update(usersTable).set({ hyperCoinBalance: (senderHyper - transferAmount).toString() }).where(eq(usersTable.id, sender.id));
+    await db.update(usersTable).set({ hyperCoinBalance: (recipientHyper + transferAmount).toString() }).where(eq(usersTable.id, recipientId));
   }
-
-  const recipientBalance = parseFloat(recipient.walletBalance ?? "0");
-
-  await db.update(usersTable)
-    .set({ walletBalance: (senderBalance - transferAmount).toString() })
-    .where(eq(usersTable.id, sender.id));
-
-  await db.update(usersTable)
-    .set({ walletBalance: (recipientBalance + transferAmount).toString() })
-    .where(eq(usersTable.id, recipientId));
 
   const [updatedSender] = await db.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
   res.json({
-    message: `$${transferAmount.toFixed(2)} sent to ${recipient.fullName}`,
+    message: `$${transferAmount.toFixed(2)} ${coin.toUpperCase()} sent to ${recipient.fullName}`,
     walletBalance: parseFloat(updatedSender.walletBalance ?? "0"),
+    hyperCoinBalance: parseFloat(updatedSender.hyperCoinBalance ?? "0"),
   });
 });
 

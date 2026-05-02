@@ -463,11 +463,14 @@ function TransferModal({
 /* ────────────────────────────────────────────────
    P2P TRANSFER MODAL
    ──────────────────────────────────────────────── */
-function P2PModal({ availableBalance, onClose, onSuccess }: {
-  availableBalance: number;
+function P2PModal({ usdtBalance, hyperBalance, hyperEnabled, onClose, onSuccess }: {
+  usdtBalance: number;
+  hyperBalance: number;
+  hyperEnabled: boolean;
   onClose: () => void;
-  onSuccess: (newBalance: number) => void;
+  onSuccess: (newUsdt: number, newHyper: number) => void;
 }) {
+  const [currency, setCurrency] = useState<"usdt" | "hypercoin">("usdt");
   const [userId, setUserId] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState<{ id: number; name: string; email: string } | null>(null);
@@ -477,9 +480,12 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
 
+  const activeBal = currency === "usdt" ? usdtBalance : hyperBalance;
+  const coinColor = currency === "usdt" ? TEAL : "#b87fff";
+  const coinLabel = currency === "usdt" ? "USDT" : "HYPERCOIN";
+
   const handleVerify = async () => {
-    setVerified(null);
-    setVerifyError("");
+    setVerified(null); setVerifyError("");
     const id = parseInt(userId, 10);
     if (!id || isNaN(id)) { setVerifyError("Enter a valid numeric user ID"); return; }
     setVerifying(true);
@@ -490,35 +496,28 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
       const data = await res.json();
       if (!res.ok) { setVerifyError(data.message || "User not found"); return; }
       setVerified(data);
-    } catch {
-      setVerifyError("Connection error");
-    } finally {
-      setVerifying(false);
-    }
+    } catch { setVerifyError("Connection error"); }
+    finally { setVerifying(false); }
   };
 
   const handleSend = async () => {
     if (!verified) return;
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) { setSendError("Enter a valid amount"); return; }
-    if (amt > availableBalance) { setSendError(`Insufficient balance. Available: $${availableBalance.toFixed(2)}`); return; }
-    setSending(true);
-    setSendError("");
+    if (amt > activeBal) { setSendError(`Insufficient balance. Available: $${activeBal.toFixed(2)}`); return; }
+    setSending(true); setSendError("");
     try {
       const res = await fetch("/api/wallet/p2p/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("uranaz_token") || ""}` },
-        body: JSON.stringify({ recipientId: verified.id, amount: amt }),
+        body: JSON.stringify({ recipientId: verified.id, amount: amt, currency }),
       });
       const data = await res.json();
       if (!res.ok) { setSendError(data.message || "Transfer failed"); return; }
       setSent(true);
-      onSuccess(data.walletBalance);
-    } catch {
-      setSendError("Connection error");
-    } finally {
-      setSending(false);
-    }
+      onSuccess(data.walletBalance, data.hyperCoinBalance);
+    } catch { setSendError("Connection error"); }
+    finally { setSending(false); }
   };
 
   return (
@@ -547,7 +546,7 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
             </div>
             <div>
               <div className="font-bold" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.8rem" }}>P2P Transfer</div>
-              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>Send USDT to another user</div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>Send to another user</div>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -562,23 +561,42 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
               <CheckCircle2 size={48} className="mx-auto mb-3" style={{ color: "#34d399" }} />
               <div className="font-bold text-sm mb-1" style={{ color: "#34d399" }}>Transfer Successful!</div>
               <div className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
-                ${parseFloat(amount).toFixed(2)} sent to {verified?.name}
+                ${parseFloat(amount).toFixed(2)} {coinLabel} sent to {verified?.name}
               </div>
-              <button
-                onClick={onClose}
-                className="mt-5 w-full py-3 rounded-2xl font-bold text-xs"
-                style={{ background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)", color: "#010810" }}
-              >
+              <button onClick={onClose} className="mt-5 w-full py-3 rounded-2xl font-bold text-xs"
+                style={{ background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)", color: "#010810" }}>
                 Done
               </button>
             </div>
           ) : (
             <>
+              {/* Currency toggle */}
+              {hyperEnabled && (
+                <div className="flex rounded-xl p-1" style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.1)" }}>
+                  {(["usdt", "hypercoin"] as const).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => { setCurrency(c); setAmount(""); setSendError(""); }}
+                      className="flex-1 py-2 rounded-lg text-xs font-bold transition-all"
+                      style={{
+                        background: currency === c
+                          ? c === "usdt" ? "linear-gradient(135deg, rgba(61,214,245,0.22), rgba(61,214,245,0.10))" : "linear-gradient(135deg, rgba(184,127,255,0.22), rgba(184,127,255,0.10))"
+                          : "transparent",
+                        color: currency === c ? (c === "usdt" ? TEAL : "#b87fff") : "rgba(168,237,255,0.35)",
+                        border: currency === c ? `1px solid ${c === "usdt" ? "rgba(61,214,245,0.3)" : "rgba(184,127,255,0.3)"}` : "1px solid transparent",
+                      }}
+                    >
+                      {c === "usdt" ? "USDT" : "HYPERCOIN"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Available balance */}
               <div className="rounded-xl px-4 py-2.5 text-center"
-                style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
-                <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>Available USDT</div>
-                <div className="font-bold text-sm" style={{ color: TEAL }}>${availableBalance.toFixed(2)}</div>
+                style={{ background: `rgba(${currency === "usdt" ? "61,214,245" : "184,127,255"},0.06)`, border: `1px solid rgba(${currency === "usdt" ? "61,214,245" : "184,127,255"},0.12)` }}>
+                <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>Available {coinLabel}</div>
+                <div className="font-bold text-sm" style={{ color: coinColor }}>${activeBal.toFixed(2)}</div>
               </div>
 
               {/* User ID lookup */}
@@ -603,9 +621,7 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
                     disabled={verifying || !userId}
                     className="px-4 rounded-xl font-bold text-xs transition-all"
                     style={{
-                      background: verified
-                        ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.08))"
-                        : "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(61,214,245,0.08))",
+                      background: verified ? "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.08))" : "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(61,214,245,0.08))",
                       border: verified ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(61,214,245,0.25)",
                       color: verified ? "#34d399" : TEAL,
                       opacity: verifying || !userId ? 0.5 : 1,
@@ -630,9 +646,9 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
               {/* Amount */}
               {verified && (
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Amount (USDT)</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Amount ({coinLabel})</label>
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-                    style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.15)" }}>
+                    style={{ background: "rgba(0,20,40,0.6)", border: `1px solid rgba(${currency === "usdt" ? "61,214,245" : "184,127,255"},0.15)` }}>
                     <input
                       type="number"
                       value={amount}
@@ -642,9 +658,9 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
                       style={{ color: "rgba(200,240,255,0.9)" }}
                     />
                     <button
-                      onClick={() => setAmount(availableBalance.toFixed(2))}
+                      onClick={() => setAmount(activeBal.toFixed(2))}
                       className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                      style={{ background: "rgba(61,214,245,0.12)", color: TEAL }}
+                      style={{ background: `rgba(${currency === "usdt" ? "61,214,245" : "184,127,255"},0.12)`, color: coinColor }}
                     >
                       MAX
                     </button>
@@ -661,13 +677,15 @@ function P2PModal({ availableBalance, onClose, onSuccess }: {
                 style={{
                   background: !verified || !amount
                     ? "rgba(61,214,245,0.08)"
-                    : "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                    : currency === "usdt"
+                      ? "linear-gradient(135deg, #3DD6F5, #2AB3CF)"
+                      : "linear-gradient(135deg, #b87fff, #8b5cf6)",
                   color: !verified || !amount ? "rgba(168,237,255,0.3)" : "#010810",
-                  boxShadow: verified && amount ? "0 0 24px rgba(61,214,245,0.3)" : "none",
+                  boxShadow: verified && amount ? `0 0 24px rgba(${currency === "usdt" ? "61,214,245" : "184,127,255"},0.3)` : "none",
                   cursor: !verified || !amount || sending ? "not-allowed" : "pointer",
                 }}
               >
-                {sending ? "Sending..." : `Send USDT${amount ? ` · $${parseFloat(amount || "0").toFixed(2)}` : ""}`}
+                {sending ? "Sending..." : `Send ${coinLabel}${amount ? ` · $${parseFloat(amount || "0").toFixed(2)}` : ""}`}
               </button>
             </>
           )}
@@ -1151,11 +1169,13 @@ export default function WalletPage({ user }: { user: any }) {
       {/* P2P Modal */}
       {showP2PModal && (
         <P2PModal
-          availableBalance={usdtBalance}
+          usdtBalance={usdtBalance}
+          hyperBalance={hyperBalance}
+          hyperEnabled={hyperEnabled}
           onClose={() => setShowP2PModal(false)}
-          onSuccess={(newBalance) => {
-            setLocalUsdtBal(newBalance);
-            setShowP2PModal(false);
+          onSuccess={(newUsdt, newHyper) => {
+            setLocalUsdtBal(newUsdt);
+            setLocalHyperBal(newHyper);
           }}
         />
       )}
