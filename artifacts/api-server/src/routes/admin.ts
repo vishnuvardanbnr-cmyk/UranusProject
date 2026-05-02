@@ -270,13 +270,13 @@ router.post("/admin/withdrawals/:id/reject", requireAdmin, async (req, res) => {
 router.get("/admin/settings", requireAdmin, async (req, res) => {
   const [settings] = await db.select().from(platformSettingsTable).limit(1);
   if (!settings) {
-    // Create default settings
     const [created] = await db.insert(platformSettingsTable).values({}).returning();
     res.json({
       maintenanceMode: created.maintenanceMode,
       minDeposit: parseFloat(created.minDeposit),
       maxDeposit: parseFloat(created.maxDeposit),
       hyperCoinMinPercent: parseFloat(created.hyperCoinMinPercent),
+      hyperCoinPrice: parseFloat(created.hyperCoinPrice),
       spotReferralRate: parseFloat(created.spotReferralRate),
       launchOfferActive: created.launchOfferActive,
       withdrawalEnabled: created.withdrawalEnabled,
@@ -289,6 +289,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     minDeposit: parseFloat(settings.minDeposit),
     maxDeposit: parseFloat(settings.maxDeposit),
     hyperCoinMinPercent: parseFloat(settings.hyperCoinMinPercent),
+    hyperCoinPrice: parseFloat(settings.hyperCoinPrice),
     spotReferralRate: parseFloat(settings.spotReferralRate),
     launchOfferActive: settings.launchOfferActive,
     withdrawalEnabled: settings.withdrawalEnabled,
@@ -313,6 +314,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     if (parsed.data.minDeposit !== undefined) updates.minDeposit = parsed.data.minDeposit.toString();
     if (parsed.data.maxDeposit !== undefined) updates.maxDeposit = parsed.data.maxDeposit.toString();
     if (parsed.data.hyperCoinMinPercent !== undefined) updates.hyperCoinMinPercent = parsed.data.hyperCoinMinPercent.toString();
+    if (parsed.data.hyperCoinPrice !== undefined) updates.hyperCoinPrice = parsed.data.hyperCoinPrice.toString();
     if (parsed.data.spotReferralRate !== undefined) updates.spotReferralRate = parsed.data.spotReferralRate.toString();
     if (parsed.data.launchOfferEndDate !== undefined) {
       updates.launchOfferEndDate = parsed.data.launchOfferEndDate ? new Date(parsed.data.launchOfferEndDate) : null;
@@ -326,6 +328,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     minDeposit: parseFloat(updated.minDeposit),
     maxDeposit: parseFloat(updated.maxDeposit),
     hyperCoinMinPercent: parseFloat(updated.hyperCoinMinPercent),
+    hyperCoinPrice: parseFloat(updated.hyperCoinPrice),
     spotReferralRate: parseFloat(updated.spotReferralRate),
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,

@@ -19,6 +19,7 @@ type SettingsForm = {
   minDeposit: number;
   maxDeposit: number;
   hyperCoinMinPercent: number;
+  hyperCoinPrice: number;
   spotReferralRate: number;
   launchOfferActive: boolean;
   withdrawalEnabled: boolean;
@@ -362,6 +363,7 @@ export default function AdminSettings() {
               { label: "Min Deposit (USDT)",      testId: "input-min-deposit",    name: "minDeposit" as const,         type: "number", extra: {} },
               { label: "Max Deposit (USDT)",      testId: "input-max-deposit",    name: "maxDeposit" as const,         type: "number", extra: {} },
               { label: "Min HYPERCOIN % (0–100)", testId: "input-hypercoin-pct",  name: "hyperCoinMinPercent" as const, type: "number", extra: { step: "1", min: "0", max: "100" } },
+              { label: "HYPERCOIN Price (USDT)",  testId: "input-hypercoin-price", name: "hyperCoinPrice" as const,      type: "number", extra: { step: "0.0001", min: "0.0001" } },
               { label: "Spot Referral Rate (%)",  testId: "input-spot-commission",name: "spotReferralRate" as const,   type: "number", extra: { step: "0.01" } },
             ].map(f => (
               <div key={f.name}>

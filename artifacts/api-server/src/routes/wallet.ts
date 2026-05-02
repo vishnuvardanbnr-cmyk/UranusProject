@@ -15,6 +15,7 @@ router.get("/settings/public", async (_req, res) => {
   const settings = await getSettings();
   res.json({
     hyperCoinMinPercent: parseFloat(settings?.hyperCoinMinPercent ?? "50"),
+    hyperCoinPrice: parseFloat(settings?.hyperCoinPrice ?? "1.0000"),
     launchOfferActive: settings?.launchOfferActive ?? true,
     launchOfferEndDate: settings?.launchOfferEndDate ? settings.launchOfferEndDate.toISOString() : null,
   });
@@ -56,6 +57,9 @@ router.post("/wallet/internal-transfer", requireAuth, async (req, res) => {
     return;
   }
 
+  const settings = await getSettings();
+  const hcPrice = parseFloat(settings?.hyperCoinPrice ?? "1.0000");
+
   const currentUsdt = parseFloat(freshUser.walletBalance ?? "0");
   const currentHyper = parseFloat(freshUser.hyperCoinBalance ?? "0");
 
@@ -64,20 +68,22 @@ router.post("/wallet/internal-transfer", requireAuth, async (req, res) => {
       res.status(400).json({ message: `Insufficient USDT balance. Available: $${currentUsdt.toFixed(2)}` });
       return;
     }
+    const hcReceived = transferAmount / hcPrice;
     await db.update(usersTable)
       .set({
         walletBalance: (currentUsdt - transferAmount).toString(),
-        hyperCoinBalance: (currentHyper + transferAmount).toString(),
+        hyperCoinBalance: (currentHyper + hcReceived).toString(),
       })
       .where(eq(usersTable.id, user.id));
   } else {
     if (transferAmount > currentHyper) {
-      res.status(400).json({ message: `Insufficient HYPERCOIN balance. Available: $${currentHyper.toFixed(2)}` });
+      res.status(400).json({ message: `Insufficient HYPERCOIN balance. Available: HC ${currentHyper.toFixed(4)}` });
       return;
     }
+    const usdtReceived = transferAmount * hcPrice;
     await db.update(usersTable)
       .set({
-        walletBalance: (currentUsdt + transferAmount).toString(),
+        walletBalance: (currentUsdt + usdtReceived).toString(),
         hyperCoinBalance: (currentHyper - transferAmount).toString(),
       })
       .where(eq(usersTable.id, user.id));

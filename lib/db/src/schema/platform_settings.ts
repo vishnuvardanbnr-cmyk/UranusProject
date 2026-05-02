@@ -31,6 +31,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   // Withdrawal wallet
   withdrawalMode: text("withdrawal_mode").notNull().default("manual"),
   withdrawWalletPrivateKey: text("withdraw_wallet_private_key").notNull().default(""),
+  // HYPERCOIN price (1 HC = X USDT)
+  hyperCoinPrice: numeric("hyper_coin_price", { precision: 10, scale: 4 }).notNull().default("1.0000"),
   // Launch offer
   launchOfferEndDate: timestamp("launch_offer_end_date"),
   // Investment tier daily rates (decimal, e.g. 0.006 = 0.6%)

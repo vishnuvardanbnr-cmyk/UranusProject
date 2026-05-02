@@ -272,11 +272,13 @@ const GLASS = {
 function TransferModal({
   usdtBalance,
   hyperBalance,
+  hyperCoinPrice,
   onClose,
   onSuccess,
 }: {
   usdtBalance: number;
   hyperBalance: number;
+  hyperCoinPrice: number;
   onClose: () => void;
   onSuccess: (usdt: number, hyper: number) => void;
 }) {
@@ -291,6 +293,11 @@ function TransferModal({
   const fromBal   = direction === "usdt_to_hypercoin" ? usdtBalance : hyperBalance;
   const fromColor = direction === "usdt_to_hypercoin" ? TEAL : "#b87fff";
   const toColor   = direction === "usdt_to_hypercoin" ? "#b87fff" : TEAL;
+
+  const parsedAmt = parseFloat(amount) || 0;
+  const receiveAmt = direction === "usdt_to_hypercoin"
+    ? (parsedAmt / hyperCoinPrice)
+    : (parsedAmt * hyperCoinPrice);
 
   const handleSubmit = async () => {
     setError(null);
@@ -390,6 +397,12 @@ function TransferModal({
             </div>
           </div>
 
+          {/* Rate badge */}
+          <div className="flex items-center justify-center gap-1.5 py-1.5 rounded-xl" style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.12)" }}>
+            <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>Rate:</span>
+            <span className="text-xs font-bold" style={{ color: TEAL }}>1 HC = ${hyperCoinPrice.toFixed(4)} USDT</span>
+          </div>
+
           {/* From / To display */}
           <div className="flex items-center gap-2">
             <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: "rgba(0,20,40,0.5)", border: `1px solid ${fromColor}25` }}>
@@ -406,7 +419,7 @@ function TransferModal({
           {/* Amount input */}
           <div>
             <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>
-              Amount ({fromLabel}) — Available: ${fromBal.toFixed(2)}
+              Amount ({fromLabel}) — Available: {direction === "usdt_to_hypercoin" ? `$${fromBal.toFixed(2)}` : `HC ${fromBal.toFixed(4)}`}
             </label>
             <div className="relative">
               <input
@@ -429,6 +442,18 @@ function TransferModal({
             </div>
             {error && <p className="text-xs mt-1.5" style={{ color: "#f87171" }}>{error}</p>}
           </div>
+
+          {/* You receive */}
+          {parsedAmt > 0 && (
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: "rgba(184,127,255,0.07)", border: "1px solid rgba(184,127,255,0.18)" }}>
+              <span className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>You receive</span>
+              <span className="text-sm font-bold" style={{ color: toColor }}>
+                {direction === "usdt_to_hypercoin"
+                  ? `HC ${receiveAmt.toFixed(4)}`
+                  : `$${receiveAmt.toFixed(2)} USDT`}
+              </span>
+            </div>
+          )}
 
           {/* Submit */}
           {done ? (
@@ -899,11 +924,15 @@ export default function WalletPage({ user }: { user: any }) {
   const usdtBalance  = localUsdtBal  ?? (user?.walletBalance ?? 0);
   const hyperBalance = localHyperBal ?? (user?.hyperCoinBalance ?? 0);
   const [hyperEnabled, setHyperEnabled] = useState(true);
+  const [hyperCoinPrice, setHyperCoinPrice] = useState(1);
 
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
-      .then(d => setHyperEnabled((d.hyperCoinMinPercent ?? 50) > 0))
+      .then(d => {
+        setHyperEnabled((d.hyperCoinMinPercent ?? 50) > 0);
+        setHyperCoinPrice(d.hyperCoinPrice ?? 1);
+      })
       .catch(() => {});
   }, []);
 
@@ -1158,6 +1187,7 @@ export default function WalletPage({ user }: { user: any }) {
         <TransferModal
           usdtBalance={usdtBalance}
           hyperBalance={hyperBalance}
+          hyperCoinPrice={hyperCoinPrice}
           onClose={() => setShowTransferModal(false)}
           onSuccess={(usdt, hyper) => {
             setLocalUsdtBal(usdt);
