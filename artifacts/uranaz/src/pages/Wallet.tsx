@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { QRCodeSVG } from "qrcode.react";
 import Pagination from "@/components/Pagination";
 import {
   useGetIncomeSummary,
@@ -12,6 +13,7 @@ import {
   ArrowUpRight,
   X,
   CheckCircle,
+  CheckCircle2,
   Clock,
   XCircle,
   TrendingUp,
@@ -22,8 +24,231 @@ import {
   Timer,
   MapPin,
   AlertCircle,
-  Plus,
+  Copy,
+  RefreshCw,
+  ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
+
+function getToken() {
+  return localStorage.getItem("uranaz_token") || "";
+}
+
+/* ────────────────────────────────────────────────
+   DEPOSIT MODAL
+   ──────────────────────────────────────────────── */
+function DepositModal({ onClose }: { onClose: () => void }) {
+  const [address, setAddress] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<{ status: string; message: string; amount?: number; sweepTxHash?: string; newBalance?: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/deposits/address", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => setAddress(d.address))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const copy = () => {
+    if (!address) return;
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const checkDeposit = async () => {
+    setChecking(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/deposits/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch {
+      setResult({ status: "failed", message: "Connection error. Please try again." });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const resultColors: Record<string, string> = {
+    credited:  "rgba(52,211,153,0.9)",
+    not_found: "rgba(61,214,245,0.7)",
+    too_small: "rgba(251,191,36,0.9)",
+    failed:    "rgba(248,113,113,0.9)",
+    sweeping:  TEAL,
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(61,214,245,0.18)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9), 0 0 0 1px rgba(61,214,245,0.06)",
+          maxHeight: "92dvh",
+          overflowY: "auto",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Top accent bar */}
+        <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, transparent, ${TEAL}, transparent)` }} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(61,214,245,0.06))",
+                border: "1px solid rgba(61,214,245,0.28)",
+                boxShadow: "0 0 16px rgba(61,214,245,0.15)",
+              }}
+            >
+              <ArrowDownLeft size={18} style={{ color: TEAL }} />
+            </div>
+            <div>
+              <div
+                className="font-bold tracking-wide"
+                style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.8rem" }}
+              >
+                Deposit USDT
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>BEP-20 · Binance Smart Chain</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}
+          >
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-6 space-y-4">
+          {/* QR Code */}
+          <div className="flex justify-center">
+            {loading ? (
+              <div className="w-44 h-44 rounded-2xl animate-pulse" style={{ background: "rgba(61,214,245,0.06)" }} />
+            ) : address ? (
+              <div
+                className="p-3 rounded-2xl"
+                style={{ background: "rgba(255,255,255,0.97)", boxShadow: "0 0 40px rgba(61,214,245,0.18)" }}
+              >
+                <QRCodeSVG value={address} size={152} bgColor="#fff" fgColor="#010810" level="M" />
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: "rgba(248,113,113,0.8)" }}>Failed to load address</p>
+            )}
+          </div>
+
+          {/* Address + Copy */}
+          {address && (
+            <button
+              onClick={copy}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all"
+              style={{
+                background: "rgba(0,20,40,0.8)",
+                border: `1px solid ${copied ? "rgba(52,211,153,0.5)" : "rgba(61,214,245,0.2)"}`,
+              }}
+            >
+              <span className="text-xs font-mono break-all text-left leading-relaxed" style={{ color: "rgba(168,237,255,0.75)" }}>
+                {address}
+              </span>
+              {copied
+                ? <CheckCircle2 size={15} className="shrink-0" style={{ color: "rgba(52,211,153,0.9)" }} />
+                : <Copy size={15} className="shrink-0" style={{ color: "rgba(61,214,245,0.55)" }} />
+              }
+            </button>
+          )}
+
+          {/* Warning */}
+          <div
+            className="flex gap-2.5 px-3 py-2.5 rounded-xl"
+            style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.16)" }}
+          >
+            <ShieldAlert size={13} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.75)" }} />
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.75)" }}>
+              Send <strong>USDT on BEP-20 (BSC) only</strong>. Other networks or tokens will result in permanent loss.
+            </p>
+          </div>
+
+          {/* Check Deposit Button */}
+          <button
+            onClick={checkDeposit}
+            disabled={checking || !address}
+            className="w-full py-3.5 rounded-2xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{
+              background: result?.status === "credited"
+                ? "linear-gradient(135deg, #34d399, #10b981)"
+                : "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+              color: "#010810",
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: "0.75rem",
+              letterSpacing: "0.05em",
+              boxShadow: "0 0 24px rgba(61,214,245,0.25)",
+            }}
+          >
+            {checking ? (
+              <><RefreshCw size={15} className="animate-spin" /> Checking…</>
+            ) : result?.status === "credited" ? (
+              <><CheckCircle2 size={15} /> Credited!</>
+            ) : (
+              <><RefreshCw size={15} /> Check Deposit</>
+            )}
+          </button>
+
+          {/* Result */}
+          {result && (
+            <div
+              className="px-4 py-3 rounded-xl space-y-1.5"
+              style={{
+                background: result.status === "credited" ? "rgba(52,211,153,0.06)" : result.status === "not_found" ? "rgba(61,214,245,0.05)" : "rgba(248,113,113,0.05)",
+                border: `1px solid ${result.status === "credited" ? "rgba(52,211,153,0.22)" : result.status === "not_found" ? "rgba(61,214,245,0.15)" : "rgba(248,113,113,0.22)"}`,
+              }}
+            >
+              <p className="text-xs font-medium" style={{ color: resultColors[result.status] ?? "rgba(168,237,255,0.7)" }}>
+                {result.message}
+              </p>
+              {result.status === "credited" && (
+                <>
+                  {result.newBalance !== undefined && (
+                    <p className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+                      New balance: <strong style={{ color: TEAL }}>${result.newBalance.toFixed(2)}</strong>
+                    </p>
+                  )}
+                  {result.sweepTxHash && (
+                    <a
+                      href={`https://bscscan.com/tx/${result.sweepTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs"
+                      style={{ color: TEAL }}
+                    >
+                      <ExternalLink size={11} /> View on BSCScan
+                    </a>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const TEAL = "#3DD6F5";
 const GLASS = {
@@ -226,6 +451,7 @@ type EntryType = "deposit" | "withdraw";
 export default function WalletPage({ user }: { user: any }) {
   const [, setLocation] = useLocation();
   const [selected, setSelected] = useState<{ item: any; type: EntryType } | null>(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [page, setPage] = useState(1);
 
   const { data: summary }    = useGetIncomeSummary();
@@ -295,7 +521,7 @@ export default function WalletPage({ user }: { user: any }) {
       <div className="grid grid-cols-2 gap-3">
         {/* Deposit */}
         <button
-          onClick={() => setLocation("/invest")}
+          onClick={() => setShowDepositModal(true)}
           className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.97]"
           style={{
             background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
@@ -413,6 +639,11 @@ export default function WalletPage({ user }: { user: any }) {
           type={selected.type}
           onClose={() => setSelected(null)}
         />
+      )}
+
+      {/* Deposit Modal */}
+      {showDepositModal && (
+        <DepositModal onClose={() => setShowDepositModal(false)} />
       )}
     </div>
   );
