@@ -442,37 +442,6 @@ export default function Dashboard({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: "My Team",    href: "/team",        icon: Users },
-          { label: "Share Link", href: "/share",       icon: Clock },
-          { label: "Withdraw",   href: "/withdrawals", icon: Wallet },
-          { label: "All Ranks",  href: "/ranks",       icon: Award },
-        ].map(item => (
-          <Link key={item.label} href={item.href}>
-            <div
-              className="rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all duration-200"
-              style={{
-                background: "rgba(5,18,32,0.65)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid rgba(61,214,245,0.10)",
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(61,214,245,0.28)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 16px rgba(61,214,245,0.08)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(61,214,245,0.10)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              }}
-            >
-              <item.icon size={17} style={{ color: TEAL }} />
-              <span className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.75)" }}>{item.label}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }
