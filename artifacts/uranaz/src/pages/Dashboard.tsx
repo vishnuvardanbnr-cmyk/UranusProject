@@ -47,6 +47,7 @@ export default function Dashboard({ user }: { user: any }) {
   const { data: teamStats } = useGetTeamStats();
   const { data: rankProgress } = useGetMyRankProgress();
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
+  const [detailOffer, setDetailOffer] = useState<any | null>(null);
 
   useEffect(() => {
     fetch("/api/offers/active")
@@ -290,11 +291,11 @@ export default function Dashboard({ user }: { user: any }) {
               {/* Reward */}
               {offer.reward && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  className="px-3 py-2.5 rounded-xl"
                   style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.10)" }}
                 >
-                  <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Reward:</span>
-                  <span className="text-xs font-bold" style={{ color: TEAL }}>{offer.reward}</span>
+                  <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>🎁 Reward</div>
+                  <div className="text-sm font-bold leading-snug" style={{ color: TEAL }}>{offer.reward}</div>
                 </div>
               )}
 
@@ -338,27 +339,252 @@ export default function Dashboard({ user }: { user: any }) {
                 </div>
               )}
 
-              {/* Countdown */}
-              {countdown && (
-                <div
-                  className="flex items-center justify-between px-3 py-2 rounded-xl"
+              {/* Countdown + View Details row */}
+              <div className="flex items-center gap-2">
+                {countdown && (
+                  <div
+                    className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl"
+                    style={{
+                      background: countdown.expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
+                      border: `1px solid ${countdown.expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
+                    }}
+                  >
+                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+                      {countdown.expired ? "Offer ended" : "Offer ends"}
+                    </span>
+                    <span className="text-xs font-bold" style={{ color: countdown.expired ? "rgba(248,113,113,0.8)" : TEAL }}>
+                      {countdown.text}
+                    </span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setDetailOffer({ offer, criteria, allDone, countdown })}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
                   style={{
-                    background: countdown.expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
-                    border: `1px solid ${countdown.expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
+                    background: "rgba(61,214,245,0.08)",
+                    border: "1px solid rgba(61,214,245,0.18)",
+                    color: TEAL,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
-                    {countdown.expired ? "Offer ended" : "Offer ends"}
-                  </span>
-                  <span className="text-xs font-bold" style={{ color: countdown.expired ? "rgba(248,113,113,0.8)" : TEAL }}>
-                    {countdown.text}
-                  </span>
-                </div>
-              )}
+                  View Details <ArrowRight size={11} />
+                </button>
+              </div>
             </div>
           </div>
         );
       })}
+
+      {/* Offer Detail Modal */}
+      {detailOffer && (() => {
+        const { offer, criteria, allDone, countdown } = detailOffer;
+        const completedCount = criteria.filter((c: any) => c.current >= c.target).length;
+        const overallPct = criteria.length > 0 ? Math.round((completedCount / criteria.length) * 100) : 0;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center"
+            style={{ background: "rgba(1,8,16,0.85)", backdropFilter: "blur(6px)" }}
+            onClick={() => setDetailOffer(null)}
+          >
+            <div
+              className="w-full max-w-lg rounded-t-3xl overflow-hidden"
+              style={{
+                background: "linear-gradient(180deg, rgba(4,16,34,0.99) 0%, rgba(1,8,16,0.99) 100%)",
+                border: "1px solid rgba(61,214,245,0.20)",
+                borderBottom: "none",
+                maxHeight: "90vh",
+                overflowY: "auto",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full" style={{ background: "rgba(61,214,245,0.2)" }} />
+              </div>
+
+              {/* Top accent */}
+              <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, #a855f7, transparent)" }} />
+
+              <div className="p-6 space-y-5">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                      style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.22)" }}
+                    >
+                      {offer.emoji}
+                    </div>
+                    <div>
+                      <div
+                        className="font-bold text-lg leading-tight"
+                        style={{
+                          fontFamily: "'Orbitron', sans-serif",
+                          background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                        }}
+                      >
+                        {offer.title}
+                      </div>
+                      {offer.subtitle && (
+                        <div className="text-sm mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>{offer.subtitle}</div>
+                      )}
+                    </div>
+                  </div>
+                  {allDone && (
+                    <div
+                      className="px-3 py-1.5 rounded-full text-xs font-bold flex-shrink-0"
+                      style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "rgba(52,211,153,0.9)" }}
+                    >
+                      ✓ Qualified!
+                    </div>
+                  )}
+                </div>
+
+                {/* Overall progress ring summary */}
+                <div
+                  className="flex items-center gap-4 px-4 py-3 rounded-2xl"
+                  style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.10)" }}
+                >
+                  <div className="relative w-14 h-14 flex-shrink-0">
+                    <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(61,214,245,0.08)" strokeWidth="5" />
+                      <circle
+                        cx="28" cy="28" r="22" fill="none"
+                        stroke={allDone ? "rgba(52,211,153,0.8)" : TEAL}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 22}`}
+                        strokeDashoffset={`${2 * Math.PI * 22 * (1 - overallPct / 100)}`}
+                        style={{ transition: "stroke-dashoffset 0.7s ease" }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-black" style={{ color: allDone ? "rgba(52,211,153,0.9)" : TEAL }}>{overallPct}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>
+                      {completedCount} of {criteria.length} criteria met
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>
+                      {allDone ? "You qualify for this offer!" : `${criteria.length - completedCount} remaining to qualify`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reward */}
+                {offer.reward && (
+                  <div
+                    className="px-4 py-4 rounded-2xl"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(61,214,245,0.08), rgba(42,179,215,0.04))",
+                      border: "1px solid rgba(61,214,245,0.18)",
+                    }}
+                  >
+                    <div className="text-xs font-medium mb-2 tracking-wide uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>🎁 Your Reward</div>
+                    <div className="text-base font-bold leading-snug" style={{ color: TEAL }}>{offer.reward}</div>
+                  </div>
+                )}
+
+                {/* Criteria breakdown */}
+                {criteria.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium mb-3 tracking-wide uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Requirements</div>
+                    <div className="space-y-4">
+                      {(criteria as any[]).map((c: any, i: number) => {
+                        const pct = Math.min(100, c.target > 0 ? (c.current / c.target) * 100 : 0);
+                        const done = c.current >= c.target;
+                        return (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{
+                                    background: done ? "rgba(52,211,153,0.15)" : "rgba(61,214,245,0.08)",
+                                    border: `1.5px solid ${done ? "rgba(52,211,153,0.5)" : "rgba(61,214,245,0.25)"}`,
+                                  }}
+                                >
+                                  {done
+                                    ? <CheckCircle size={11} style={{ color: "rgba(52,211,153,0.9)" }} />
+                                    : <span className="text-xs font-bold" style={{ color: "rgba(61,214,245,0.5)" }}>{i + 1}</span>
+                                  }
+                                </div>
+                                <span className="text-sm font-medium" style={{ color: done ? "rgba(168,237,255,0.85)" : "rgba(168,237,255,0.55)" }}>
+                                  {c.label}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-black" style={{ color: done ? "rgba(52,211,153,0.9)" : TEAL }}>
+                                  {c.fmt(c.current)}
+                                </span>
+                                <span className="text-xs ml-1" style={{ color: "rgba(168,237,255,0.3)" }}>/ {c.fmt(c.target)}</span>
+                              </div>
+                            </div>
+                            <div className="w-full rounded-full h-2" style={{ background: "rgba(61,214,245,0.07)" }}>
+                              <div
+                                className="h-2 rounded-full transition-all duration-700"
+                                style={{
+                                  width: `${pct}%`,
+                                  background: done
+                                    ? "linear-gradient(90deg, rgba(52,211,153,0.8), rgba(52,211,153,0.5))"
+                                    : "linear-gradient(90deg, #3DD6F5, #2AB3CF)",
+                                  boxShadow: done ? "0 0 10px rgba(52,211,153,0.35)" : "0 0 10px rgba(61,214,245,0.35)",
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-between mt-1">
+                              <span className="text-xs" style={{ color: "rgba(168,237,255,0.2)" }}>0</span>
+                              <span className="text-xs" style={{ color: "rgba(168,237,255,0.2)" }}>{c.fmt(c.target)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Countdown */}
+                {countdown && (
+                  <div
+                    className="flex items-center justify-between px-4 py-3 rounded-xl"
+                    style={{
+                      background: countdown.expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
+                      border: `1px solid ${countdown.expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
+                    }}
+                  >
+                    <div>
+                      <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{countdown.expired ? "This offer has ended" : "Time remaining"}</div>
+                      <div className="font-black text-base mt-0.5" style={{ color: countdown.expired ? "rgba(248,113,113,0.8)" : TEAL }}>
+                        {countdown.text}
+                      </div>
+                    </div>
+                    {!countdown.expired && (
+                      <div className="text-2xl">⏳</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Close button */}
+                <button
+                  onClick={() => setDetailOffer(null)}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all"
+                  style={{
+                    background: "rgba(61,214,245,0.08)",
+                    border: "1px solid rgba(61,214,245,0.18)",
+                    color: "rgba(168,237,255,0.7)",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Rank Progress */}
       {rankProgress?.nextRank && (
