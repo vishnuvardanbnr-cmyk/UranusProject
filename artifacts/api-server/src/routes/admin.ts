@@ -437,4 +437,15 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
   });
 });
 
+// POST /api/admin/run-daily-payout — manual trigger for testing
+router.post("/admin/run-daily-payout", requireAdmin, async (req, res) => {
+  try {
+    const { processDailyPayout } = await import("../lib/dailyPayout");
+    const stats = await processDailyPayout();
+    res.json({ success: true, ...stats });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message || "Payout failed" });
+  }
+});
+
 export default router;
