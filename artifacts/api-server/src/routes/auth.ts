@@ -11,12 +11,6 @@ function hashPassword(password: string): string {
   return createHash("sha256").update(password + "uranaz-salt").digest("hex");
 }
 
-function generateReferralCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const bytes = randomBytes(7);
-  const suffix = Array.from(bytes).map(b => chars[b % chars.length]).join("");
-  return "U" + suffix;
-}
 
 function userToResponse(user: typeof usersTable.$inferSelect) {
   return {
@@ -61,14 +55,20 @@ router.post("/auth/register", async (req, res) => {
     if (sponsor) sponsorId = sponsor.id;
   }
 
-  const [user] = await db.insert(usersTable).values({
+  const [newUser] = await db.insert(usersTable).values({
     name,
     email,
     phone,
     passwordHash: hashPassword(password),
-    referralCode: generateReferralCode(),
+    referralCode: "0",
     sponsorId: sponsorId ?? null,
   }).returning();
+
+  // Set referral code = user's own ID
+  const [user] = await db.update(usersTable)
+    .set({ referralCode: String(newUser.id) })
+    .where(eq(usersTable.id, newUser.id))
+    .returning();
 
   const token = signToken(user.id);
   res.status(201).json({ user: userToResponse(user), token });

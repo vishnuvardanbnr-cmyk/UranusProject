@@ -109,30 +109,33 @@ export default function Team({ user }: { user: any }) {
               </span>
             </div>
 
-            {/* Referral Code */}
-            <div>
-              <div className="text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.38)" }}>Referral Code</div>
-              <div
-                className="flex items-center justify-between rounded-xl px-4 py-3"
-                style={{ background: "rgba(0,10,24,0.7)", border: "1px solid rgba(61,214,245,0.14)" }}
-              >
-                <span
-                  className="font-black tracking-widest text-base"
-                  style={{ color: TEAL, fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.12em" }}
-                >
-                  {referral.referralCode}
-                </span>
-                <button
-                  onClick={copyCode}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all"
-                  style={copiedCode
-                    ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }
-                    : { background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }
-                  }
-                >
-                  {copiedCode ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-                </button>
+            {/* User ID / Referral ID hero */}
+            <div
+              className="rounded-2xl py-4 px-4 text-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(61,214,245,0.08), rgba(42,179,215,0.03))",
+                border: "1px solid rgba(61,214,245,0.18)",
+              }}
+            >
+              <div className="text-xs uppercase tracking-widest mb-1.5" style={{ color: "rgba(168,237,255,0.38)" }}>
+                Your User ID (Ref ID)
               </div>
+              <div
+                className="font-black text-4xl"
+                style={{ color: TEAL, fontFamily: "'Orbitron', sans-serif", textShadow: "0 0 28px rgba(61,214,245,0.45)" }}
+              >
+                {referral.referralCode}
+              </div>
+              <button
+                onClick={copyCode}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg mt-3 transition-all"
+                style={copiedCode
+                  ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }
+                  : { background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }
+                }
+              >
+                {copiedCode ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy ID</>}
+              </button>
             </div>
 
             {/* Referral Link */}
