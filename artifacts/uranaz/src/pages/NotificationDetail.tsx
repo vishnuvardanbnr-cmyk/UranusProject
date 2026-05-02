@@ -75,13 +75,18 @@ export default function NotificationDetail() {
     const load = async () => {
       try {
         const token = localStorage.getItem("uranaz_token");
-        const r = await fetch("/api/notices/active", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const r = await fetch("/api/notices/active", { headers });
         if (!r.ok) { setNotFound(true); return; }
         const list: Notice[] = await r.json();
         const found = list.find(n => n.id === id);
         if (!found) { setNotFound(true); return; }
         setNotice(found);
-        // auto-mark as read
+
+        // Record server-side view (idempotent per user)
+        fetch(`/api/notices/${found.id}/view`, { method: "POST", headers }).catch(() => {});
+
+        // Auto-mark as read locally as well
         const dismissed = getDismissed();
         if (!dismissed.includes(found.id) && found.dismissible && !found.pinned) {
           saveDismissed([...dismissed, found.id]);

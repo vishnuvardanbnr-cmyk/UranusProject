@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable } from "@workspace/db";
-import { eq, desc, ilike, or, and } from "drizzle-orm";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable } from "@workspace/db";
+import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
 import { withdrawalToResponse } from "./withdrawals";
@@ -655,7 +655,7 @@ const NoticeBody = z.object({
   endsAt: z.string().nullable().optional(),
 });
 
-function noticeToResponse(n: typeof noticesTable.$inferSelect) {
+function noticeToResponse(n: typeof noticesTable.$inferSelect, viewCount = 0, audienceSize = 0) {
   return {
     id: n.id,
     title: n.title,
@@ -672,12 +672,46 @@ function noticeToResponse(n: typeof noticesTable.$inferSelect) {
     startsAt: n.startsAt ? n.startsAt.toISOString().slice(0, 16) : null,
     endsAt: n.endsAt ? n.endsAt.toISOString().slice(0, 16) : null,
     createdAt: n.createdAt.toISOString(),
+    viewCount,
+    audienceSize,
+    unreadCount: Math.max(0, audienceSize - viewCount),
   };
+}
+
+async function computeAudienceSize(audience: string): Promise<number> {
+  const all = await db.select({ id: usersTable.id, isActive: usersTable.isActive, isAdmin: usersTable.isAdmin }).from(usersTable);
+  if (audience === "all")      return all.length;
+  if (audience === "active")   return all.filter(u => u.isActive).length;
+  if (audience === "inactive") return all.filter(u => !u.isActive).length;
+  if (audience === "admin")    return all.filter(u => u.isAdmin).length;
+  return all.length;
 }
 
 router.get("/admin/notices", requireAdmin, async (_req, res) => {
   const notices = await db.select().from(noticesTable).orderBy(desc(noticesTable.createdAt));
-  res.json(notices.map(noticeToResponse));
+
+  // Aggregate view counts per notice in one query
+  const viewCounts = notices.length > 0
+    ? await db.select({
+        noticeId: noticeViewsTable.noticeId,
+        cnt: sql<number>`count(*)::int`,
+      }).from(noticeViewsTable)
+        .where(inArray(noticeViewsTable.noticeId, notices.map(n => n.id)))
+        .groupBy(noticeViewsTable.noticeId)
+    : [];
+  const viewCountMap = new Map(viewCounts.map(v => [v.noticeId, Number(v.cnt)]));
+
+  // Compute audience sizes (cache by audience type)
+  const audienceCache = new Map<string, number>();
+  for (const n of notices) {
+    if (!audienceCache.has(n.audience)) {
+      audienceCache.set(n.audience, await computeAudienceSize(n.audience));
+    }
+  }
+
+  res.json(notices.map(n =>
+    noticeToResponse(n, viewCountMap.get(n.id) ?? 0, audienceCache.get(n.audience) ?? 0)
+  ));
 });
 
 router.post("/admin/notices", requireAdmin, async (req, res) => {

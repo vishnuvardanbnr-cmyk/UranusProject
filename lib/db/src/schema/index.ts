@@ -10,3 +10,4 @@ export * from "./deposits";
 export * from "./deposit_wallet_backups";
 export * from "./offers";
 export * from "./notices";
+export * from "./notice_views";

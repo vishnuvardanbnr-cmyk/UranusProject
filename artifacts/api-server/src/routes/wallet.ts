@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, platformSettingsTable, offersTable, noticesTable } from "@workspace/db";
-import { eq, or, isNull, lte, gte, and } from "drizzle-orm";
+import { db, usersTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable } from "@workspace/db";
+import { eq, or, isNull, lte, gte, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
@@ -50,6 +50,18 @@ router.get("/notices/active", requireAuth, async (req, res) => {
     return b.createdAt.getTime() - a.createdAt.getTime();
   });
 
+  // Mark which notices the user has already viewed (server-side read state)
+  let viewedIds = new Set<number>();
+  if (visible.length > 0) {
+    const viewedRows = await db.select({ noticeId: noticeViewsTable.noticeId })
+      .from(noticeViewsTable)
+      .where(and(
+        eq(noticeViewsTable.userId, user.id),
+        inArray(noticeViewsTable.noticeId, visible.map(n => n.id)),
+      ));
+    viewedIds = new Set(viewedRows.map(r => r.noticeId));
+  }
+
   res.json(visible.map(n => ({
     id: n.id,
     title: n.title,
@@ -62,7 +74,24 @@ router.get("/notices/active", requireAuth, async (req, res) => {
     pinned: n.pinned,
     dismissible: n.dismissible,
     createdAt: n.createdAt.toISOString(),
+    viewed: viewedIds.has(n.id),
   })));
+});
+
+// POST /api/notices/:id/view — record that the signed-in user has opened this notice
+router.post("/notices/:id/view", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
+  // Confirm the notice exists & is currently active+visible to this user
+  const [n] = await db.select().from(noticesTable).where(eq(noticesTable.id, id));
+  if (!n) { res.status(404).json({ message: "Notice not found" }); return; }
+  try {
+    await db.insert(noticeViewsTable).values({ noticeId: id, userId: user.id }).onConflictDoNothing();
+  } catch (err) {
+    req.log.error({ err }, "Failed to record notice view");
+  }
+  res.json({ success: true });
 });
 
 // GET /api/offers/active — public, returns active offers for user dashboard

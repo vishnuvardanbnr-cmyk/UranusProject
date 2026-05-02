@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, Pin, Bell, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, Pin, Bell, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -27,6 +27,9 @@ interface Notice {
   startsAt: string | null;
   endsAt: string | null;
   createdAt: string;
+  viewCount: number;
+  audienceSize: number;
+  unreadCount: number;
 }
 
 const TYPE_META: Record<NoticeType, { color: string; bg: string; border: string; Icon: any; label: string }> = {
@@ -490,6 +493,56 @@ export default function AdminNotices() {
                           </span>
                         )}
                       </div>
+
+                      {/* View stats */}
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <div className="rounded-lg px-2 py-1.5 text-center"
+                             style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.18)" }}>
+                          <div className="text-[9px] uppercase tracking-wider font-semibold flex items-center justify-center gap-1"
+                               style={{ color: "rgba(52,211,153,0.7)" }}>
+                            <Eye size={9} /> Viewed
+                          </div>
+                          <div className="text-sm font-bold mt-0.5" style={{ color: "#34d399" }}>
+                            {n.viewCount}
+                          </div>
+                        </div>
+                        <div className="rounded-lg px-2 py-1.5 text-center"
+                             style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}>
+                          <div className="text-[9px] uppercase tracking-wider font-semibold flex items-center justify-center gap-1"
+                               style={{ color: "rgba(251,191,36,0.7)" }}>
+                            <EyeOff size={9} /> Unread
+                          </div>
+                          <div className="text-sm font-bold mt-0.5" style={{ color: "#fbbf24" }}>
+                            {n.unreadCount}
+                          </div>
+                        </div>
+                        <div className="rounded-lg px-2 py-1.5 text-center"
+                             style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)" }}>
+                          <div className="text-[9px] uppercase tracking-wider font-semibold"
+                               style={{ color: "rgba(61,214,245,0.7)" }}>
+                            Audience
+                          </div>
+                          <div className="text-sm font-bold mt-0.5" style={{ color: TEAL }}>
+                            {n.audienceSize}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      {n.audienceSize > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(168,237,255,0.06)" }}>
+                            <div className="h-full rounded-full transition-all"
+                                 style={{
+                                   width: `${Math.min(100, (n.viewCount / n.audienceSize) * 100)}%`,
+                                   background: "linear-gradient(90deg, #34d399, #3DD6F5)",
+                                 }} />
+                          </div>
+                          <div className="text-[10px] mt-1" style={{ color: "rgba(168,237,255,0.4)" }}>
+                            {Math.round((n.viewCount / n.audienceSize) * 100)}% reach
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
