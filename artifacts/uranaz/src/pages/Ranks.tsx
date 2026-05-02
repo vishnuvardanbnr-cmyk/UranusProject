@@ -57,7 +57,6 @@ export default function Ranks({ user }: { user: any }) {
                 Next: <span style={{ color: "rgba(168,237,255,0.85)", fontWeight: 600 }}>{progress.nextRank.name}</span>
                 {" "}— <span style={{ color: TEAL }}>{progress.nextRank.reward}</span>
               </div>
-              <div className="text-xs mb-3" style={{ color: "rgba(168,237,255,0.35)" }}>{progress.nextRank.criteria}</div>
             </>
           )}
           <div className="grid grid-cols-3 gap-2 mt-3">

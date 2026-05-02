@@ -679,11 +679,6 @@ export default function Dashboard({ user }: { user: any }) {
             </div>
 
             {/* Criteria */}
-            {rankProgress.nextRank.criteria && (
-              <div className="text-xs mb-4 leading-relaxed" style={{ color: "rgba(168,237,255,0.38)" }}>
-                {rankProgress.nextRank.criteria}
-              </div>
-            )}
 
             {/* CTA */}
             <Link href="/ranks">
