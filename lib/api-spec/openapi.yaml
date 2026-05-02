@@ -568,9 +568,11 @@ components:
           type: string
         password:
           type: string
+        country:
+          type: string
         referralCode:
           type: string
-      required: [name, email, phone, password]
+      required: [name, email, phone, password, country]
 
     LoginBody:
       type: object

@@ -103,7 +103,14 @@ router.post("/auth/register", async (req, res) => {
     res.status(400).json({ message: "Invalid input", errors: parsed.error.issues });
     return;
   }
-  const { name, email, phone, password, referralCode } = parsed.data;
+  const { name, email, phone, password, referralCode, country } = parsed.data;
+
+  // Defensive: api-zod only enforces `country` as a string. Make sure it is
+  // non-empty after trim so a tampered client cannot register without a country.
+  if (!country || !country.trim()) {
+    res.status(400).json({ message: "Country is required." });
+    return;
+  }
 
   const otpRequired = await isOtpRegistrationEnabled();
   if (otpRequired) {
@@ -179,6 +186,7 @@ router.post("/auth/register", async (req, res) => {
         name,
         email,
         phone,
+        country: country?.trim() || null,
         passwordHash: hashPassword(password),
         referralCode: referralCodeGenerated,
         sponsorId: sponsorId ?? null,

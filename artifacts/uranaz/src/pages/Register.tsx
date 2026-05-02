@@ -8,13 +8,25 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, ArrowLeft, ShieldCheck } from "lucide-react";
+import { COUNTRIES, COUNTRY_BY_ISO2 } from "@/lib/countries";
 
 function buildSchema(requireReferral: boolean) {
   return z.object({
     name: z.string().min(2, "Full name required"),
     email: z.string().email("Valid email required"),
-    phone: z.string().min(7, "Phone required"),
+    countryIso2: z
+      .string()
+      .min(2, "Country is required")
+      .refine((v) => Boolean(COUNTRY_BY_ISO2[v]), { message: "Pick a country from the list" }),
+    phoneLocal: z
+      .string()
+      .trim()
+      .regex(/^[0-9 \-]*$/, "Digits only")
+      .refine((v) => v.replace(/[^0-9]/g, "").length >= 5, {
+        message: "Enter at least 5 digits",
+      }),
     password: z.string().min(6, "Min 6 characters"),
     referralCode: requireReferral
       ? z.string().trim().min(1, "Referral code is required")
@@ -81,26 +93,47 @@ export default function Register({ onLogin }: Props) {
 
   const form = useForm<RegisterValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", phone: "", password: "", referralCode: ref },
+    defaultValues: { name: "", email: "", countryIso2: "", phoneLocal: "", password: "", referralCode: ref },
   });
+
+  const selectedIso2 = form.watch("countryIso2");
+  const selectedCountry = selectedIso2 ? COUNTRY_BY_ISO2[selectedIso2] : undefined;
+
+  // Convert form values into the API-shaped registration payload.
+  // The visible "Phone Number" input only collects the local digits — the
+  // dial code is locked to the chosen country and prepended on submit.
+  function toApiPayload(data: RegisterValues) {
+    const c = COUNTRY_BY_ISO2[data.countryIso2];
+    const localDigits = data.phoneLocal.replace(/[^0-9]/g, "");
+    const phone = c ? `${c.dialCode} ${localDigits}` : localDigits;
+    return {
+      name: data.name,
+      email: data.email,
+      phone,
+      country: c?.name ?? "",
+      password: data.password,
+      referralCode: data.referralCode,
+    };
+  }
 
   const handleFormSubmit = async (data: RegisterValues) => {
     try {
+      const payload = toApiPayload(data);
       const { registrationOtp } = await checkOtpRequired();
       if (registrationOtp) {
         setSending(true);
         try {
-          await sendOtp(data.email);
+          await sendOtp(payload.email);
           setFormData(data);
           setStep("otp");
-          toast({ title: "OTP sent!", description: `Check your email ${data.email}` });
+          toast({ title: "OTP sent!", description: `Check your email ${payload.email}` });
         } catch (err: any) {
           toast({ title: "Failed to send OTP", description: err?.message, variant: "destructive" });
         } finally {
           setSending(false);
         }
       } else {
-        const res = await registerMutation.mutateAsync({ data });
+        const res = await registerMutation.mutateAsync({ data: payload as any });
         setToken(res.token);
         onLogin(res.user);
         setLocation("/profile-setup");
@@ -117,7 +150,8 @@ export default function Register({ onLogin }: Props) {
       return;
     }
     try {
-      const res = await registerMutation.mutateAsync({ data: { ...formData, otp } as any });
+      const payload = toApiPayload(formData);
+      const res = await registerMutation.mutateAsync({ data: { ...payload, otp } as any });
       setToken(res.token);
       onLogin(res.user);
       setLocation("/profile-setup");
@@ -200,23 +234,148 @@ export default function Register({ onLogin }: Props) {
                     </div>
                   </div>
                 )}
-                {[
-                  { name: "name" as const,         label: "Full Name",                                                testId: "input-name",     type: "text",     placeholder: "Your full name",        show: true },
-                  { name: "email" as const,        label: "Email Address",                                            testId: "input-email",    type: "email",    placeholder: "you@example.com",       show: true },
-                  { name: "phone" as const,        label: "Phone Number",                                             testId: "input-phone",    type: "tel",      placeholder: "+65 8123 4567",         show: true },
-                  { name: "password" as const,     label: "Password",                                                 testId: "input-password", type: "password", placeholder: "Min 6 characters",      show: true },
-                  { name: "referralCode" as const, label: requireReferral ? "Referral Code" : "Referral Code (Optional)", testId: "input-referral", type: "text",     placeholder: "Enter referral code",   show: !isFirstUser },
-                ].filter(f => f.show).map(f => (
-                  <FormField key={f.name} control={form.control} name={f.name} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel style={LABEL_STYLE}>{f.label}</FormLabel>
+                {/* Name */}
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>Full Name</FormLabel>
+                    <FormControl>
+                      <Input data-testid="input-name" type="text" placeholder="Your full name" {...field} style={INPUT_STYLE} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Email */}
+                <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>Email Address</FormLabel>
+                    <FormControl>
+                      <Input data-testid="input-email" type="email" placeholder="you@example.com" {...field} style={INPUT_STYLE} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Country */}
+                <FormField control={form.control} name="countryIso2" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>Country</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <Input data-testid={f.testId} type={f.type} placeholder={f.placeholder} {...field} style={INPUT_STYLE} />
+                        <SelectTrigger
+                          data-testid="select-country"
+                          className="w-full h-9 rounded-md px-3"
+                          style={INPUT_STYLE}
+                        >
+                          <SelectValue placeholder="Select your country" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent
+                        className="max-h-72"
+                        style={{
+                          background: "rgba(5,18,32,0.97)",
+                          border: "1px solid rgba(61,214,245,0.25)",
+                          color: "rgba(168,237,255,0.9)",
+                          backdropFilter: "blur(24px)",
+                        }}
+                      >
+                        {COUNTRIES.map((c) => (
+                          <SelectItem
+                            key={c.iso2}
+                            value={c.iso2}
+                            data-testid={`option-country-${c.iso2}`}
+                            className="cursor-pointer"
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              <span>{c.name}</span>
+                              <span style={{ color: "rgba(168,237,255,0.45)", fontSize: "0.75rem" }}>
+                                ({c.dialCode})
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Phone (with locked country dial-code prefix) */}
+                <FormField control={form.control} name="phoneLocal" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>Phone Number</FormLabel>
+                    <FormControl>
+                      <div
+                        className="flex items-stretch rounded-md overflow-hidden"
+                        style={{
+                          background: INPUT_STYLE.background,
+                          border: INPUT_STYLE.border,
+                        }}
+                      >
+                        <div
+                          data-testid="text-dial-code"
+                          aria-label="Country dial code"
+                          className="flex items-center px-3 text-sm select-none"
+                          style={{
+                            background: "rgba(61,214,245,0.10)",
+                            color: selectedCountry ? TEAL : "rgba(168,237,255,0.4)",
+                            borderRight: "1px solid rgba(61,214,245,0.18)",
+                            fontWeight: 600,
+                            minWidth: 64,
+                            justifyContent: "center",
+                          }}
+                          title={selectedCountry ? `${selectedCountry.name} dial code` : "Select a country first"}
+                        >
+                          {selectedCountry?.dialCode ?? "+—"}
+                        </div>
+                        <input
+                          data-testid="input-phone"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          placeholder={selectedCountry ? "8123 4567" : "Select country first"}
+                          disabled={!selectedCountry}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(e.target.value.replace(/[^0-9 \-]/g, ""))
+                          }
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          className="flex-1 bg-transparent px-3 text-sm focus:outline-none disabled:opacity-60"
+                          style={{ color: "rgba(168,237,255,0.9)" }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Password */}
+                <FormField control={form.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>Password</FormLabel>
+                    <FormControl>
+                      <Input data-testid="input-password" type="password" placeholder="Min 6 characters" {...field} style={INPUT_STYLE} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Referral (hidden for first user) */}
+                {!isFirstUser && (
+                  <FormField control={form.control} name="referralCode" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel style={LABEL_STYLE}>
+                        {requireReferral ? "Referral Code" : "Referral Code (Optional)"}
+                      </FormLabel>
+                      <FormControl>
+                        <Input data-testid="input-referral" type="text" placeholder="Enter referral code" {...field} style={INPUT_STYLE} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                ))}
+                )}
                 <button
                   data-testid="button-submit-register"
                   type="submit"
