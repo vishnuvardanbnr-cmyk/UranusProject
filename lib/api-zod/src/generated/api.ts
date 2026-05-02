@@ -685,9 +685,11 @@ export const UpdateAdminSettingsBody = zod.object({
   minDeposit: zod.number(),
   maxDeposit: zod.number(),
   hyperCoinMinPercent: zod.number(),
+  hyperCoinPrice: zod.number().optional(),
   spotReferralRate: zod.number(),
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
+  launchOfferEndDate: zod.string().optional(),
 });
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -695,7 +697,9 @@ export const UpdateAdminSettingsResponse = zod.object({
   minDeposit: zod.number(),
   maxDeposit: zod.number(),
   hyperCoinMinPercent: zod.number(),
+  hyperCoinPrice: zod.number().optional(),
   spotReferralRate: zod.number(),
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
+  launchOfferEndDate: zod.string().optional(),
 });
