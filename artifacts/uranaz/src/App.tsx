@@ -51,6 +51,12 @@ const queryClient = new QueryClient({
   },
 });
 
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [location]);
+  return null;
+}
+
 function RequireAuth({ children, user }: { children: React.ReactNode; user: any }) {
   const [location] = useLocation();
   if (!user) return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
@@ -244,6 +250,7 @@ function AppInner() {
 
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <ScrollToTop />
       <SpaceBackground />
       <div className="relative z-10 min-h-screen">
         <Router user={user} setUser={setUser} />
