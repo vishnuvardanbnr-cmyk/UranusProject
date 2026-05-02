@@ -68,20 +68,6 @@ export default function Dashboard({ user }: { user: any }) {
             {user?.name}
           </p>
         </div>
-        <Link href="/invest">
-          <button
-            data-testid="button-invest-now"
-            className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all"
-            style={{
-              background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-              color: "#010810",
-              boxShadow: "0 0 16px rgba(61,214,245,0.35)",
-              letterSpacing: "0.03em",
-            }}
-          >
-            <TrendingUp size={14} /> Invest
-          </button>
-        </Link>
       </div>
 
       {/* Balance Card */}
