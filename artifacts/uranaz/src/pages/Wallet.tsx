@@ -156,22 +156,30 @@ function DepositModal({ onClose }: { onClose: () => void }) {
 
           {/* Address + Copy */}
           {address && (
-            <button
-              onClick={copy}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all"
-              style={{
-                background: "rgba(0,20,40,0.8)",
-                border: `1px solid ${copied ? "rgba(52,211,153,0.5)" : "rgba(61,214,245,0.2)"}`,
-              }}
-            >
-              <span className="text-xs font-mono break-all text-left leading-relaxed" style={{ color: "rgba(168,237,255,0.75)" }}>
-                {address}
-              </span>
-              {copied
-                ? <CheckCircle2 size={15} className="shrink-0" style={{ color: "rgba(52,211,153,0.9)" }} />
-                : <Copy size={15} className="shrink-0" style={{ color: "rgba(61,214,245,0.55)" }} />
-              }
-            </button>
+            <div className="space-y-1.5">
+              <button
+                onClick={copy}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all"
+                style={{
+                  background: "rgba(0,20,40,0.8)",
+                  border: `1px solid ${copied ? "rgba(52,211,153,0.5)" : "rgba(61,214,245,0.2)"}`,
+                }}
+              >
+                <span className="text-xs font-mono break-all text-left leading-relaxed" style={{ color: "rgba(168,237,255,0.75)" }}>
+                  {address}
+                </span>
+                {copied
+                  ? <CheckCircle2 size={15} className="shrink-0" style={{ color: "rgba(52,211,153,0.9)" }} />
+                  : <Copy size={15} className="shrink-0" style={{ color: "rgba(61,214,245,0.55)" }} />
+                }
+              </button>
+              {copied && (
+                <div className="flex items-center justify-center gap-1.5 py-1 rounded-lg" style={{ background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.22)" }}>
+                  <CheckCircle2 size={12} style={{ color: "rgba(52,211,153,0.9)" }} />
+                  <span className="text-xs font-semibold" style={{ color: "rgba(52,211,153,0.9)" }}>Address Copied!</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Warning */}
