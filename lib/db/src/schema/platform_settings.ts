@@ -18,7 +18,10 @@ export const platformSettingsTable = pgTable("platform_settings", {
   smtpUser: text("smtp_user").notNull().default(""),
   smtpPassword: text("smtp_password").notNull().default(""),
   smtpFrom: text("smtp_from").notNull().default(""),
-  smtpFromName: text("smtp_from_name").notNull().default("URANAZ TRADES"),
+  smtpFromName: text("smtp_from_name").notNull().default("URANUS TRADES"),
+  // Legal content
+  termsContent: text("terms_content").notNull().default(""),
+  privacyContent: text("privacy_content").notNull().default(""),
   // Email feature toggles
   otpRegistrationEnabled: boolean("otp_registration_enabled").notNull().default(false),
   otpWithdrawalEnabled: boolean("otp_withdrawal_enabled").notNull().default(false),
