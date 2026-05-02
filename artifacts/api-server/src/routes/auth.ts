@@ -256,11 +256,10 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
   }
   const user = (req as any).user;
 
-  // Server-side BEP20 validation. This is the source of truth — UI validation
-  // is convenience only. Rejecting empty/invalid wallets here also closes the
-  // OTP bypass where a user could blank the wallet to dodge the gate.
   const newWallet = (parsed.data.walletAddress ?? "").trim();
-  if (!BEP20_REGEX.test(newWallet)) {
+  // Allow empty wallet on initial setup (user chose to skip).
+  // Only validate format when a non-empty value is provided.
+  if (newWallet && !BEP20_REGEX.test(newWallet)) {
     res.status(400).json({
       message: "Invalid wallet address. Must be a valid BEP20 address (0x followed by 40 hex characters).",
     });
