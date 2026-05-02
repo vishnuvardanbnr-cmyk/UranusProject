@@ -86,9 +86,10 @@ export default function NotificationDetail() {
         // Record server-side view (idempotent per user)
         fetch(`/api/notices/${found.id}/view`, { method: "POST", headers }).catch(() => {});
 
-        // Auto-mark as read locally as well
+        // Auto-mark as read locally — opening a notice always counts as reading,
+        // regardless of pinned/dismissible (those flags only control list behavior, not read state)
         const dismissed = getDismissed();
-        if (!dismissed.includes(found.id) && found.dismissible && !found.pinned) {
+        if (!dismissed.includes(found.id)) {
           saveDismissed([...dismissed, found.id]);
         }
       } catch {
