@@ -51,11 +51,6 @@ const queryClient = new QueryClient({
   },
 });
 
-function ScrollToTop() {
-  const [location] = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [location]);
-  return null;
-}
 
 function RequireAuth({ children, user }: { children: React.ReactNode; user: any }) {
   const [location] = useLocation();
@@ -71,6 +66,13 @@ function RequireAdmin({ children, user }: { children: React.ReactNode; user: any
 
 function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
   const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location]);
+
   const isLoggedIn = !!user;
   const isPublic = ["/", "/login", "/register", "/terms", "/privacy"].includes(location) ||
     location.startsWith("/terms") || location.startsWith("/privacy");
