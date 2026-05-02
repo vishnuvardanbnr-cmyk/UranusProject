@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Pagination from "@/components/Pagination";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -92,6 +93,10 @@ export default function Invest({ user }: { user: any }) {
   };
 
   const activeInvestments = investments?.filter(i => i.status === "active") || [];
+  const INVEST_PAGE_SIZE = 5;
+  const [investPage, setInvestPage] = useState(1);
+  const totalInvestPages = Math.max(1, Math.ceil(activeInvestments.length / INVEST_PAGE_SIZE));
+  const paginatedInvestments = activeInvestments.slice((investPage - 1) * INVEST_PAGE_SIZE, investPage * INVEST_PAGE_SIZE);
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-6 pb-24 md:pb-8">
@@ -227,11 +232,16 @@ export default function Invest({ user }: { user: any }) {
       {/* Active Investments */}
       {activeInvestments.length > 0 && (
         <div>
-          <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>
-            Your Active Investments
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.75)" }}>
+              Your Active Investments
+            </h2>
+            <span className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
+              {activeInvestments.length} total
+            </span>
+          </div>
           <div className="space-y-3">
-            {activeInvestments.map(inv => (
+            {paginatedInvestments.map(inv => (
               <div
                 key={inv.id}
                 data-testid={`card-investment-${inv.id}`}
@@ -258,8 +268,8 @@ export default function Invest({ user }: { user: any }) {
                     Earned: <span style={{ color: "rgba(168,237,255,0.8)", fontWeight: 600 }}>${inv.earnedSoFar.toFixed(2)}</span>
                   </div>
                   <div className="text-right" style={{ color: "rgba(168,237,255,0.4)" }}>{inv.remainingDays} days left</div>
-                  <div style={{ color: "rgba(168,100,255,0.6)" }}>HC: ${inv.hyperCoinAmount.toFixed(2)}</div>
-                  <div className="text-right" style={{ color: "rgba(61,214,245,0.6)" }}>USDT: ${inv.usdtAmount.toFixed(2)}</div>
+                  {hyperEnabled && <div style={{ color: "rgba(168,100,255,0.6)" }}>HC: ${inv.hyperCoinAmount.toFixed(2)}</div>}
+                  {hyperEnabled && <div className="text-right" style={{ color: "rgba(61,214,245,0.6)" }}>USDT: ${inv.usdtAmount.toFixed(2)}</div>}
                 </div>
                 <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.08)" }}>
                   <div
@@ -270,6 +280,14 @@ export default function Invest({ user }: { user: any }) {
               </div>
             ))}
           </div>
+          <Pagination
+            page={investPage}
+            totalPages={totalInvestPages}
+            total={activeInvestments.length}
+            pageSize={INVEST_PAGE_SIZE}
+            onPrev={() => setInvestPage(p => Math.max(1, p - 1))}
+            onNext={() => setInvestPage(p => Math.min(totalInvestPages, p + 1))}
+          />
         </div>
       )}
     </div>
