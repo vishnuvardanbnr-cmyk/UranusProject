@@ -79,29 +79,6 @@ export default function Ranks({ user }: { user: any }) {
         </div>
       </div>
 
-      {/* Leg progress */}
-      {progress?.lugsProgress && progress.lugsProgress.length > 0 && (
-        <div className="rounded-xl p-5" style={GLASS}>
-          <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>Leg Business Progress</h2>
-          <div className="space-y-3">
-            {progress.lugsProgress.map(leg => {
-              const pct = leg.required > 0 ? Math.min(100, (leg.business / leg.required) * 100) : 0;
-              return (
-                <div key={leg.lugIndex}>
-                  <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.4)" }}>
-                    <span>Leg {leg.lugIndex}</span>
-                    <span>${leg.business.toFixed(0)} / ${leg.required.toLocaleString()}</span>
-                  </div>
-                  <div className="w-full rounded-full h-2" style={{ background: "rgba(61,214,245,0.08)" }}>
-                    <div className="h-2 rounded-full uranus-progress transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Rank cards */}
       {loadingRanks ? (
         <div className="space-y-3">
@@ -179,37 +156,6 @@ export default function Ranks({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Singapore Launch Offer */}
-      <div
-        className="rounded-2xl p-5 text-center relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(61,214,245,0.10), rgba(100,60,200,0.08))",
-          border: "1px solid rgba(61,214,245,0.22)",
-        }}
-      >
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(61,214,245,0.06) 0%, transparent 70%)" }} />
-        <div className="relative">
-          <div className="text-3xl mb-2">✈️</div>
-          <h3 className="font-bold mb-1" style={{ color: "rgba(168,237,255,0.9)" }}>Launch Offer — Singapore Trip</h3>
-          <p className="text-sm mb-4" style={{ color: "rgba(168,237,255,0.4)" }}>3-Day 5-Star Package for qualifying investors</p>
-          <div className="grid grid-cols-3 gap-2 text-sm">
-            {[
-              { label: "Self Invest",   value: "$500+" },
-              { label: "Team Business", value: "$25K" },
-              { label: "3 Legs",        value: "10k+10k+5k" },
-            ].map(item => (
-              <div
-                key={item.label}
-                className="rounded-lg p-2.5"
-                style={{ background: "rgba(0,10,24,0.5)", border: "1px solid rgba(61,214,245,0.10)" }}
-              >
-                <div className="font-bold" style={{ color: TEAL }}>{item.value}</div>
-                <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{item.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
