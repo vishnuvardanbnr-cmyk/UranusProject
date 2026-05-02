@@ -685,25 +685,6 @@ export default function Dashboard({ user }: { user: any }) {
               </div>
             )}
 
-            {/* Stats row */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {[
-                { label: "Levels Done",    value: rankProgress.levelsCompleted         ?? 0 },
-                { label: "Ranked Refs",    value: rankProgress.qualifyingReferrersCount ?? 0 },
-              ].map(s => (
-                <div key={s.label} className="rounded-xl p-3 text-center"
-                  style={{ background: "rgba(0,10,24,0.55)", border: "1px solid rgba(61,214,245,0.07)" }}>
-                  <div
-                    className="font-black text-lg"
-                    style={{ color: "rgba(168,237,255,0.85)", fontFamily: "'Orbitron', sans-serif" }}
-                  >
-                    {s.value}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.32)" }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
             {/* CTA */}
             <Link href="/ranks">
               <button
