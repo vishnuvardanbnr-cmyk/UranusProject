@@ -9,6 +9,7 @@ import ranksRouter from "./ranks";
 import adminRouter from "./admin";
 import supportRouter from "./support";
 import depositsRouter from "./deposits";
+import walletRouter from "./wallet";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(ranksRouter);
 router.use(adminRouter);
 router.use(supportRouter);
 router.use(depositsRouter);
+router.use(walletRouter);
 
 export default router;

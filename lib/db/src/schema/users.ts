@@ -22,6 +22,7 @@ export const usersTable = pgTable("users", {
   totalEarnings: numeric("total_earnings", { precision: 20, scale: 6 }).notNull().default("0"),
   totalInvested: numeric("total_invested", { precision: 20, scale: 6 }).notNull().default("0"),
   walletBalance: numeric("wallet_balance", { precision: 20, scale: 6 }).notNull().default("0"),
+  hyperCoinBalance: numeric("hyper_coin_balance", { precision: 20, scale: 6 }).notNull().default("0"),
   depositAddress: text("deposit_address"),
   depositPrivateKey: text("deposit_private_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

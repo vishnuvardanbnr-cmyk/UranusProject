@@ -11,6 +11,7 @@ import {
   Wallet,
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowLeftRight,
   X,
   CheckCircle,
   CheckCircle2,
@@ -265,6 +266,200 @@ const GLASS = {
   border: "1px solid rgba(61,214,245,0.10)",
 } as const;
 
+/* ────────────────────────────────────────────────
+   TRANSFER MODAL (USDT ↔ HYPERCOIN)
+   ──────────────────────────────────────────────── */
+function TransferModal({
+  usdtBalance,
+  hyperBalance,
+  onClose,
+  onSuccess,
+}: {
+  usdtBalance: number;
+  hyperBalance: number;
+  onClose: () => void;
+  onSuccess: (usdt: number, hyper: number) => void;
+}) {
+  const [direction, setDirection] = useState<"usdt_to_hypercoin" | "hypercoin_to_usdt">("usdt_to_hypercoin");
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const fromLabel = direction === "usdt_to_hypercoin" ? "USDT" : "HYPERCOIN";
+  const toLabel   = direction === "usdt_to_hypercoin" ? "HYPERCOIN" : "USDT";
+  const fromBal   = direction === "usdt_to_hypercoin" ? usdtBalance : hyperBalance;
+  const fromColor = direction === "usdt_to_hypercoin" ? TEAL : "#b87fff";
+  const toColor   = direction === "usdt_to_hypercoin" ? "#b87fff" : TEAL;
+
+  const handleSubmit = async () => {
+    setError(null);
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setError("Enter a valid amount"); return; }
+    if (amt > fromBal)    { setError(`Insufficient ${fromLabel} balance`); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/wallet/internal-transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ direction, amount: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || "Transfer failed"); return; }
+      setDone(true);
+      onSuccess(data.walletBalance, data.hyperCoinBalance);
+      setTimeout(onClose, 1500);
+    } catch {
+      setError("Connection error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(61,214,245,0.18)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #b87fff, #3DD6F5, transparent)" }} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(61,214,245,0.08))", border: "1px solid rgba(184,127,255,0.3)" }}
+            >
+              <ArrowLeftRight size={17} style={{ color: "#b87fff" }} />
+            </div>
+            <div>
+              <div className="font-bold tracking-wide" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.8rem" }}>
+                Internal Transfer
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>USDT ↔ HYPERCOIN</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}
+          >
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-6 space-y-4">
+          {/* Direction Toggle */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl p-1" style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.10)" }}>
+            {(["usdt_to_hypercoin", "hypercoin_to_usdt"] as const).map(d => (
+              <button
+                key={d}
+                onClick={() => { setDirection(d); setAmount(""); setError(null); }}
+                className="rounded-lg py-2 text-xs font-semibold transition-all"
+                style={direction === d ? {
+                  background: "linear-gradient(135deg, rgba(184,127,255,0.20), rgba(61,214,245,0.10))",
+                  color: "rgba(200,240,255,0.92)",
+                  border: "1px solid rgba(184,127,255,0.28)",
+                } : { color: "rgba(168,237,255,0.4)" }}
+              >
+                {d === "usdt_to_hypercoin" ? "USDT → HC" : "HC → USDT"}
+              </button>
+            ))}
+          </div>
+
+          {/* Balance pills */}
+          <div className="flex gap-2">
+            <div className="flex-1 rounded-xl px-3 py-2.5" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
+              <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>USDT Balance</div>
+              <div className="font-bold text-sm" style={{ color: TEAL }}>${usdtBalance.toFixed(2)}</div>
+            </div>
+            <div className="flex-1 rounded-xl px-3 py-2.5" style={{ background: "rgba(184,127,255,0.06)", border: "1px solid rgba(184,127,255,0.14)" }}>
+              <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+              <div className="font-bold text-sm" style={{ color: "#b87fff" }}>${hyperBalance.toFixed(2)}</div>
+            </div>
+          </div>
+
+          {/* From / To display */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: "rgba(0,20,40,0.5)", border: `1px solid ${fromColor}25` }}>
+              <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>From</div>
+              <div className="font-bold text-xs" style={{ color: fromColor }}>{fromLabel}</div>
+            </div>
+            <ArrowLeftRight size={14} style={{ color: "rgba(168,237,255,0.3)", flexShrink: 0 }} />
+            <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: "rgba(0,20,40,0.5)", border: `1px solid ${toColor}25` }}>
+              <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>To</div>
+              <div className="font-bold text-xs" style={{ color: toColor }}>{toLabel}</div>
+            </div>
+          </div>
+
+          {/* Amount input */}
+          <div>
+            <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>
+              Amount ({fromLabel}) — Available: ${fromBal.toFixed(2)}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={amount}
+                onChange={e => { setAmount(e.target.value); setError(null); }}
+                placeholder="0.00"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{ background: "rgba(0,20,40,0.7)", border: `1px solid ${error ? "rgba(248,113,113,0.4)" : "rgba(61,214,245,0.18)"}`, color: "rgba(168,237,255,0.9)" }}
+              />
+              <button
+                onClick={() => setAmount(fromBal.toFixed(2))}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-md"
+                style={{ background: "rgba(61,214,245,0.12)", color: TEAL }}
+              >
+                MAX
+              </button>
+            </div>
+            {error && <p className="text-xs mt-1.5" style={{ color: "#f87171" }}>{error}</p>}
+          </div>
+
+          {/* Submit */}
+          {done ? (
+            <div className="flex items-center justify-center gap-2 py-3 rounded-2xl" style={{ background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.25)" }}>
+              <CheckCircle2 size={16} style={{ color: "#34d399" }} />
+              <span className="text-sm font-semibold" style={{ color: "#34d399" }}>Transfer Successful!</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !amount}
+              className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(135deg, #b87fff, #8b5cf6)",
+                color: "#fff",
+                boxShadow: "0 0 20px rgba(184,127,255,0.25)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {loading
+                ? <><RefreshCw size={15} className="animate-spin" /> Processing…</>
+                : <><ArrowLeftRight size={15} /> Transfer {amount ? `$${parseFloat(amount).toFixed(2)}` : ""}</>
+              }
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
   pending:   { icon: Clock,        color: "#fbbf24", label: "Pending"   },
   approved:  { icon: CheckCircle,  color: "#34d399", label: "Approved"  },
@@ -460,7 +655,13 @@ export default function WalletPage({ user }: { user: any }) {
   const [, setLocation] = useLocation();
   const [selected, setSelected] = useState<{ item: any; type: EntryType } | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [page, setPage] = useState(1);
+  const [localUsdtBal, setLocalUsdtBal] = useState<number | null>(null);
+  const [localHyperBal, setLocalHyperBal] = useState<number | null>(null);
+
+  const usdtBalance  = localUsdtBal  ?? (user?.walletBalance ?? 0);
+  const hyperBalance = localHyperBal ?? (user?.hyperCoinBalance ?? 0);
 
   const { data: summary }    = useGetIncomeSummary();
   const { data: investments } = useListInvestments();
@@ -493,32 +694,47 @@ export default function WalletPage({ user }: { user: any }) {
         Wallet
       </h1>
 
-      {/* Balance Cards */}
+      {/* ── USDT & HYPERCOIN Balances ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(61,214,245,0.12), rgba(42,179,215,0.06))",
+            border: "1px solid rgba(61,214,245,0.28)",
+            boxShadow: "0 0 20px rgba(61,214,245,0.07)",
+          }}
+        >
+          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>USDT Balance</div>
+          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: TEAL, fontSize: "1.05rem" }}>
+            ${usdtBalance.toFixed(2)}
+          </div>
+        </div>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
+            border: "1px solid rgba(184,127,255,0.28)",
+            boxShadow: "0 0 20px rgba(184,127,255,0.07)",
+          }}
+        >
+          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
+            ${hyperBalance.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Earnings Stats ── */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Available Balance",  value: summary?.availableBalance,  highlight: true  },
-          { label: "Total Earnings",     value: summary?.totalEarnings,     highlight: false },
-          { label: "Pending Withdrawal", value: summary?.pendingWithdrawal, highlight: false },
-          { label: "Total Withdrawn",    value: summary?.withdrawnTotal,    highlight: false },
+          { label: "Total Earnings",     value: summary?.totalEarnings     },
+          { label: "Available Balance",  value: summary?.availableBalance  },
+          { label: "Pending Withdrawal", value: summary?.pendingWithdrawal },
+          { label: "Total Withdrawn",    value: summary?.withdrawnTotal    },
         ].map(item => (
-          <div
-            key={item.label}
-            className="rounded-xl p-4"
-            style={item.highlight ? {
-              background: "linear-gradient(135deg, rgba(61,214,245,0.12), rgba(42,179,215,0.06))",
-              border: "1px solid rgba(61,214,245,0.28)",
-              boxShadow: "0 0 20px rgba(61,214,245,0.07)",
-            } : GLASS}
-          >
-            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>{item.label}</div>
-            <div
-              className="font-black"
-              style={{
-                fontFamily: "'Orbitron', sans-serif",
-                color: item.highlight ? TEAL : "rgba(168,237,255,0.88)",
-                fontSize: "1.05rem",
-              }}
-            >
+          <div key={item.label} className="rounded-xl p-3.5" style={GLASS}>
+            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.38)" }}>{item.label}</div>
+            <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.82)" }}>
               ${item.value?.toFixed(2) ?? "0.00"}
             </div>
           </div>
@@ -526,11 +742,11 @@ export default function WalletPage({ user }: { user: any }) {
       </div>
 
       {/* ── Action Buttons ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {/* Deposit */}
         <button
           onClick={() => setShowDepositModal(true)}
-          className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.97]"
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
           style={{
             background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
             color: "#010810",
@@ -541,10 +757,25 @@ export default function WalletPage({ user }: { user: any }) {
           Deposit
         </button>
 
+        {/* Transfer */}
+        <button
+          onClick={() => setShowTransferModal(true)}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
+          style={{
+            background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(139,92,246,0.10))",
+            border: "1px solid rgba(184,127,255,0.32)",
+            color: "#b87fff",
+            boxShadow: "0 0 20px rgba(184,127,255,0.12)",
+          }}
+        >
+          <ArrowLeftRight size={16} strokeWidth={2.5} />
+          Transfer
+        </button>
+
         {/* Withdraw */}
         <button
           onClick={() => setLocation("/withdrawals")}
-          className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.97]"
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
           style={{
             background: "linear-gradient(135deg, rgba(248,113,113,0.18), rgba(220,60,60,0.12))",
             border: "1px solid rgba(248,113,113,0.35)",
@@ -652,6 +883,19 @@ export default function WalletPage({ user }: { user: any }) {
       {/* Deposit Modal */}
       {showDepositModal && (
         <DepositModal onClose={() => setShowDepositModal(false)} />
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <TransferModal
+          usdtBalance={usdtBalance}
+          hyperBalance={hyperBalance}
+          onClose={() => setShowTransferModal(false)}
+          onSuccess={(usdt, hyper) => {
+            setLocalUsdtBal(usdt);
+            setLocalHyperBal(hyper);
+          }}
+        />
       )}
     </div>
   );

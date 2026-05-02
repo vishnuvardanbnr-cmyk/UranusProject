@@ -31,6 +31,7 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
     totalEarnings: parseFloat(user.totalEarnings),
     totalInvested: parseFloat(user.totalInvested),
     walletBalance: parseFloat(user.walletBalance ?? "0"),
+    hyperCoinBalance: parseFloat(user.hyperCoinBalance ?? "0"),
     createdAt: user.createdAt.toISOString(),
   };
 }

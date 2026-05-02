@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, investmentsTable, usersTable, incomeTable } from "@workspace/db";
+import { db, investmentsTable, usersTable, incomeTable, platformSettingsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateInvestmentBody } from "@workspace/api-zod";
@@ -63,9 +63,32 @@ router.post("/investments", requireAuth, async (req, res) => {
     return;
   }
 
+  // Fetch configurable HYPERCOIN minimum from admin settings
+  const [settings] = await db.select().from(platformSettingsTable).limit(1);
+  const hyperCoinMinPercent = parseFloat(settings?.hyperCoinMinPercent ?? "50");
+
   const hyperCoinPercent = (hyperCoinAmount / amount) * 100;
-  if (hyperCoinPercent < 50) {
-    res.status(400).json({ message: "Minimum 50% of deposit must be in HYPERCOIN" });
+  if (hyperCoinPercent < hyperCoinMinPercent) {
+    res.status(400).json({ message: `Minimum ${hyperCoinMinPercent}% of deposit must be in HYPERCOIN` });
+    return;
+  }
+
+  // Fetch fresh user to check balances
+  const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
+  if (!freshUser) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  const currentUsdt = parseFloat(freshUser.walletBalance ?? "0");
+  const currentHyper = parseFloat(freshUser.hyperCoinBalance ?? "0");
+
+  if (usdtAmount > currentUsdt) {
+    res.status(400).json({ message: `Insufficient USDT balance. Available: $${currentUsdt.toFixed(2)}` });
+    return;
+  }
+  if (hyperCoinAmount > currentHyper) {
+    res.status(400).json({ message: `Insufficient HYPERCOIN balance. Available: $${currentHyper.toFixed(2)}` });
     return;
   }
 
@@ -87,8 +110,13 @@ router.post("/investments", requireAuth, async (req, res) => {
     earnedSoFar: "0",
   }).returning();
 
+  // Deduct USDT and HYPERCOIN from user balances
   await db.update(usersTable)
-    .set({ totalInvested: (parseFloat(user.totalInvested) + amount).toString() })
+    .set({
+      totalInvested: (parseFloat(freshUser.totalInvested) + amount).toString(),
+      walletBalance: (currentUsdt - usdtAmount).toString(),
+      hyperCoinBalance: (currentHyper - hyperCoinAmount).toString(),
+    })
     .where(eq(usersTable.id, user.id));
 
   if (user.sponsorId) {

@@ -101,7 +101,7 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         </Route>
         <Route path="/invest">
           <RequireAuth user={user}>
-            <Invest />
+            <Invest user={user} />
           </RequireAuth>
         </Route>
         <Route path="/income">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,12 +28,25 @@ const schema = z.object({
   usdtAmount: z.coerce.number().min(0),
 });
 
-export default function Invest() {
+export default function Invest({ user }: { user: any }) {
   const [selectedTier, setSelectedTier] = useState<string>("tier2");
+  const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
   const createInvestment = useCreateInvestment();
   const { data: investments } = useListInvestments();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch live admin-configured HYPERCOIN minimum %
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.json())
+      .then(d => {
+        if (typeof d.hyperCoinMinPercent === "number") {
+          setHyperCoinMinPercent(d.hyperCoinMinPercent);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const plan = plans.find(p => p.tier === selectedTier)!;
 
@@ -47,18 +60,30 @@ export default function Invest() {
   const totalReturn = dailyEarning * plan.days;
 
   const handleAmountChange = (val: number) => {
-    const hypercoin = Math.ceil(val * 0.5);
+    const hypercoin = Math.ceil(val * (hyperCoinMinPercent / 100));
     form.setValue("amount", val);
     form.setValue("hyperCoinAmount", hypercoin);
     form.setValue("usdtAmount", val - hypercoin);
   };
+
+  // Update split whenever hyperCoinMinPercent loads
+  useEffect(() => {
+    const val = form.getValues("amount");
+    const hypercoin = Math.ceil(val * (hyperCoinMinPercent / 100));
+    form.setValue("hyperCoinAmount", hypercoin);
+    form.setValue("usdtAmount", val - hypercoin);
+  }, [hyperCoinMinPercent]);
+
+  const usdtBalance = user?.walletBalance ?? 0;
+  const hyperBalance = user?.hyperCoinBalance ?? 0;
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
     try {
       await createInvestment.mutateAsync({ data });
       await queryClient.invalidateQueries({ queryKey: getListInvestmentsQueryKey() });
       toast({ title: "Investment created!", description: `$${data.amount} invested successfully` });
-      form.reset({ amount: 500, hyperCoinAmount: 250, usdtAmount: 250 });
+      const defaultHyper = Math.ceil(500 * (hyperCoinMinPercent / 100));
+      form.reset({ amount: 500, hyperCoinAmount: defaultHyper, usdtAmount: 500 - defaultHyper });
     } catch (err: any) {
       toast({ title: "Investment failed", description: err?.message || "Please try again", variant: "destructive" });
     }
@@ -84,6 +109,8 @@ export default function Invest() {
       {/* Invest Form */}
       <div className="rounded-2xl p-5" style={{ ...GLASS, backdropFilter: "blur(14px)" }}>
         <h2 className="font-semibold text-sm mb-4" style={{ color: "rgba(168,237,255,0.8)" }}>New Investment</h2>
+
+        {/* Info banner */}
         <div
           className="flex items-start gap-2 rounded-lg p-3 mb-4"
           style={{
@@ -93,9 +120,23 @@ export default function Invest() {
         >
           <Info size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
           <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-            Minimum 50% must be HYPERCOIN. Payouts every weekday (5 days/week).
+            Minimum <span style={{ color: TEAL, fontWeight: 700 }}>{hyperCoinMinPercent}%</span> must be HYPERCOIN.
+            Payouts every weekday (5 days/week).
           </p>
         </div>
+
+        {/* Available balances */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="rounded-lg px-3 py-2" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.12)" }}>
+            <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>USDT Balance</div>
+            <div className="font-bold text-sm" style={{ color: TEAL }}>${usdtBalance.toFixed(2)}</div>
+          </div>
+          <div className="rounded-lg px-3 py-2" style={{ background: "rgba(168,100,255,0.06)", border: "1px solid rgba(168,100,255,0.14)" }}>
+            <div className="text-xs mb-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+            <div className="font-bold text-sm" style={{ color: "#b87fff" }}>${hyperBalance.toFixed(2)}</div>
+          </div>
+        </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="amount" render={({ field }) => (
@@ -116,15 +157,43 @@ export default function Invest() {
             <div className="grid grid-cols-2 gap-3">
               <FormField control={form.control} name="hyperCoinAmount" render={({ field }) => (
                 <FormItem>
-                  <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>HYPERCOIN (min 50%)</FormLabel>
-                  <FormControl><Input data-testid="input-hypercoin" type="number" {...field} style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }} /></FormControl>
+                  <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>
+                    HYPERCOIN (min {hyperCoinMinPercent}%)
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      data-testid="input-hypercoin"
+                      type="number"
+                      {...field}
+                      onChange={e => {
+                        const hyper = Number(e.target.value);
+                        const total = form.getValues("amount");
+                        field.onChange(hyper);
+                        form.setValue("usdtAmount", Math.max(0, total - hyper));
+                      }}
+                      style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(168,100,255,0.25)", color: "rgba(168,237,255,0.9)" }}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="usdtAmount" render={({ field }) => (
                 <FormItem>
                   <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Amount</FormLabel>
-                  <FormControl><Input data-testid="input-usdt" type="number" {...field} style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }} /></FormControl>
+                  <FormControl>
+                    <Input
+                      data-testid="input-usdt"
+                      type="number"
+                      {...field}
+                      onChange={e => {
+                        const usdt = Number(e.target.value);
+                        const total = form.getValues("amount");
+                        field.onChange(usdt);
+                        form.setValue("hyperCoinAmount", Math.max(0, total - usdt));
+                      }}
+                      style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -145,6 +214,41 @@ export default function Invest() {
             </button>
           </form>
         </Form>
+      </div>
+
+      {/* Plan Tiers */}
+      <div>
+        <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>Select Plan</h2>
+        <div className="space-y-2">
+          {plans.map(p => (
+            <button
+              key={p.tier}
+              onClick={() => {
+                setSelectedTier(p.tier);
+                handleAmountChange(p.min);
+              }}
+              className="w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all"
+              style={selectedTier === p.tier ? {
+                background: "rgba(61,214,245,0.10)",
+                border: "1px solid rgba(61,214,245,0.35)",
+              } : {
+                ...GLASS,
+                opacity: 0.75,
+              }}
+            >
+              <div className="text-left">
+                <div className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>{p.range}</div>
+                <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>{p.days} days</div>
+              </div>
+              <div className="flex items-center gap-2">
+                {p.popular && (
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(61,214,245,0.15)", color: TEAL }}>Popular</span>
+                )}
+                <span className="font-bold text-sm" style={{ color: TEAL }}>{p.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Active Investments */}
@@ -176,9 +280,13 @@ export default function Invest() {
                     +{(inv.dailyRate * 100).toFixed(1)}%/day
                   </span>
                 </div>
-                <div className="flex justify-between text-xs mb-2" style={{ color: "rgba(168,237,255,0.4)" }}>
-                  <span>Earned: <span style={{ color: "rgba(168,237,255,0.8)", fontWeight: 600 }}>${inv.earnedSoFar.toFixed(2)}</span></span>
-                  <span>{inv.remainingDays} days left</span>
+                <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
+                  <div style={{ color: "rgba(168,237,255,0.4)" }}>
+                    Earned: <span style={{ color: "rgba(168,237,255,0.8)", fontWeight: 600 }}>${inv.earnedSoFar.toFixed(2)}</span>
+                  </div>
+                  <div className="text-right" style={{ color: "rgba(168,237,255,0.4)" }}>{inv.remainingDays} days left</div>
+                  <div style={{ color: "rgba(168,100,255,0.6)" }}>HC: ${inv.hyperCoinAmount.toFixed(2)}</div>
+                  <div className="text-right" style={{ color: "rgba(61,214,245,0.6)" }}>USDT: ${inv.usdtAmount.toFixed(2)}</div>
                 </div>
                 <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.08)" }}>
                   <div
