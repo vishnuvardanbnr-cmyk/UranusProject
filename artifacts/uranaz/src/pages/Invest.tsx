@@ -122,69 +122,6 @@ export default function Invest() {
         })}
       </div>
 
-      {/* Calculator */}
-      <div
-        className="rounded-2xl p-5 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(61,214,245,0.10), rgba(42,179,215,0.05), rgba(100,60,200,0.05))",
-          border: "1px solid rgba(61,214,245,0.22)",
-          boxShadow: "0 0 30px rgba(61,214,245,0.06)",
-        }}
-      >
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.10) 0%, transparent 60%)" }}
-        />
-        <h2 className="font-semibold text-sm mb-4 relative" style={{ color: "rgba(168,237,255,0.8)" }}>
-          Investment Calculator
-        </h2>
-        <div className="mb-4 relative">
-          <label className="text-xs mb-1.5 block" style={{ color: "rgba(168,237,255,0.45)" }}>
-            Amount (multiples of $100)
-          </label>
-          <div className="flex gap-2">
-            {[plan.min, Math.round((plan.min + plan.max) / 200) * 100, plan.max].map(v => (
-              <button
-                key={v}
-                onClick={() => handleAmountChange(v)}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: watchedAmount === v
-                    ? "linear-gradient(135deg, #3DD6F5, #2AB3CF)"
-                    : "rgba(0,15,30,0.5)",
-                  color: watchedAmount === v ? "#010810" : "rgba(168,237,255,0.6)",
-                  border: watchedAmount === v ? "none" : "1px solid rgba(61,214,245,0.15)",
-                  boxShadow: watchedAmount === v ? "0 0 12px rgba(61,214,245,0.3)" : "none",
-                }}
-              >
-                ${v}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-center relative">
-          {[
-            { label: "Daily Return", value: `$${dailyEarning.toFixed(2)}`, highlight: true },
-            { label: "Duration",     value: `${plan.days} days`,           highlight: false },
-            { label: "Total Return", value: `$${totalReturn.toFixed(2)}`,  highlight: true },
-          ].map(item => (
-            <div
-              key={item.label}
-              className="rounded-xl p-3"
-              style={{ background: "rgba(0,10,24,0.5)", border: "1px solid rgba(61,214,245,0.08)" }}
-            >
-              <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{item.label}</div>
-              <div
-                className="font-bold text-sm mt-0.5"
-                style={{ color: item.highlight ? TEAL : "rgba(168,237,255,0.8)" }}
-              >
-                {item.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Invest Form */}
       <div className="rounded-2xl p-5" style={{ ...GLASS, backdropFilter: "blur(14px)" }}>
         <h2 className="font-semibold text-sm mb-4" style={{ color: "rgba(168,237,255,0.8)" }}>New Investment</h2>
