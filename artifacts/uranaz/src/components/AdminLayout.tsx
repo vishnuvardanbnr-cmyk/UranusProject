@@ -108,7 +108,7 @@ function SidebarShell({ location, onNavigate }: { location: string; onNavigate?:
             ADMIN PANEL
           </div>
           <div className="text-[10px]" style={{ color: "rgba(168,237,255,0.4)" }}>
-            URANAZ TRADES
+            URANUS TRADES
           </div>
         </div>
       </div>

@@ -203,7 +203,7 @@ export default function Register({ onLogin }: Props) {
             {step === "otp" ? "Verify Email" : "Create Account"}
           </h1>
           <p style={{ color: "rgba(168,237,255,0.5)", fontSize: "0.875rem" }}>
-            {step === "otp" ? `We sent a code to ${formData?.email}` : "Join URANAZ TRADES and start earning"}
+            {step === "otp" ? `We sent a code to ${formData?.email}` : "Join URANUS TRADES and start earning"}
           </p>
         </div>
 

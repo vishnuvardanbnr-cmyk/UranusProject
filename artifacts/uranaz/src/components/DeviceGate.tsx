@@ -72,7 +72,7 @@ function BlockShell({
             fontFamily: "'Orbitron',sans-serif",
           }}
         >
-          URANAZ TRADES
+          URANUS TRADES
         </div>
       </div>
     </div>
@@ -105,7 +105,7 @@ function MobileOnlyBlock() {
       accent={TEAL}
       icon={<Smartphone className="w-10 h-10" style={{ color: TEAL }} />}
       title="MOBILE ONLY"
-      message="URANAZ TRADES is a mobile-first investment app. Please open your account on your phone for the best experience."
+      message="URANUS TRADES is a mobile-first investment app. Please open your account on your phone for the best experience."
       hint="Scan or open the link on your mobile device to continue."
     />
   );

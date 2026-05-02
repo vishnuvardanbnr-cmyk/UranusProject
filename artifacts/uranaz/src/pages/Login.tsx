@@ -41,7 +41,7 @@ export default function Login({ onLogin }: Props) {
             className="w-44 h-44 mx-auto mb-4 relative"
             style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
           >
-            <img src="/logo.png" alt="URANAZ TRADES" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="URANUS TRADES" className="w-full h-full object-contain" />
           </div>
           <h1
             className="text-2xl font-bold mb-1"
@@ -56,7 +56,7 @@ export default function Login({ onLogin }: Props) {
             Welcome Back
           </h1>
           <p style={{ color: "rgba(168,237,255,0.5)", fontSize: "0.875rem" }}>
-            Sign in to your URANAZ TRADES account
+            Sign in to your URANUS TRADES account
           </p>
         </div>
 
@@ -147,7 +147,7 @@ export default function Login({ onLogin }: Props) {
               color: "rgba(168,237,255,0.35)",
             }}
           >
-            Demo: john@example.com / demo123 &nbsp;|&nbsp; Admin: admin@uranaz.com / admin123
+            Demo: john@example.com / demo123 &nbsp;|&nbsp; Admin: admin@uranus.com / admin123
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function Landing() {
           <h1 className="text-4xl sm:text-6xl font-bold mb-4 leading-tight">
             <span className="text-foreground">Grow Your Wealth with</span>
             <br />
-            <span className="gold-text">URANAZ TRADES</span>
+            <span className="gold-text">URANUS TRADES</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
             10+ years of expertise in Real Estate, Stocks, Forex & Crypto — now opening our investment platform to the public. Earn up to 0.8% daily returns with a proven multi-level commission structure.

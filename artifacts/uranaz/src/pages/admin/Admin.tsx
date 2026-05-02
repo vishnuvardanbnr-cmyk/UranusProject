@@ -42,7 +42,7 @@ export default function Admin() {
             Admin Dashboard
           </h1>
           <p className="text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>
-            URANAZ TRADES platform overview
+            URANUS TRADES platform overview
           </p>
         </div>
         <div
