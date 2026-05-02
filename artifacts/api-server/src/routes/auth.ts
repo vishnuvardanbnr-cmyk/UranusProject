@@ -48,16 +48,17 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
 
 // GET /api/auth/otp-required
 router.get("/auth/otp-required", async (_req, res) => {
-  const { isOtpWithdrawalEnabled } = await import("../lib/email");
+  const { isOtpWithdrawalEnabled, isOtpWalletUpdateEnabled } = await import("../lib/email");
   const registrationOtp = await isOtpRegistrationEnabled();
   const withdrawalOtp = await isOtpWithdrawalEnabled();
-  res.json({ registrationOtp, withdrawalOtp });
+  const walletUpdateOtp = await isOtpWalletUpdateEnabled();
+  res.json({ registrationOtp, withdrawalOtp, walletUpdateOtp });
 });
 
 // POST /api/auth/send-otp
 router.post("/auth/send-otp", async (req, res) => {
   const { email, purpose } = req.body;
-  if (!email || !["registration", "withdrawal"].includes(purpose)) {
+  if (!email || !["registration", "withdrawal", "wallet_update"].includes(purpose)) {
     res.status(400).json({ message: "Invalid input" });
     return;
   }
@@ -172,6 +173,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
 });
 
 // POST /api/auth/profile-setup
+const BEP20_REGEX = /^0x[a-fA-F0-9]{40}$/;
 router.post("/auth/profile-setup", requireAuth, async (req, res) => {
   const parsed = SetupProfileBody.safeParse(req.body);
   if (!parsed.success) {
@@ -179,9 +181,52 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
     return;
   }
   const user = (req as any).user;
+
+  // Server-side BEP20 validation. This is the source of truth — UI validation
+  // is convenience only. Rejecting empty/invalid wallets here also closes the
+  // OTP bypass where a user could blank the wallet to dodge the gate.
+  const newWallet = (parsed.data.walletAddress ?? "").trim();
+  if (!BEP20_REGEX.test(newWallet)) {
+    res.status(400).json({
+      message: "Invalid wallet address. Must be a valid BEP20 address (0x followed by 40 hex characters).",
+    });
+    return;
+  }
+
+  // OTP gate: only when changing an EXISTING wallet address (not initial setup),
+  // and only if admin has enabled OTP for wallet updates AND SMTP is configured.
+  const oldWallet = (user.walletAddress ?? "").trim();
+  const walletChanged = !!oldWallet && oldWallet !== newWallet;
+
+  if (walletChanged) {
+    const { isOtpWalletUpdateEnabled } = await import("../lib/email");
+    const otpRequired = await isOtpWalletUpdateEnabled();
+    if (otpRequired) {
+      const otp = req.body.otp as string | undefined;
+      if (!otp) {
+        res.status(400).json({ message: "OTP required to change your withdrawal wallet address", otpRequired: true });
+        return;
+      }
+      const now = new Date();
+      const [otpRecord] = await db.select().from(otpCodesTable)
+        .where(and(
+          eq(otpCodesTable.email, user.email),
+          eq(otpCodesTable.purpose, "wallet_update"),
+          eq(otpCodesTable.used, false),
+        ))
+        .orderBy(desc(otpCodesTable.createdAt))
+        .limit(1);
+      if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+        res.status(400).json({ message: "Invalid or expired OTP" });
+        return;
+      }
+      await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
+    }
+  }
+
   const [updated] = await db.update(usersTable)
     .set({
-      walletAddress: parsed.data.walletAddress,
+      walletAddress: newWallet,
       country: parsed.data.country,
       idNumber: parsed.data.idNumber,
       profileImage: parsed.data.profileImage,

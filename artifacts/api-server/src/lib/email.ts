@@ -15,10 +15,12 @@ function createTransport(s: NonNullable<Awaited<ReturnType<typeof getSettings>>>
   });
 }
 
-export async function sendOtpEmail(to: string, code: string, purpose: "registration" | "withdrawal") {
+export async function sendOtpEmail(to: string, code: string, purpose: "registration" | "withdrawal" | "wallet_update") {
   const s = await getSettings();
   if (!s?.smtpEnabled) return;
-  const label = purpose === "registration" ? "Registration" : "Withdrawal";
+  const label = purpose === "registration" ? "Registration"
+              : purpose === "withdrawal"   ? "Withdrawal"
+              : "Wallet Address Update";
   const transport = createTransport(s);
   await transport.sendMail({
     from: `"${s.smtpFromName}" <${s.smtpFrom}>`,
@@ -71,4 +73,9 @@ export async function isOtpRegistrationEnabled(): Promise<boolean> {
 export async function isOtpWithdrawalEnabled(): Promise<boolean> {
   const s = await getSettings();
   return !!(s?.smtpEnabled && s?.otpWithdrawalEnabled);
+}
+
+export async function isOtpWalletUpdateEnabled(): Promise<boolean> {
+  const s = await getSettings();
+  return !!(s?.smtpEnabled && s?.otpWalletUpdateEnabled);
 }

@@ -41,7 +41,7 @@ export default function Terms() {
           },
           {
             title: "7. Withdrawals",
-            content: "Withdrawal requests are processed within 24–48 business hours. Minimum withdrawal amount is $10 USDT. Withdrawals are processed to the TRC20 wallet address provided in your profile. URANAZ TRADES is not responsible for errors in wallet addresses provided by users."
+            content: "Withdrawal requests are processed within 24–48 business hours. Minimum withdrawal amount is $10 USDT. Withdrawals are processed to the BEP20 wallet address provided in your profile. URANAZ TRADES is not responsible for errors in wallet addresses provided by users."
           },
           {
             title: "8. Account Security",

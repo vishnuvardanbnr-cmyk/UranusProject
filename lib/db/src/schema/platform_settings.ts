@@ -22,6 +22,7 @@ export const platformSettingsTable = pgTable("platform_settings", {
   // Email feature toggles
   otpRegistrationEnabled: boolean("otp_registration_enabled").notNull().default(false),
   otpWithdrawalEnabled: boolean("otp_withdrawal_enabled").notNull().default(false),
+  otpWalletUpdateEnabled: boolean("otp_wallet_update_enabled").notNull().default(false),
   depositConfirmationEnabled: boolean("deposit_confirmation_enabled").notNull().default(false),
   // Blockchain / wallet
   adminMasterWallet: text("admin_master_wallet").notNull().default(""),

@@ -9,8 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { CheckCircle } from "lucide-react";
 
+const BEP20_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 const schema = z.object({
-  walletAddress: z.string().min(10, "Valid wallet address required"),
+  walletAddress: z.string()
+    .min(1, "Wallet address is required")
+    .regex(BEP20_REGEX, "Must be a valid BEP20 address (0x + 40 hex characters)"),
   country: z.string().min(2, "Country required"),
   idNumber: z.string().optional(),
 });
@@ -88,8 +92,8 @@ export default function ProfileSetup({ onUpdate }: Props) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField control={form.control} name="walletAddress" render={({ field }) => (
                 <FormItem>
-                  <FormLabel style={LABEL_STYLE}>USDT Wallet Address (TRC20)</FormLabel>
-                  <FormControl><Input data-testid="input-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} style={INPUT_STYLE} /></FormControl>
+                  <FormLabel style={LABEL_STYLE}>USDT Wallet Address (BEP20)</FormLabel>
+                  <FormControl><Input data-testid="input-wallet" placeholder="0x0000000000000000000000000000000000000000" {...field} style={INPUT_STYLE} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

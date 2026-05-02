@@ -17,6 +17,7 @@ const SmtpSettingsBody = z.object({
   smtpFromName: z.string(),
   otpRegistrationEnabled: z.boolean(),
   otpWithdrawalEnabled: z.boolean(),
+  otpWalletUpdateEnabled: z.boolean().default(false),
   depositConfirmationEnabled: z.boolean(),
 });
 
@@ -389,6 +390,7 @@ router.get("/admin/smtp-settings", requireAdmin, async (req, res) => {
     smtpFromName: settings.smtpFromName,
     otpRegistrationEnabled: settings.otpRegistrationEnabled,
     otpWithdrawalEnabled: settings.otpWithdrawalEnabled,
+    otpWalletUpdateEnabled: settings.otpWalletUpdateEnabled,
     depositConfirmationEnabled: settings.depositConfirmationEnabled,
   });
 });
@@ -414,6 +416,7 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
         smtpFromName: parsed.data.smtpFromName,
         otpRegistrationEnabled: parsed.data.otpRegistrationEnabled,
         otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
+        otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
         depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
       })
       .where(eq(platformSettingsTable.id, existing.id))
@@ -429,6 +432,7 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
       smtpFromName: parsed.data.smtpFromName,
       otpRegistrationEnabled: parsed.data.otpRegistrationEnabled,
       otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
+      otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
       depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
     }).returning();
   }
@@ -442,6 +446,7 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
     smtpFromName: updated.smtpFromName,
     otpRegistrationEnabled: updated.otpRegistrationEnabled,
     otpWithdrawalEnabled: updated.otpWithdrawalEnabled,
+    otpWalletUpdateEnabled: updated.otpWalletUpdateEnabled,
     depositConfirmationEnabled: updated.depositConfirmationEnabled,
   });
 });

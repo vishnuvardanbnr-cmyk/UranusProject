@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Copy, Shield } from "lucide-react";
+import { Copy, Shield, ShieldCheck, X, Mail } from "lucide-react";
 import { Link } from "wouter";
 
 const TEAL = "#3DD6F5";
@@ -14,16 +15,28 @@ const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", 
 const INPUT_STYLE = { background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" };
 const LABEL_STYLE = { color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" };
 
+const BEP20_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 const schema = z.object({
-  walletAddress: z.string().min(10, "Valid wallet address required"),
+  walletAddress: z.string()
+    .min(1, "Wallet address is required")
+    .regex(BEP20_REGEX, "Must be a valid BEP20 address (0x + 40 hex characters)"),
   country: z.string().min(2, "Country required"),
   idNumber: z.string().optional(),
 });
+
+type FormData = z.infer<typeof schema>;
 
 export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: any) => void }) {
   const setup = useSetupProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [pendingData, setPendingData] = useState<FormData | null>(null);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -34,14 +47,83 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof schema>) => {
+  const submitProfile = async (data: FormData, otp?: string) => {
+    const body: any = { ...data };
+    if (otp) body.otp = otp;
+    const token = localStorage.getItem("uranaz_token");
+    const r = await fetch("/api/auth/profile-setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const json = await r.json();
+    if (!r.ok) {
+      const err: any = new Error(json.message || "Failed to save");
+      err.otpRequired = json.otpRequired === true;
+      throw err;
+    }
+    return json;
+  };
+
+  const requestOtp = async () => {
+    setOtpSending(true);
+    setOtpError("");
     try {
-      const updated = await setup.mutateAsync({ data });
+      const r = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, purpose: "wallet_update" }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.message || "Failed to send OTP");
+      toast({ title: "OTP sent", description: `Check your email (${user.email})` });
+    } catch (e: any) {
+      setOtpError(e?.message || "Failed to send OTP");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      const updated = await submitProfile(data);
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       onUpdate(updated);
       toast({ title: "Profile updated!" });
     } catch (err: any) {
+      // Server tells us OTP is required for wallet change → open modal & send code
+      if (err?.otpRequired) {
+        setPendingData(data);
+        setOtpCode("");
+        setOtpError("");
+        setOtpModalOpen(true);
+        await requestOtp();
+        return;
+      }
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    }
+  };
+
+  const verifyOtpAndSubmit = async () => {
+    if (!pendingData) return;
+    if (!/^\d{6}$/.test(otpCode)) {
+      setOtpError("Enter the 6-digit code from your email");
+      return;
+    }
+    setOtpSending(true);
+    setOtpError("");
+    try {
+      const updated = await submitProfile(pendingData, otpCode);
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      onUpdate(updated);
+      setOtpModalOpen(false);
+      setPendingData(null);
+      setOtpCode("");
+      toast({ title: "Wallet address updated!", description: "OTP verified successfully" });
+    } catch (err: any) {
+      setOtpError(err?.message || "Invalid OTP");
+    } finally {
+      setOtpSending(false);
     }
   };
 
@@ -150,9 +232,14 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="walletAddress" render={({ field }) => (
               <FormItem>
-                <FormLabel style={LABEL_STYLE}>USDT Wallet Address (TRC20)</FormLabel>
-                <FormControl><Input data-testid="input-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} style={INPUT_STYLE} /></FormControl>
+                <FormLabel style={LABEL_STYLE}>USDT Wallet Address (BEP20)</FormLabel>
+                <FormControl><Input data-testid="input-wallet" placeholder="0x0000000000000000000000000000000000000000" {...field} style={INPUT_STYLE} /></FormControl>
                 <FormMessage />
+                {!!user?.walletAddress && (
+                  <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: "rgba(168,237,255,0.45)" }}>
+                    <ShieldCheck size={11} /> Changing this address may require email OTP verification
+                  </p>
+                )}
               </FormItem>
             )} />
             <FormField control={form.control} name="country" render={({ field }) => (
@@ -205,6 +292,94 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
           </Link>
         ))}
       </div>
+
+      {/* OTP modal */}
+      {otpModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(1,8,16,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget && !otpSending) setOtpModalOpen(false); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 relative"
+            style={{
+              background: "linear-gradient(155deg, rgba(4,16,32,0.97), rgba(2,10,22,0.97))",
+              border: "1px solid rgba(61,214,245,0.30)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(61,214,245,0.15)",
+            }}
+          >
+            <button
+              onClick={() => { if (!otpSending) setOtpModalOpen(false); }}
+              className="absolute top-3 right-3 p-1.5 rounded-lg"
+              style={{ color: "rgba(168,237,255,0.4)" }}
+            >
+              <X size={16} />
+            </button>
+
+            <div className="text-center mb-5">
+              <div
+                className="w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-3"
+                style={{
+                  background: "rgba(61,214,245,0.12)",
+                  border: "1px solid rgba(61,214,245,0.35)",
+                  boxShadow: "0 0 24px rgba(61,214,245,0.25)",
+                }}
+              >
+                <Mail size={22} style={{ color: TEAL }} />
+              </div>
+              <h3 className="font-bold text-lg" style={{ color: "rgba(168,237,255,0.95)", fontFamily: "'Orbitron', sans-serif" }}>
+                Verify Wallet Change
+              </h3>
+              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.55)" }}>
+                We sent a 6-digit code to <span style={{ color: TEAL }}>{user?.email}</span>
+              </p>
+            </div>
+
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
+              placeholder="000000"
+              className="w-full px-4 py-3 rounded-xl text-center text-xl font-bold tracking-[0.4em] outline-none"
+              style={{
+                background: "rgba(0,10,24,0.8)",
+                border: `1px solid ${otpError ? "rgba(248,113,113,0.4)" : "rgba(61,214,245,0.25)"}`,
+                color: TEAL,
+                fontFamily: "'Orbitron', monospace",
+              }}
+              autoFocus
+            />
+
+            {otpError && (
+              <p className="text-xs mt-2 text-center" style={{ color: "#f87171" }}>{otpError}</p>
+            )}
+
+            <button
+              onClick={verifyOtpAndSubmit}
+              disabled={otpSending || otpCode.length !== 6}
+              className="w-full mt-4 py-2.5 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                color: "#010810",
+                boxShadow: "0 0 16px rgba(61,214,245,0.35)",
+              }}
+            >
+              {otpSending ? "Verifying…" : "Verify & Update Wallet"}
+            </button>
+
+            <button
+              onClick={requestOtp}
+              disabled={otpSending}
+              className="w-full mt-2 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ background: "transparent", color: "rgba(168,237,255,0.6)" }}
+            >
+              Didn't get the code? Resend
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -61,6 +61,7 @@ type SmtpForm = {
   smtpFromName: string;
   otpRegistrationEnabled: boolean;
   otpWithdrawalEnabled: boolean;
+  otpWalletUpdateEnabled: boolean;
   depositConfirmationEnabled: boolean;
 };
 
@@ -108,6 +109,7 @@ export default function AdminSettings() {
       smtpFromName: "URANAZ TRADES",
       otpRegistrationEnabled: false,
       otpWithdrawalEnabled: false,
+      otpWalletUpdateEnabled: false,
       depositConfirmationEnabled: false,
     },
   });
@@ -1122,6 +1124,11 @@ export default function AdminSettings() {
                   key: "otpWithdrawalEnabled" as const,
                   label: "OTP on Withdrawal",
                   desc: "Require email OTP verification before processing withdrawal requests",
+                },
+                {
+                  key: "otpWalletUpdateEnabled" as const,
+                  label: "OTP on Wallet Address Change",
+                  desc: "Require email OTP when a user updates their withdrawal wallet address",
                 },
                 {
                   key: "depositConfirmationEnabled" as const,
