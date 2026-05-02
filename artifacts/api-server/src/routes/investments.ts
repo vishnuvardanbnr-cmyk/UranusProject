@@ -7,10 +7,17 @@ import { sendDepositConfirmationEmail } from "../lib/email";
 
 const router = Router();
 
-function getPlanTier(amount: number) {
-  if (amount >= 100 && amount <= 400) return { tier: "tier1", dailyRate: 0.006, durationDays: 300 };
-  if (amount >= 500 && amount <= 900) return { tier: "tier2", dailyRate: 0.007, durationDays: 260 };
-  if (amount >= 1000 && amount <= 1500) return { tier: "tier3", dailyRate: 0.008, durationDays: 225 };
+async function getPlanTier(amount: number) {
+  const [s] = await db.select().from(platformSettingsTable).limit(1);
+  const r1 = s ? parseFloat(s.tier1DailyRate) : 0.006;
+  const r2 = s ? parseFloat(s.tier2DailyRate) : 0.007;
+  const r3 = s ? parseFloat(s.tier3DailyRate) : 0.008;
+  const d1 = s ? s.tier1Days : 300;
+  const d2 = s ? s.tier2Days : 260;
+  const d3 = s ? s.tier3Days : 225;
+  if (amount >= 100 && amount <= 400)   return { tier: "tier1", dailyRate: r1, durationDays: d1 };
+  if (amount >= 500 && amount <= 900)   return { tier: "tier2", dailyRate: r2, durationDays: d2 };
+  if (amount >= 1000 && amount <= 1500) return { tier: "tier3", dailyRate: r3, durationDays: d3 };
   return null;
 }
 
@@ -57,7 +64,7 @@ router.post("/investments", requireAuth, async (req, res) => {
     return;
   }
 
-  const plan = getPlanTier(amount);
+  const plan = await getPlanTier(amount);
   if (!plan) {
     res.status(400).json({ message: "Investment amount must be between 100 and 1500 USDT" });
     return;
@@ -120,7 +127,8 @@ router.post("/investments", requireAuth, async (req, res) => {
     .where(eq(usersTable.id, user.id));
 
   if (user.sponsorId) {
-    const spotCommission = amount * 0.05;
+    const spotRate = settings ? parseFloat(settings.spotReferralRate) : 0.05;
+    const spotCommission = amount * spotRate;
     await db.insert(incomeTable).values({
       userId: user.sponsorId,
       type: "spot_referral",

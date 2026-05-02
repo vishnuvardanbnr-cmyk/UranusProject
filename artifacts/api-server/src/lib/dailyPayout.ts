@@ -1,24 +1,52 @@
-import { db, investmentsTable, usersTable, incomeTable } from "@workspace/db";
+import { db, investmentsTable, usersTable, incomeTable, platformSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
-// Level commission rates (% of daily return credited to each upline level)
-// Level 1 = direct sponsor, Level 2 = sponsor's sponsor, etc.
-const LEVEL_COMMISSION_RATES: Record<number, number> = {
-  1: 0.20,  // 20%
-  2: 0.10,  // 10%
-  3: 0.10,  // 10%
-  4: 0.04,  // 4%
-  5: 0.04,
-  6: 0.04,
-  7: 0.04,
-  8: 0.04,
+async function getIncomeSettings() {
+  const [s] = await db.select().from(platformSettingsTable).limit(1);
+  if (!s) return null;
+  return {
+    levelRates: {
+      1: parseFloat(s.levelCommL1),
+      2: parseFloat(s.levelCommL2),
+      3: parseFloat(s.levelCommL3),
+      4: parseFloat(s.levelCommL4),
+      5: parseFloat(s.levelCommL5),
+      6: parseFloat(s.levelCommL6),
+      7: parseFloat(s.levelCommL7),
+      8: parseFloat(s.levelCommL8),
+    } as Record<number, number>,
+    levelUnlocks: {
+      1: 0,
+      2: parseFloat(s.levelUnlockL2),
+      3: parseFloat(s.levelUnlockL3),
+      4: parseFloat(s.levelUnlockL4),
+      5: parseFloat(s.levelUnlockL5),
+      6: parseFloat(s.levelUnlockL6),
+      7: parseFloat(s.levelUnlockL7),
+      8: parseFloat(s.levelUnlockL8),
+    } as Record<number, number>,
+  };
+}
+
+// Fallback defaults if no settings row exists yet
+const DEFAULT_LEVEL_RATES: Record<number, number> = {
+  1: 0.20, 2: 0.10, 3: 0.10,
+  4: 0.04, 5: 0.04, 6: 0.04, 7: 0.04, 8: 0.04,
+};
+const DEFAULT_LEVEL_UNLOCKS: Record<number, number> = {
+  1: 0, 2: 1000, 3: 3000,
+  4: 10000, 5: 10000, 6: 10000, 7: 10000, 8: 10000,
 };
 
 export async function processDailyPayout(): Promise<{ processed: number; skipped: number; errors: number }> {
   const stats = { processed: 0, skipped: 0, errors: 0 };
 
   logger.info("Daily payout started");
+
+  const cfg = await getIncomeSettings();
+  const levelRates   = cfg?.levelRates   ?? DEFAULT_LEVEL_RATES;
+  const levelUnlocks = cfg?.levelUnlocks ?? DEFAULT_LEVEL_UNLOCKS;
 
   const activeInvestments = await db
     .select()
@@ -29,21 +57,21 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
 
   for (const inv of activeInvestments) {
     try {
-      const dailyReturn = parseFloat(inv.amount) * parseFloat(inv.dailyRate);
-      const newEarned = parseFloat(inv.earnedSoFar) + dailyReturn;
+      const dailyReturn  = parseFloat(inv.amount) * parseFloat(inv.dailyRate);
+      const newEarned    = parseFloat(inv.earnedSoFar) + dailyReturn;
       const newRemaining = Math.max(0, inv.remainingDays - 1);
-      const isCompleted = newRemaining === 0;
+      const isCompleted  = newRemaining === 0;
 
       // Update investment
       await db.update(investmentsTable)
         .set({
-          earnedSoFar: newEarned.toString(),
+          earnedSoFar:  newEarned.toString(),
           remainingDays: newRemaining,
           status: isCompleted ? "completed" : "active",
         })
         .where(eq(investmentsTable.id, inv.id));
 
-      // Credit daily return income to user
+      // Credit daily return to investor
       await db.insert(incomeTable).values({
         userId: inv.userId,
         type: "daily_return",
@@ -51,7 +79,7 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         description: `Daily return on $${parseFloat(inv.amount).toFixed(2)} investment`,
       });
 
-      // Update user totalEarnings
+      // Update investor totalEarnings
       const [investor] = await db.select().from(usersTable).where(eq(usersTable.id, inv.userId)).limit(1);
       if (investor) {
         await db.update(usersTable)
@@ -59,18 +87,20 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
           .where(eq(usersTable.id, inv.userId));
       }
 
-      // Level commissions — walk up the sponsor chain
+      // Level commissions — walk up the sponsor chain (up to 8 levels)
       if (investor) {
-        let currentUserId = investor.sponsorId;
+        let currentUserId: number | null = investor.sponsorId;
         let level = 1;
 
         while (currentUserId && level <= 8) {
           const [upline] = await db.select().from(usersTable).where(eq(usersTable.id, currentUserId)).limit(1);
           if (!upline) break;
 
-          // Only credit if upline has unlocked this level
-          if (upline.currentLevel >= level) {
-            const rate = LEVEL_COMMISSION_RATES[level] ?? 0;
+          const unlockThreshold = levelUnlocks[level] ?? 0;
+          const uplineEarnings  = parseFloat(upline.totalEarnings);
+
+          if (uplineEarnings >= unlockThreshold) {
+            const rate       = levelRates[level] ?? 0;
             const commission = dailyReturn * rate;
 
             if (commission > 0) {

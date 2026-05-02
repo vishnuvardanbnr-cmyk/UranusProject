@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight } from "lucide-react";
+import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -22,6 +22,31 @@ type SettingsForm = {
   spotReferralRate: number;
   launchOfferActive: boolean;
   withdrawalEnabled: boolean;
+};
+
+type IncomeForm = {
+  spotReferralRate: number;
+  tier1DailyRate: number;
+  tier2DailyRate: number;
+  tier3DailyRate: number;
+  tier1Days: number;
+  tier2Days: number;
+  tier3Days: number;
+  levelCommL1: number;
+  levelCommL2: number;
+  levelCommL3: number;
+  levelCommL4: number;
+  levelCommL5: number;
+  levelCommL6: number;
+  levelCommL7: number;
+  levelCommL8: number;
+  levelUnlockL2: number;
+  levelUnlockL3: number;
+  levelUnlockL4: number;
+  levelUnlockL5: number;
+  levelUnlockL6: number;
+  levelUnlockL7: number;
+  levelUnlockL8: number;
 };
 
 type SmtpForm = {
@@ -168,6 +193,49 @@ export default function AdminSettings() {
       .then(d => setBackups(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setBackupsLoading(false));
+  };
+
+  // Income settings
+  const [incomeLoading, setIncomeLoading] = useState(false);
+  const [incomeSaving, setIncomeSaving] = useState(false);
+  const incomeForm = useForm<IncomeForm>({
+    defaultValues: {
+      spotReferralRate: 5,
+      tier1DailyRate: 0.6, tier2DailyRate: 0.7, tier3DailyRate: 0.8,
+      tier1Days: 300, tier2Days: 260, tier3Days: 225,
+      levelCommL1: 20, levelCommL2: 10, levelCommL3: 10,
+      levelCommL4: 4, levelCommL5: 4, levelCommL6: 4, levelCommL7: 4, levelCommL8: 4,
+      levelUnlockL2: 1000, levelUnlockL3: 3000,
+      levelUnlockL4: 10000, levelUnlockL5: 10000, levelUnlockL6: 10000, levelUnlockL7: 10000, levelUnlockL8: 10000,
+    },
+  });
+
+  useEffect(() => {
+    setIncomeLoading(true);
+    fetch("/api/admin/income-settings", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => incomeForm.reset(d))
+      .catch(() => {})
+      .finally(() => setIncomeLoading(false));
+  }, []);
+
+  const onIncomeSubmit = async (data: IncomeForm) => {
+    setIncomeSaving(true);
+    try {
+      const res = await fetch("/api/admin/income-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      const updated = await res.json();
+      incomeForm.reset(updated);
+      toast({ title: "Income settings saved!" });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setIncomeSaving(false);
+    }
   };
 
   const [walletLoading, setWalletLoading] = useState(false);
@@ -737,6 +805,144 @@ export default function AdminSettings() {
             >
               <Save size={16} />
               {withdrawalSaving ? "Saving..." : "Save Withdrawal Settings"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* Income Settings */}
+      <div className="flex items-center gap-3 pt-2">
+        <TrendingUp size={20} style={{ color: TEAL }} />
+        <h2
+          className="text-lg font-bold"
+          style={{
+            fontFamily: "'Orbitron', sans-serif",
+            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Income Settings
+        </h2>
+      </div>
+
+      <div className="rounded-2xl p-5" style={GLASS}>
+        {incomeLoading ? (
+          <div className="space-y-3">
+            {[1,2,3,4].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+          </div>
+        ) : (
+          <form onSubmit={incomeForm.handleSubmit(onIncomeSubmit)} className="space-y-6">
+
+            {/* Spot Referral */}
+            <div>
+              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Spot Referral Commission</h3>
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Rate (%) — paid to sponsor when referral invests</label>
+                <input
+                  type="number" step="0.1" min="0" max="100"
+                  {...incomeForm.register("spotReferralRate", { valueAsNumber: true })}
+                  className={INPUT_CLS} style={INPUT_STYLE}
+                />
+              </div>
+            </div>
+
+            {/* Investment Tier Daily Rates */}
+            <div>
+              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Daily Return Rates per Tier</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                {([
+                  { label: "Tier 1 Rate (%)", name: "tier1DailyRate" as const, hint: "$100–$400" },
+                  { label: "Tier 2 Rate (%)", name: "tier2DailyRate" as const, hint: "$500–$900" },
+                  { label: "Tier 3 Rate (%)", name: "tier3DailyRate" as const, hint: "$1000–$1500" },
+                ]).map(f => (
+                  <div key={f.name}>
+                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>{f.label}</label>
+                    <input type="number" step="0.01" min="0" max="100"
+                      {...incomeForm.register(f.name, { valueAsNumber: true })}
+                      className={INPUT_CLS} style={INPUT_STYLE}
+                    />
+                    <span className="text-xs mt-0.5 block" style={{ color: "rgba(168,237,255,0.3)" }}>{f.hint}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { label: "Tier 1 Days", name: "tier1Days" as const },
+                  { label: "Tier 2 Days", name: "tier2Days" as const },
+                  { label: "Tier 3 Days", name: "tier3Days" as const },
+                ]).map(f => (
+                  <div key={f.name}>
+                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>{f.label}</label>
+                    <input type="number" min="1"
+                      {...incomeForm.register(f.name, { valueAsNumber: true })}
+                      className={INPUT_CLS} style={INPUT_STYLE}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Level Commission Rates */}
+            <div>
+              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Level Commission Rates (%)</h3>
+                <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>% of the investor's daily return credited to each upline level</p>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                {([1,2,3,4,5,6,7,8] as const).map(lvl => (
+                  <div key={lvl}>
+                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>L{lvl}</label>
+                    <input type="number" step="0.1" min="0" max="100"
+                      {...incomeForm.register(`levelCommL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
+                      className={INPUT_CLS} style={INPUT_STYLE}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Level Unlock Thresholds */}
+            <div>
+              <div className="pb-2 mb-3" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+                <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>Level Unlock Thresholds ($)</h3>
+                <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>Total earnings required to unlock each level (L1 is always unlocked)</p>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="p-2.5 rounded-xl flex flex-col items-center justify-center" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.08)" }}>
+                  <span className="text-xs font-bold" style={{ color: TEAL }}>L1</span>
+                  <span className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>Always</span>
+                </div>
+                {([2,3,4,5,6,7,8] as const).map(lvl => (
+                  <div key={lvl}>
+                    <label className="text-xs font-medium block mb-1" style={{ color: "rgba(168,237,255,0.5)" }}>L{lvl} ($)</label>
+                    <input type="number" min="0"
+                      {...incomeForm.register(`levelUnlockL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
+                      className={INPUT_CLS} style={INPUT_STYLE}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={incomeSaving}
+              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                color: "#010810",
+                letterSpacing: "0.04em",
+                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
+              }}
+            >
+              <Save size={16} />
+              {incomeSaving ? "Saving..." : "Save Income Settings"}
             </button>
           </form>
         )}

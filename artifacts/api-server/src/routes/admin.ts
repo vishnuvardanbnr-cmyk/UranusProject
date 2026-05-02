@@ -437,6 +437,128 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
   });
 });
 
+// GET /api/admin/income-settings
+router.get("/admin/income-settings", requireAdmin, async (req, res) => {
+  let [s] = await db.select().from(platformSettingsTable).limit(1);
+  if (!s) {
+    [s] = await db.insert(platformSettingsTable).values({}).returning();
+  }
+  res.json({
+    spotReferralRate: parseFloat(s.spotReferralRate) * 100,
+    tier1DailyRate:   parseFloat(s.tier1DailyRate) * 100,
+    tier2DailyRate:   parseFloat(s.tier2DailyRate) * 100,
+    tier3DailyRate:   parseFloat(s.tier3DailyRate) * 100,
+    tier1Days: s.tier1Days,
+    tier2Days: s.tier2Days,
+    tier3Days: s.tier3Days,
+    levelCommL1: parseFloat(s.levelCommL1) * 100,
+    levelCommL2: parseFloat(s.levelCommL2) * 100,
+    levelCommL3: parseFloat(s.levelCommL3) * 100,
+    levelCommL4: parseFloat(s.levelCommL4) * 100,
+    levelCommL5: parseFloat(s.levelCommL5) * 100,
+    levelCommL6: parseFloat(s.levelCommL6) * 100,
+    levelCommL7: parseFloat(s.levelCommL7) * 100,
+    levelCommL8: parseFloat(s.levelCommL8) * 100,
+    levelUnlockL2: parseFloat(s.levelUnlockL2),
+    levelUnlockL3: parseFloat(s.levelUnlockL3),
+    levelUnlockL4: parseFloat(s.levelUnlockL4),
+    levelUnlockL5: parseFloat(s.levelUnlockL5),
+    levelUnlockL6: parseFloat(s.levelUnlockL6),
+    levelUnlockL7: parseFloat(s.levelUnlockL7),
+    levelUnlockL8: parseFloat(s.levelUnlockL8),
+  });
+});
+
+const IncomeSettingsBody = z.object({
+  spotReferralRate: z.number().min(0).max(100),
+  tier1DailyRate:  z.number().min(0).max(100),
+  tier2DailyRate:  z.number().min(0).max(100),
+  tier3DailyRate:  z.number().min(0).max(100),
+  tier1Days: z.number().int().min(1),
+  tier2Days: z.number().int().min(1),
+  tier3Days: z.number().int().min(1),
+  levelCommL1: z.number().min(0).max(100),
+  levelCommL2: z.number().min(0).max(100),
+  levelCommL3: z.number().min(0).max(100),
+  levelCommL4: z.number().min(0).max(100),
+  levelCommL5: z.number().min(0).max(100),
+  levelCommL6: z.number().min(0).max(100),
+  levelCommL7: z.number().min(0).max(100),
+  levelCommL8: z.number().min(0).max(100),
+  levelUnlockL2: z.number().min(0),
+  levelUnlockL3: z.number().min(0),
+  levelUnlockL4: z.number().min(0),
+  levelUnlockL5: z.number().min(0),
+  levelUnlockL6: z.number().min(0),
+  levelUnlockL7: z.number().min(0),
+  levelUnlockL8: z.number().min(0),
+});
+
+// PUT /api/admin/income-settings
+router.put("/admin/income-settings", requireAdmin, async (req, res) => {
+  const parsed = IncomeSettingsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Invalid input" });
+    return;
+  }
+  const d = parsed.data;
+  const updates = {
+    spotReferralRate: (d.spotReferralRate / 100).toString(),
+    tier1DailyRate:  (d.tier1DailyRate  / 100).toString(),
+    tier2DailyRate:  (d.tier2DailyRate  / 100).toString(),
+    tier3DailyRate:  (d.tier3DailyRate  / 100).toString(),
+    tier1Days: d.tier1Days,
+    tier2Days: d.tier2Days,
+    tier3Days: d.tier3Days,
+    levelCommL1: (d.levelCommL1 / 100).toString(),
+    levelCommL2: (d.levelCommL2 / 100).toString(),
+    levelCommL3: (d.levelCommL3 / 100).toString(),
+    levelCommL4: (d.levelCommL4 / 100).toString(),
+    levelCommL5: (d.levelCommL5 / 100).toString(),
+    levelCommL6: (d.levelCommL6 / 100).toString(),
+    levelCommL7: (d.levelCommL7 / 100).toString(),
+    levelCommL8: (d.levelCommL8 / 100).toString(),
+    levelUnlockL2: d.levelUnlockL2.toString(),
+    levelUnlockL3: d.levelUnlockL3.toString(),
+    levelUnlockL4: d.levelUnlockL4.toString(),
+    levelUnlockL5: d.levelUnlockL5.toString(),
+    levelUnlockL6: d.levelUnlockL6.toString(),
+    levelUnlockL7: d.levelUnlockL7.toString(),
+    levelUnlockL8: d.levelUnlockL8.toString(),
+  };
+  const [existing] = await db.select().from(platformSettingsTable).limit(1);
+  let s;
+  if (existing) {
+    [s] = await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id)).returning();
+  } else {
+    [s] = await db.insert(platformSettingsTable).values(updates).returning();
+  }
+  res.json({
+    spotReferralRate: parseFloat(s.spotReferralRate) * 100,
+    tier1DailyRate:   parseFloat(s.tier1DailyRate) * 100,
+    tier2DailyRate:   parseFloat(s.tier2DailyRate) * 100,
+    tier3DailyRate:   parseFloat(s.tier3DailyRate) * 100,
+    tier1Days: s.tier1Days,
+    tier2Days: s.tier2Days,
+    tier3Days: s.tier3Days,
+    levelCommL1: parseFloat(s.levelCommL1) * 100,
+    levelCommL2: parseFloat(s.levelCommL2) * 100,
+    levelCommL3: parseFloat(s.levelCommL3) * 100,
+    levelCommL4: parseFloat(s.levelCommL4) * 100,
+    levelCommL5: parseFloat(s.levelCommL5) * 100,
+    levelCommL6: parseFloat(s.levelCommL6) * 100,
+    levelCommL7: parseFloat(s.levelCommL7) * 100,
+    levelCommL8: parseFloat(s.levelCommL8) * 100,
+    levelUnlockL2: parseFloat(s.levelUnlockL2),
+    levelUnlockL3: parseFloat(s.levelUnlockL3),
+    levelUnlockL4: parseFloat(s.levelUnlockL4),
+    levelUnlockL5: parseFloat(s.levelUnlockL5),
+    levelUnlockL6: parseFloat(s.levelUnlockL6),
+    levelUnlockL7: parseFloat(s.levelUnlockL7),
+    levelUnlockL8: parseFloat(s.levelUnlockL8),
+  });
+});
+
 // POST /api/admin/run-daily-payout — manual trigger for testing
 router.post("/admin/run-daily-payout", requireAdmin, async (req, res) => {
   try {

@@ -31,6 +31,31 @@ export const platformSettingsTable = pgTable("platform_settings", {
   // Withdrawal wallet
   withdrawalMode: text("withdrawal_mode").notNull().default("manual"),
   withdrawWalletPrivateKey: text("withdraw_wallet_private_key").notNull().default(""),
+  // Investment tier daily rates (decimal, e.g. 0.006 = 0.6%)
+  tier1DailyRate: numeric("tier1_daily_rate", { precision: 8, scale: 5 }).notNull().default("0.00600"),
+  tier2DailyRate: numeric("tier2_daily_rate", { precision: 8, scale: 5 }).notNull().default("0.00700"),
+  tier3DailyRate: numeric("tier3_daily_rate", { precision: 8, scale: 5 }).notNull().default("0.00800"),
+  // Investment tier durations (days)
+  tier1Days: integer("tier1_days").notNull().default(300),
+  tier2Days: integer("tier2_days").notNull().default(260),
+  tier3Days: integer("tier3_days").notNull().default(225),
+  // Level commission rates (decimal, e.g. 0.20 = 20%)
+  levelCommL1: numeric("level_comm_l1", { precision: 6, scale: 4 }).notNull().default("0.2000"),
+  levelCommL2: numeric("level_comm_l2", { precision: 6, scale: 4 }).notNull().default("0.1000"),
+  levelCommL3: numeric("level_comm_l3", { precision: 6, scale: 4 }).notNull().default("0.1000"),
+  levelCommL4: numeric("level_comm_l4", { precision: 6, scale: 4 }).notNull().default("0.0400"),
+  levelCommL5: numeric("level_comm_l5", { precision: 6, scale: 4 }).notNull().default("0.0400"),
+  levelCommL6: numeric("level_comm_l6", { precision: 6, scale: 4 }).notNull().default("0.0400"),
+  levelCommL7: numeric("level_comm_l7", { precision: 6, scale: 4 }).notNull().default("0.0400"),
+  levelCommL8: numeric("level_comm_l8", { precision: 6, scale: 4 }).notNull().default("0.0400"),
+  // Level unlock thresholds (total earnings needed, in USD)
+  levelUnlockL2: numeric("level_unlock_l2", { precision: 10, scale: 2 }).notNull().default("1000"),
+  levelUnlockL3: numeric("level_unlock_l3", { precision: 10, scale: 2 }).notNull().default("3000"),
+  levelUnlockL4: numeric("level_unlock_l4", { precision: 10, scale: 2 }).notNull().default("10000"),
+  levelUnlockL5: numeric("level_unlock_l5", { precision: 10, scale: 2 }).notNull().default("10000"),
+  levelUnlockL6: numeric("level_unlock_l6", { precision: 10, scale: 2 }).notNull().default("10000"),
+  levelUnlockL7: numeric("level_unlock_l7", { precision: 10, scale: 2 }).notNull().default("10000"),
+  levelUnlockL8: numeric("level_unlock_l8", { precision: 10, scale: 2 }).notNull().default("10000"),
 });
 
 export const insertPlatformSettingsSchema = createInsertSchema(platformSettingsTable).omit({ id: true });
