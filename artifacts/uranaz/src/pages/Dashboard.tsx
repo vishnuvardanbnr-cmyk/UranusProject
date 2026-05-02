@@ -187,7 +187,6 @@ export default function Dashboard({ user }: { user: any }) {
               { label: "Daily Returns",     value: summary.dailyReturnTotal },
               { label: "Spot Referral",     value: summary.spotReferralTotal },
               { label: "Level Commission",  value: summary.levelCommissionTotal },
-              { label: "Rank Bonuses",      value: summary.rankBonusTotal },
             ].map((item, idx) => (
               <div
                 key={item.label}
