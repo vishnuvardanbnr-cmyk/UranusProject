@@ -289,52 +289,6 @@ export default function Team({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Level commission table */}
-      <div>
-        <h2 className="font-semibold text-sm mb-3" style={{ color: "rgba(168,237,255,0.75)" }}>Level Commission Structure</h2>
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" }}
-        >
-          {[1,2,3,4,5,6,7,8].map((level, idx) => {
-            const unlocked = level <= (user?.currentLevel ?? 0) || level === 1;
-            return (
-              <div
-                key={level}
-                className="flex items-center justify-between px-4 py-3"
-                style={{ borderTop: idx > 0 ? "1px solid rgba(61,214,245,0.07)" : "none" }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
-                    style={{
-                      background: unlocked ? "rgba(61,214,245,0.12)" : "rgba(255,255,255,0.04)",
-                      border: unlocked ? "1px solid rgba(61,214,245,0.2)" : "1px solid rgba(255,255,255,0.06)",
-                      color: unlocked ? TEAL : "rgba(168,237,255,0.25)",
-                    }}
-                  >
-                    {level}
-                  </div>
-                  <div className="text-sm" style={{ color: unlocked ? "rgba(168,237,255,0.75)" : "rgba(168,237,255,0.3)" }}>
-                    Level {level}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold" style={{ color: unlocked ? TEAL : "rgba(168,237,255,0.25)" }}>
-                    {levelCommissions[level]}
-                  </div>
-                  {!unlocked && (
-                    <div className="text-xs" style={{ color: "rgba(168,237,255,0.25)" }}>
-                      Earn ${levelUnlockRequirements[level]?.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Team members by level */}
       {loadingTeam ? (
         <div className="space-y-3">
