@@ -52,7 +52,7 @@ export default function TopNav({ user, onLogout }: Props) {
             <img src="/logo.png" alt="URANAZ" className="w-full h-full object-contain" />
           </div>
           <span
-            className="font-bold text-sm tracking-widest hidden sm:block"
+            className="font-bold text-sm tracking-widest"
             style={{
               fontFamily: "'Orbitron', sans-serif",
               background: "linear-gradient(135deg, #a8edff 0%, #3DD6F5 60%)",
