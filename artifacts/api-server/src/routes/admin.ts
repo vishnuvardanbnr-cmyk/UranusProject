@@ -368,6 +368,31 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
   });
 });
 
+// GET /api/admin/legal
+router.get("/admin/legal", requireAdmin, async (_req, res) => {
+  const [settings] = await db.select().from(platformSettingsTable).limit(1);
+  res.json({
+    termsContent: settings?.termsContent ?? "",
+    privacyContent: settings?.privacyContent ?? "",
+  });
+});
+
+// PUT /api/admin/legal
+router.put("/admin/legal", requireAdmin, async (req, res) => {
+  const { termsContent, privacyContent } = req.body as { termsContent?: string; privacyContent?: string };
+  const [existing] = await db.select().from(platformSettingsTable).limit(1);
+  const updates: Partial<typeof platformSettingsTable.$inferInsert> = {};
+  if (typeof termsContent === "string") updates.termsContent = termsContent;
+  if (typeof privacyContent === "string") updates.privacyContent = privacyContent;
+  if (existing) {
+    await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id));
+  } else {
+    await db.insert(platformSettingsTable).values(updates as any);
+  }
+  const [updated] = await db.select().from(platformSettingsTable).limit(1);
+  res.json({ termsContent: updated?.termsContent ?? "", privacyContent: updated?.privacyContent ?? "" });
+});
+
 // GET /api/admin/withdrawal-settings
 router.get("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   let [settings] = await db.select().from(platformSettingsTable).limit(1);

@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, TrendingUp, Wallet, FileText,
-  Settings, MessageCircle, Award, Bell, Shield, Menu, X, ArrowLeft,
+  Settings, MessageCircle, Award, Bell, Shield, Menu, X, ArrowLeft, Scale,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: "/admin/support",      label: "Support Tickets",   sub: "Manage user queries",         icon: MessageCircle },
   { href: "/admin/offers",       label: "Offers",            sub: "Create & manage offers",      icon: Award },
   { href: "/admin/notices",      label: "Notices",           sub: "Push announcements & alerts", icon: Bell },
+  { href: "/admin/legal",        label: "Legal Content",     sub: "Terms & Privacy Policy",      icon: Scale },
 ] as const;
 
 function isActive(location: string, href: string) {

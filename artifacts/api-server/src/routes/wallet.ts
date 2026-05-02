@@ -21,6 +21,18 @@ router.get("/settings/public", async (_req, res) => {
   });
 });
 
+// GET /api/legal/terms — public
+router.get("/legal/terms", async (_req, res) => {
+  const settings = await getSettings();
+  res.json({ content: settings?.termsContent ?? "" });
+});
+
+// GET /api/legal/privacy — public
+router.get("/legal/privacy", async (_req, res) => {
+  const settings = await getSettings();
+  res.json({ content: settings?.privacyContent ?? "" });
+});
+
 // GET /api/notices/active — returns currently-visible notices for the signed-in user
 router.get("/notices/active", requireAuth, async (req, res) => {
   const user = (req as any).user;
