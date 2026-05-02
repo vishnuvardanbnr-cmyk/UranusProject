@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Bell, Pin, X, ChevronRight, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
+import { ArrowLeft, Bell, Pin, X, ChevronRight, ChevronLeft, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles, RotateCcw, Inbox } from "lucide-react";
+
+const PAGE_SIZE = 10;
 
 const TEAL = "#3DD6F5";
 
@@ -56,6 +58,10 @@ export default function Notifications() {
   const [dismissed, setDismissed] = useState<number[]>(getDismissed());
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("all");
+  const [page, setPage] = useState(1);
+
+  // Reset to first page when tab changes
+  useEffect(() => { setPage(1); }, [tab]);
 
   const load = async () => {
     setLoading(true);
@@ -95,9 +101,14 @@ export default function Notifications() {
   };
 
   const unreadCount = notices.filter(n => !dismissed.includes(n.id)).length;
-  const visible = tab === "unread"
+  const filtered = tab === "unread"
     ? notices.filter(n => !dismissed.includes(n.id))
     : notices;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+  const visible = filtered.slice(startIdx, startIdx + PAGE_SIZE);
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
@@ -291,6 +302,61 @@ export default function Notifications() {
               </Link>
             );
           })}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ background: "rgba(5,18,32,0.65)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.7)" }}
+              >
+                <ChevronLeft size={13} /> Prev
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .map((p, idx, arr) => (
+                    <span key={p} className="flex items-center gap-1">
+                      {idx > 0 && arr[idx - 1] !== p - 1 && (
+                        <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.3)" }}>···</span>
+                      )}
+                      <button
+                        onClick={() => setPage(p)}
+                        className="min-w-[30px] h-[30px] rounded-lg text-xs font-bold transition-all"
+                        style={{
+                          background: p === safePage ? "linear-gradient(135deg, #3DD6F5, #2AB3CF)" : "rgba(61,214,245,0.06)",
+                          color: p === safePage ? "#010810" : "rgba(168,237,255,0.6)",
+                          border: `1px solid ${p === safePage ? "transparent" : "rgba(61,214,245,0.18)"}`,
+                          boxShadow: p === safePage ? "0 0 12px rgba(61,214,245,0.45)" : "none",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    </span>
+                  ))}
+              </div>
+
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ background: "rgba(5,18,32,0.65)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.7)" }}
+              >
+                Next <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Range indicator */}
+          {filtered.length > 0 && (
+            <p className="text-[11px] text-center pt-1" style={{ color: "rgba(168,237,255,0.35)" }}>
+              Showing {startIdx + 1}–{Math.min(startIdx + PAGE_SIZE, filtered.length)} of {filtered.length}
+              {tab === "unread" ? " unread" : ""}
+            </p>
+          )}
         </div>
       )}
     </div>
