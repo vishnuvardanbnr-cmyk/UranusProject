@@ -1,5 +1,5 @@
 import { useGetTeam, useGetTeamStats, useGetReferralLink } from "@workspace/api-client-react";
-import { Users, ChevronDown, ChevronRight, Copy, CheckCircle, Link as LinkIcon } from "lucide-react";
+import { Users, ChevronDown, ChevronRight, Copy, CheckCircle, Link as LinkIcon, Share2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,6 +36,27 @@ export default function Team({ user }: { user: any }) {
     setCopiedCode(true);
     toast({ title: "Copied!", description: "Referral code copied" });
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const shareWhatsApp = () => {
+    if (!referral?.referralLink) return;
+    const msg = encodeURIComponent(
+      `🚀 Join URANAZ TRADES and start earning daily returns!\n\nUse my referral link to sign up:\n${referral.referralLink}\n\nMy referral code: ${referral.referralCode}`
+    );
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  };
+
+  const shareNative = async () => {
+    if (!referral?.referralLink) return;
+    if (navigator.share) {
+      await navigator.share({
+        title: "Join URANAZ TRADES",
+        text: `Use my referral code ${referral.referralCode} to sign up and earn daily returns!`,
+        url: referral.referralLink,
+      });
+    } else {
+      await copyLink();
+    }
   };
 
   const toggleLevel = (level: number) =>
@@ -138,6 +159,40 @@ export default function Team({ user }: { user: any }) {
                   {copiedLink ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
                 </button>
               </div>
+            </div>
+
+            {/* Share buttons */}
+            <div className="flex gap-2.5">
+              {/* WhatsApp */}
+              <button
+                onClick={shareWhatsApp}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-[0.97]"
+                style={{
+                  background: "linear-gradient(135deg, #25D366, #1da851)",
+                  color: "#fff",
+                  boxShadow: "0 0 18px rgba(37,211,102,0.28)",
+                }}
+              >
+                {/* WhatsApp SVG icon */}
+                <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor">
+                  <path d="M16 .5C7.44.5.5 7.44.5 16c0 2.82.74 5.47 2.03 7.77L.5 31.5l8.01-2.1A15.45 15.45 0 0016 31.5C24.56 31.5 31.5 24.56 31.5 16S24.56.5 16 .5zm0 28.3a13.2 13.2 0 01-6.73-1.84l-.48-.29-4.76 1.25 1.27-4.64-.32-.5A13.23 13.23 0 1116 28.8zm7.27-9.9c-.4-.2-2.35-1.16-2.71-1.29-.37-.13-.63-.2-.9.2-.26.4-1.03 1.29-1.27 1.56-.23.26-.47.3-.87.1-.4-.2-1.68-.62-3.2-1.98-1.18-1.05-1.98-2.35-2.21-2.75-.23-.4-.02-.62.17-.82.18-.18.4-.47.6-.7.2-.23.26-.4.4-.66.13-.26.06-.5-.03-.7-.1-.2-.9-2.16-1.23-2.96-.32-.78-.65-.67-.9-.68l-.76-.01c-.27 0-.7.1-1.06.5s-1.4 1.37-1.4 3.33 1.43 3.86 1.63 4.13c.2.26 2.82 4.3 6.83 6.03.96.41 1.7.66 2.28.84.96.3 1.83.26 2.52.16.77-.12 2.35-.96 2.68-1.88.33-.93.33-1.72.23-1.89-.1-.16-.36-.26-.76-.46z"/>
+                </svg>
+                Share on WhatsApp
+              </button>
+
+              {/* Native share / copy fallback */}
+              <button
+                onClick={shareNative}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.97]"
+                style={{
+                  background: "rgba(61,214,245,0.08)",
+                  border: "1px solid rgba(61,214,245,0.2)",
+                  color: TEAL,
+                }}
+              >
+                <Share2 size={14} />
+                Share
+              </button>
             </div>
 
             {/* Hint */}
