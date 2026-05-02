@@ -48,8 +48,17 @@ lib/
 - `/admin/users` — User list with status toggle
 - `/admin/investments` — All investments list
 - `/admin/withdrawals` — Withdrawal approval/rejection
+- `/admin/reports` — Detailed reports (deposits, withdrawals, wallet-address change history); CSV export, date/status/search filters
 - `/admin/settings` — Platform settings + SMTP config + Blockchain wallet config
 - `/admin/support` — Live support ticket management
+- `/admin/offers` — Promotional offer management
+- `/admin/notices` — Push announcements & alerts
+
+### Admin Reports
+- `GET /api/admin/reports/deposits?page&limit&status&search&from&to` — Deposit history w/ user info, summary totals
+- `GET /api/admin/reports/withdrawals?page&limit&status&search&from&to` — Withdrawal history w/ user info, summary totals
+- `GET /api/admin/reports/wallet-changes?page&limit&search&from&to&otpOnly` — Wallet update audit trail
+- All persisted in `wallet_address_changes` table (userId, oldAddress, newAddress, otpVerified, ipAddress, userAgent). Inserted by `/auth/profile-setup` on any wallet change (initial setup or update). `otpVerified` reflects whether the request actually presented and validated an OTP — not just whether the feature was on.
 
 ## Backend API Routes
 

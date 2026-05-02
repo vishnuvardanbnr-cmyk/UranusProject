@@ -1,6 +1,6 @@
 import { useGetAdminStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Users, TrendingUp, Wallet, Settings, DollarSign, ArrowRight, Shield, MessageCircle, Award, Bell } from "lucide-react";
+import { Users, TrendingUp, Wallet, Settings, DollarSign, ArrowRight, Shield, MessageCircle, Award, Bell, FileText } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -82,6 +82,7 @@ export default function Admin() {
           { label: "Manage Users",     sub: `${stats?.totalUsers ?? 0} users`,       href: "/admin/users",        icon: Users },
           { label: "Investments",      sub: `${stats?.activeInvestments ?? 0} active`, href: "/admin/investments", icon: TrendingUp },
           { label: "Withdrawals",      sub: `${stats?.pendingWithdrawals ?? 0} pending`, href: "/admin/withdrawals", icon: Wallet },
+          { label: "Reports",          sub: "Deposits, withdrawals, wallets",        href: "/admin/reports",      icon: FileText },
           { label: "Platform Settings",sub: "Configure platform",                    href: "/admin/settings",     icon: Settings },
           { label: "Support Tickets", sub: "Manage user queries",                   href: "/admin/support",      icon: MessageCircle },
           { label: "Offers",           sub: "Create & manage offers",               href: "/admin/offers",       icon: Award },

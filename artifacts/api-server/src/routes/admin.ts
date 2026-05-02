@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable } from "@workspace/db";
 import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -750,6 +750,209 @@ router.delete("/admin/notices/:id", requireAdmin, async (req, res) => {
   if (isNaN(id)) { res.status(400).json({ message: "Invalid ID" }); return; }
   await db.delete(noticesTable).where(eq(noticesTable.id, id));
   res.json({ success: true });
+});
+
+// ============================================================
+// REPORTS — Detailed listings for deposits, withdrawals, and
+// withdrawal-wallet-address change history.
+// ============================================================
+
+function paginate<T>(items: T[], page: number, limit: number) {
+  const total = items.length;
+  const start = (page - 1) * limit;
+  return { rows: items.slice(start, start + limit), total };
+}
+
+function startOfDay(d: Date) { d.setHours(0, 0, 0, 0); return d; }
+function dateRange(query: any) {
+  const from = query.from ? new Date(String(query.from)) : null;
+  const toRaw = query.to ? new Date(String(query.to)) : null;
+  const to = toRaw ? new Date(toRaw.getTime() + 24 * 60 * 60 * 1000 - 1) : null; // inclusive end-of-day
+  return { from, to };
+}
+
+// GET /api/admin/reports/deposits
+router.get("/admin/reports/deposits", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20")) || 20));
+  const status = req.query.status ? String(req.query.status) : "";
+  const search = (req.query.search ? String(req.query.search) : "").trim().toLowerCase();
+  const { from, to } = dateRange(req.query);
+
+  let rows = await db.select().from(depositsTable).orderBy(desc(depositsTable.createdAt));
+  if (status) rows = rows.filter(d => d.status === status);
+  if (from) rows = rows.filter(d => d.createdAt >= from);
+  if (to)   rows = rows.filter(d => d.createdAt <= to);
+
+  // Enrich with user info (single query for distinct users in range).
+  const userIds = Array.from(new Set(rows.map(r => r.userId)));
+  const users = userIds.length
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u]));
+  let enriched = rows.map(r => {
+    const u = uMap.get(r.userId);
+    return {
+      id: r.id,
+      userId: r.userId,
+      userName: u?.name ?? "—",
+      userEmail: u?.email ?? "—",
+      amount: parseFloat(r.amount),
+      status: r.status,
+      txHash: r.txHash,
+      sweepTxHash: r.sweepTxHash,
+      note: r.note,
+      createdAt: r.createdAt.toISOString(),
+      creditedAt: r.creditedAt?.toISOString() ?? null,
+    };
+  });
+
+  if (search) {
+    enriched = enriched.filter(d =>
+      d.userName.toLowerCase().includes(search) ||
+      d.userEmail.toLowerCase().includes(search) ||
+      (d.txHash ?? "").toLowerCase().includes(search) ||
+      String(d.userId) === search,
+    );
+  }
+
+  // Summary across the full filtered set (not just the page).
+  const summary = {
+    totalCount: enriched.length,
+    totalAmount: enriched.reduce((s, d) => s + d.amount, 0),
+    creditedCount: enriched.filter(d => d.status === "credited").length,
+    creditedAmount: enriched.filter(d => d.status === "credited").reduce((s, d) => s + d.amount, 0),
+    pendingCount: enriched.filter(d => d.status === "pending" || d.status === "sweeping").length,
+    failedCount: enriched.filter(d => d.status === "failed").length,
+  };
+
+  const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// GET /api/admin/reports/withdrawals
+router.get("/admin/reports/withdrawals", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20")) || 20));
+  const status = req.query.status ? String(req.query.status) : "";
+  const search = (req.query.search ? String(req.query.search) : "").trim().toLowerCase();
+  const { from, to } = dateRange(req.query);
+
+  let rows = await db.select().from(withdrawalsTable).orderBy(desc(withdrawalsTable.createdAt));
+  if (status) rows = rows.filter(w => w.status === status);
+  if (from) rows = rows.filter(w => w.createdAt >= from);
+  if (to)   rows = rows.filter(w => w.createdAt <= to);
+
+  const userIds = Array.from(new Set(rows.map(r => r.userId)));
+  const users = userIds.length
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u]));
+
+  let enriched = rows.map(w => {
+    const u = uMap.get(w.userId);
+    return {
+      id: w.id,
+      userId: w.userId,
+      userName: w.userName || u?.name || "—",
+      userEmail: u?.email ?? "—",
+      amount: parseFloat(w.amount),
+      walletAddress: w.walletAddress,
+      status: w.status,
+      txHash: w.txHash,
+      note: w.note,
+      processingError: w.processingError,
+      createdAt: w.createdAt.toISOString(),
+      processedAt: w.processedAt?.toISOString() ?? null,
+    };
+  });
+
+  if (search) {
+    enriched = enriched.filter(w =>
+      w.userName.toLowerCase().includes(search) ||
+      w.userEmail.toLowerCase().includes(search) ||
+      w.walletAddress.toLowerCase().includes(search) ||
+      (w.txHash ?? "").toLowerCase().includes(search) ||
+      String(w.userId) === search,
+    );
+  }
+
+  const summary = {
+    totalCount: enriched.length,
+    totalRequested: enriched.reduce((s, w) => s + w.amount, 0),
+    approvedCount: enriched.filter(w => w.status === "approved").length,
+    approvedAmount: enriched.filter(w => w.status === "approved").reduce((s, w) => s + w.amount, 0),
+    pendingCount: enriched.filter(w => w.status === "pending").length,
+    pendingAmount: enriched.filter(w => w.status === "pending").reduce((s, w) => s + w.amount, 0),
+    processingCount: enriched.filter(w => w.status === "processing").length,
+    rejectedCount: enriched.filter(w => w.status === "rejected").length,
+  };
+
+  const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// GET /api/admin/reports/wallet-changes
+router.get("/admin/reports/wallet-changes", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20")) || 20));
+  const search = (req.query.search ? String(req.query.search) : "").trim().toLowerCase();
+  const { from, to } = dateRange(req.query);
+  const onlyOtp = req.query.otpOnly === "true";
+
+  let rows = await db.select().from(walletAddressChangesTable).orderBy(desc(walletAddressChangesTable.createdAt));
+  if (from) rows = rows.filter(r => r.createdAt >= from);
+  if (to)   rows = rows.filter(r => r.createdAt <= to);
+  if (onlyOtp) rows = rows.filter(r => r.otpVerified);
+
+  const userIds = Array.from(new Set(rows.map(r => r.userId)));
+  const users = userIds.length
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u]));
+
+  let enriched = rows.map(r => {
+    const u = uMap.get(r.userId);
+    return {
+      id: r.id,
+      userId: r.userId,
+      userName: u?.name ?? "—",
+      userEmail: u?.email ?? "—",
+      oldAddress: r.oldAddress,
+      newAddress: r.newAddress,
+      otpVerified: r.otpVerified,
+      ipAddress: r.ipAddress,
+      isInitialSetup: !r.oldAddress,
+      createdAt: r.createdAt.toISOString(),
+    };
+  });
+
+  if (search) {
+    enriched = enriched.filter(r =>
+      r.userName.toLowerCase().includes(search) ||
+      r.userEmail.toLowerCase().includes(search) ||
+      (r.oldAddress ?? "").toLowerCase().includes(search) ||
+      r.newAddress.toLowerCase().includes(search) ||
+      String(r.userId) === search,
+    );
+  }
+
+  // "Distinct users who changed wallet" — counts users with at least one
+  // non-initial-setup row in the filtered window.
+  const usersWhoChanged = new Set(
+    enriched.filter(r => !r.isInitialSetup).map(r => r.userId),
+  );
+
+  const summary = {
+    totalCount: enriched.length,
+    initialSetupCount: enriched.filter(r => r.isInitialSetup).length,
+    updateCount: enriched.filter(r => !r.isInitialSetup).length,
+    otpVerifiedCount: enriched.filter(r => r.otpVerified).length,
+    distinctUsers: usersWhoChanged.size,
+  };
+
+  const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
 });
 
 // POST /api/admin/run-daily-payout — manual trigger for testing

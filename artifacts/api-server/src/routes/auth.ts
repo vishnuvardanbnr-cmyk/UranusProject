@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, otpCodesTable } from "@workspace/db";
+import { db, usersTable, otpCodesTable, walletAddressChangesTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { createHash } from "crypto";
 import { signToken, requireAuth } from "../middlewares/auth";
@@ -197,6 +197,9 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
   // and only if admin has enabled OTP for wallet updates AND SMTP is configured.
   const oldWallet = (user.walletAddress ?? "").trim();
   const walletChanged = !!oldWallet && oldWallet !== newWallet;
+  // Tracks whether an OTP was actually presented AND validated for THIS request.
+  // Used by the audit log so admins can distinguish gated vs ungated changes.
+  let otpVerifiedThisRequest = false;
 
   if (walletChanged) {
     const { isOtpWalletUpdateEnabled } = await import("../lib/email");
@@ -221,6 +224,7 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
         return;
       }
       await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
+      otpVerifiedThisRequest = true;
     }
   }
 
@@ -234,6 +238,27 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
     })
     .where(eq(usersTable.id, user.id))
     .returning();
+
+  // Audit log: record any change to the withdrawal wallet (initial setup or update).
+  if (oldWallet !== newWallet) {
+    try {
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+              || req.socket?.remoteAddress
+              || null;
+      const ua = (req.headers["user-agent"] as string) || null;
+      await db.insert(walletAddressChangesTable).values({
+        userId: user.id,
+        oldAddress: oldWallet || null,
+        newAddress: newWallet,
+        otpVerified: otpVerifiedThisRequest,
+        ipAddress: ip,
+        userAgent: ua,
+      });
+    } catch (err: any) {
+      req.log?.error?.({ err }, "Failed to record wallet address change");
+    }
+  }
+
   res.json(userToResponse(updated));
 });
 

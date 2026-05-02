@@ -11,3 +11,4 @@ export * from "./deposit_wallet_backups";
 export * from "./offers";
 export * from "./notices";
 export * from "./notice_views";
+export * from "./wallet_address_changes";
