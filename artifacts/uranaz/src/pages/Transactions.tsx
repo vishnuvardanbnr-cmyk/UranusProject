@@ -216,22 +216,33 @@ export default function Transactions() {
         Transactions
       </h1>
 
-      {/* Filter pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {typeFilters.map(f => {
+      {/* Filter grid */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { value: "",                 label: "All",        icon: DollarSign, color: TEAL      },
+          { value: "daily_return",     label: "Daily",      icon: TrendingUp, color: "#34d399" },
+          { value: "spot_referral",    label: "Referral",   icon: Users,      color: "#60a5fa" },
+          { value: "level_commission", label: "Commission", icon: DollarSign, color: "#c084fc" },
+          { value: "rank_bonus",       label: "Rank Bonus", icon: Award,      color: TEAL      },
+        ].map(f => {
           const active = typeFilter === f.value;
           return (
             <button
               key={f.value}
               onClick={() => setTypeFilter(f.value)}
-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
-              style={{
-                background: active ? "linear-gradient(135deg, #3DD6F5, #2AB3CF)" : "rgba(5,18,32,0.65)",
-                color:      active ? "#010810" : "rgba(168,237,255,0.45)",
-                border:     active ? "none" : "1px solid rgba(61,214,245,0.12)",
-                boxShadow:  active ? "0 0 10px rgba(61,214,245,0.25)" : "none",
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97]"
+              style={active ? {
+                background: `linear-gradient(135deg, ${f.color}22, ${f.color}0d)`,
+                border: `1px solid ${f.color}50`,
+                color: f.color,
+                boxShadow: `0 0 14px ${f.color}20`,
+              } : {
+                background: "rgba(5,18,32,0.55)",
+                border: "1px solid rgba(61,214,245,0.09)",
+                color: "rgba(168,237,255,0.38)",
               }}
             >
+              <f.icon size={11} style={active ? { color: f.color } : { color: "rgba(168,237,255,0.28)" }} />
               {f.label}
             </button>
           );
