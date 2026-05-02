@@ -59,6 +59,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("all");
   const [page, setPage] = useState(1);
+  const [markingAll, setMarkingAll] = useState(false);
 
   // Reset to first page when tab changes
   useEffect(() => { setPage(1); }, [tab]);
@@ -89,11 +90,23 @@ export default function Notifications() {
     setDismissed(next);
     saveDismissed(next);
   };
-  const dismissAll = () => {
-    const ids = notices.filter(n => n.dismissible && !n.pinned).map(n => n.id);
-    const next = Array.from(new Set([...dismissed, ...ids]));
+  const dismissAll = async () => {
+    if (markingAll) return;
+    setMarkingAll(true);
+    // Mark EVERY notice (including pinned + non-dismissible) as read locally so the badge clears
+    const allIds = notices.map(n => n.id);
+    const next = Array.from(new Set([...dismissed, ...allIds]));
     setDismissed(next);
     saveDismissed(next);
+    // Sync server-side view state in one batch
+    try {
+      const token = localStorage.getItem("uranaz_token");
+      await fetch("/api/notices/view-all", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {/* ignore — local state already updated */}
+    finally { setMarkingAll(false); }
   };
   const restoreAll = () => {
     setDismissed([]);
@@ -165,10 +178,12 @@ export default function Notifications() {
         {unreadCount > 0 ? (
           <button
             onClick={dismissAll}
-            className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5"
+            disabled={markingAll}
+            className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.65)" }}
           >
-            Mark all read
+            <CheckCircle2 size={11} />
+            {markingAll ? "Marking…" : "Mark all read"}
           </button>
         ) : dismissed.length > 0 && (
           <button

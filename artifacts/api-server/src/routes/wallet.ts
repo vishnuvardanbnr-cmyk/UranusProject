@@ -78,6 +78,34 @@ router.get("/notices/active", requireAuth, async (req, res) => {
   })));
 });
 
+// POST /api/notices/view-all — record views for every notice currently visible to the signed-in user
+router.post("/notices/view-all", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const now = new Date();
+
+  const all = await db.select().from(noticesTable);
+  const visible = all.filter(n => {
+    if (!n.active) return false;
+    if (n.startsAt && n.startsAt > now) return false;
+    if (n.endsAt && n.endsAt < now) return false;
+    if (n.audience === "active"   && !user.isActive) return false;
+    if (n.audience === "inactive" &&  user.isActive) return false;
+    if (n.audience === "admin"    && !user.isAdmin)  return false;
+    return true;
+  });
+
+  if (visible.length === 0) { res.json({ success: true, marked: 0 }); return; }
+
+  try {
+    await db.insert(noticeViewsTable)
+      .values(visible.map(n => ({ noticeId: n.id, userId: user.id })))
+      .onConflictDoNothing();
+  } catch (err) {
+    req.log.error({ err }, "Failed to bulk-record notice views");
+  }
+  res.json({ success: true, marked: visible.length });
+});
+
 // POST /api/notices/:id/view — record that the signed-in user has opened this notice
 router.post("/notices/:id/view", requireAuth, async (req, res) => {
   const user = (req as any).user;
