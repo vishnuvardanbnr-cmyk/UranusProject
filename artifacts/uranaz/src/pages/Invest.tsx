@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { TrendingUp, Info } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = {
@@ -116,23 +116,6 @@ export default function Invest({ user }: { user: any }) {
       {/* Invest Form */}
       <div className="rounded-2xl p-5" style={{ ...GLASS, backdropFilter: "blur(14px)" }}>
         <h2 className="font-semibold text-sm mb-4" style={{ color: "rgba(168,237,255,0.8)" }}>New Investment</h2>
-
-        {/* Info banner */}
-        <div
-          className="flex items-start gap-2 rounded-lg p-3 mb-4"
-          style={{
-            background: "rgba(61,214,245,0.05)",
-            border: "1px solid rgba(61,214,245,0.14)",
-          }}
-        >
-          <Info size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
-          <p className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
-            {hyperEnabled
-              ? <>Minimum <span style={{ color: TEAL, fontWeight: 700 }}>{hyperCoinMinPercent}%</span> must be HYPERCOIN. Payouts every weekday (5 days/week).</>
-              : <>Payouts every weekday (5 days/week).</>
-            }
-          </p>
-        </div>
 
         {/* Available balances */}
         <div className={`grid gap-2 mb-4 ${hyperEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
