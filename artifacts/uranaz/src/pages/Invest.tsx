@@ -81,47 +81,6 @@ export default function Invest() {
         Investment Plans
       </h1>
 
-      {/* Plan Selector */}
-      <div className="grid grid-cols-3 gap-2">
-        {plans.map(p => {
-          const active = selectedTier === p.tier;
-          return (
-            <button
-              key={p.tier}
-              data-testid={`button-select-${p.tier}`}
-              onClick={() => setSelectedTier(p.tier)}
-              className="relative rounded-xl p-3 text-center transition-all duration-200"
-              style={{
-                background: active
-                  ? "linear-gradient(135deg, rgba(61,214,245,0.15), rgba(42,179,215,0.08))"
-                  : "rgba(5,18,32,0.65)",
-                backdropFilter: "blur(12px)",
-                border: active ? "2px solid rgba(61,214,245,0.5)" : "1px solid rgba(61,214,245,0.10)",
-                boxShadow: active ? "0 0 20px rgba(61,214,245,0.12)" : "none",
-              }}
-            >
-              {p.popular && (
-                <div
-                  className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
-                    color: "#010810",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  BEST
-                </div>
-              )}
-              <div className="font-bold text-base" style={{ color: active ? TEAL : "rgba(168,237,255,0.6)" }}>
-                {p.label}
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>{p.range}</div>
-              <div className="text-xs" style={{ color: "rgba(168,237,255,0.25)" }}>{p.days} days</div>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Invest Form */}
       <div className="rounded-2xl p-5" style={{ ...GLASS, backdropFilter: "blur(14px)" }}>
         <h2 className="font-semibold text-sm mb-4" style={{ color: "rgba(168,237,255,0.8)" }}>New Investment</h2>
