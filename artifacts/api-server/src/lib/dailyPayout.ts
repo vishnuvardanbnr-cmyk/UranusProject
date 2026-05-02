@@ -5,14 +5,14 @@ import { logger } from "./logger";
 // Level commission rates (% of daily return credited to each upline level)
 // Level 1 = direct sponsor, Level 2 = sponsor's sponsor, etc.
 const LEVEL_COMMISSION_RATES: Record<number, number> = {
-  1: 0.05,  // 5%
-  2: 0.03,  // 3%
-  3: 0.02,  // 2%
-  4: 0.01,  // 1%
-  5: 0.01,
-  6: 0.01,
-  7: 0.01,
-  8: 0.01,
+  1: 0.20,  // 20%
+  2: 0.10,  // 10%
+  3: 0.10,  // 10%
+  4: 0.04,  // 4%
+  5: 0.04,
+  6: 0.04,
+  7: 0.04,
+  8: 0.04,
 };
 
 export async function processDailyPayout(): Promise<{ processed: number; skipped: number; errors: number }> {
