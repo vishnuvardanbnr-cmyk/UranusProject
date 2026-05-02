@@ -12,6 +12,16 @@ function hashPassword(password: string): string {
   return createHash("sha256").update(password + "uranaz-salt").digest("hex");
 }
 
+async function generateUniqueReferralCode(): Promise<string> {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  while (true) {
+    let code = "URN";
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.referralCode, code)).limit(1);
+    if (!existing) return code;
+  }
+}
+
 function userToResponse(user: typeof usersTable.$inferSelect) {
   return {
     id: user.id,
@@ -114,19 +124,16 @@ router.post("/auth/register", async (req, res) => {
     if (sponsor) sponsorId = sponsor.id;
   }
 
-  const [newUser] = await db.insert(usersTable).values({
+  const referralCodeGenerated = await generateUniqueReferralCode();
+
+  const [user] = await db.insert(usersTable).values({
     name,
     email,
     phone,
     passwordHash: hashPassword(password),
-    referralCode: "0",
+    referralCode: referralCodeGenerated,
     sponsorId: sponsorId ?? null,
   }).returning();
-
-  const [user] = await db.update(usersTable)
-    .set({ referralCode: String(newUser.id) })
-    .where(eq(usersTable.id, newUser.id))
-    .returning();
 
   const token = signToken(user.id);
   res.status(201).json({ user: userToResponse(user), token });
