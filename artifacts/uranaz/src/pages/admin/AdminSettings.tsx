@@ -22,6 +22,7 @@ type SettingsForm = {
   spotReferralRate: number;
   launchOfferActive: boolean;
   withdrawalEnabled: boolean;
+  launchOfferEndDate: string;
 };
 
 type IncomeForm = {
@@ -404,6 +405,22 @@ export default function AdminSettings() {
                 />
               </div>
             ))}
+          </div>
+
+          {/* Launch offer end date */}
+          <div>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
+              Launch Offer End Date &amp; Time
+            </label>
+            <input
+              type="datetime-local"
+              {...register("launchOfferEndDate")}
+              className={INPUT_CLS}
+              style={INPUT_STYLE}
+            />
+            <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>
+              Shown as a countdown on users' dashboards. Leave blank for no deadline.
+            </p>
           </div>
 
           <button

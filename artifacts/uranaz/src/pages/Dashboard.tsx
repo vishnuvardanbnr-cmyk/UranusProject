@@ -47,11 +47,15 @@ export default function Dashboard({ user }: { user: any }) {
   const { data: teamStats } = useGetTeamStats();
   const { data: rankProgress } = useGetMyRankProgress();
   const [launchOfferActive, setLaunchOfferActive] = useState(false);
+  const [launchOfferEndDate, setLaunchOfferEndDate] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
-      .then(d => setLaunchOfferActive(!!d.launchOfferActive))
+      .then(d => {
+        setLaunchOfferActive(!!d.launchOfferActive);
+        setLaunchOfferEndDate(d.launchOfferEndDate ?? null);
+      })
       .catch(() => {});
   }, []);
 
@@ -314,6 +318,37 @@ export default function Dashboard({ user }: { user: any }) {
                   );
                 })}
               </div>
+
+              {/* End date / countdown */}
+              {launchOfferEndDate && (() => {
+                const end = new Date(launchOfferEndDate);
+                const now = new Date();
+                const diffMs = end.getTime() - now.getTime();
+                const expired = diffMs <= 0;
+                const days    = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const hours   = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins    = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                return (
+                  <div
+                    className="flex items-center justify-between px-3 py-2 rounded-xl"
+                    style={{
+                      background: expired ? "rgba(248,113,113,0.07)" : "rgba(61,214,245,0.06)",
+                      border: `1px solid ${expired ? "rgba(248,113,113,0.2)" : "rgba(61,214,245,0.12)"}`,
+                    }}
+                  >
+                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+                      {expired ? "Offer ended" : "Offer ends"}
+                    </span>
+                    {expired ? (
+                      <span className="text-xs font-bold" style={{ color: "rgba(248,113,113,0.8)" }}>Expired</span>
+                    ) : (
+                      <span className="text-xs font-bold" style={{ color: TEAL }}>
+                        {days}d {hours}h {mins}m left
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Target summary chips */}
               <div className="flex flex-wrap gap-2 pt-1">

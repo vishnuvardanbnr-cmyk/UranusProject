@@ -16,6 +16,7 @@ router.get("/settings/public", async (_req, res) => {
   res.json({
     hyperCoinMinPercent: parseFloat(settings?.hyperCoinMinPercent ?? "50"),
     launchOfferActive: settings?.launchOfferActive ?? true,
+    launchOfferEndDate: settings?.launchOfferEndDate ? settings.launchOfferEndDate.toISOString() : null,
   });
 });
 

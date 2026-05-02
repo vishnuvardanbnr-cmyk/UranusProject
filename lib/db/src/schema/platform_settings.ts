@@ -1,4 +1,4 @@
-import { pgTable, serial, boolean, numeric, integer, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, boolean, numeric, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -31,6 +31,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   // Withdrawal wallet
   withdrawalMode: text("withdrawal_mode").notNull().default("manual"),
   withdrawWalletPrivateKey: text("withdraw_wallet_private_key").notNull().default(""),
+  // Launch offer
+  launchOfferEndDate: timestamp("launch_offer_end_date"),
   // Investment tier daily rates (decimal, e.g. 0.006 = 0.6%)
   tier1DailyRate: numeric("tier1_daily_rate", { precision: 8, scale: 5 }).notNull().default("0.00600"),
   tier2DailyRate: numeric("tier2_daily_rate", { precision: 8, scale: 5 }).notNull().default("0.00700"),

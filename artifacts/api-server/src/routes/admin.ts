@@ -280,6 +280,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
       spotReferralRate: parseFloat(created.spotReferralRate),
       launchOfferActive: created.launchOfferActive,
       withdrawalEnabled: created.withdrawalEnabled,
+      launchOfferEndDate: created.launchOfferEndDate ? created.launchOfferEndDate.toISOString().slice(0, 16) : "",
     });
     return;
   }
@@ -291,6 +292,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     spotReferralRate: parseFloat(settings.spotReferralRate),
     launchOfferActive: settings.launchOfferActive,
     withdrawalEnabled: settings.withdrawalEnabled,
+    launchOfferEndDate: settings.launchOfferEndDate ? settings.launchOfferEndDate.toISOString().slice(0, 16) : "",
   });
 });
 
@@ -312,6 +314,9 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     if (parsed.data.maxDeposit !== undefined) updates.maxDeposit = parsed.data.maxDeposit.toString();
     if (parsed.data.hyperCoinMinPercent !== undefined) updates.hyperCoinMinPercent = parsed.data.hyperCoinMinPercent.toString();
     if (parsed.data.spotReferralRate !== undefined) updates.spotReferralRate = parsed.data.spotReferralRate.toString();
+    if (parsed.data.launchOfferEndDate !== undefined) {
+      updates.launchOfferEndDate = parsed.data.launchOfferEndDate ? new Date(parsed.data.launchOfferEndDate) : null;
+    }
     [updated] = await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id)).returning();
   } else {
     [updated] = await db.insert(platformSettingsTable).values({}).returning();
@@ -324,6 +329,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     spotReferralRate: parseFloat(updated.spotReferralRate),
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,
+    launchOfferEndDate: updated.launchOfferEndDate ? updated.launchOfferEndDate.toISOString().slice(0, 16) : "",
   });
 });
 
