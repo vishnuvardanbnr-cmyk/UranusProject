@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, Plus, Send, ChevronLeft, Clock, CheckCircle, AlertCircle, X, Loader2 } from "lucide-react";
+import { MessageCircle, Plus, Send, ChevronLeft, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const TEAL = "#3DD6F5";
@@ -125,18 +125,6 @@ export default function Support({ user }: { user: any }) {
     }
   };
 
-  const closeTicket = async () => {
-    if (!activeTicket) return;
-    const res = await fetch(`/api/support/tickets/${activeTicket.id}/close`, {
-      method: "PUT", headers: { Authorization: `Bearer ${getToken()}` }
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setActiveTicket(updated);
-      setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
-    }
-  };
-
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto pb-24 md:pb-8 space-y-5">
       {/* Header */}
@@ -162,15 +150,6 @@ export default function Support({ user }: { user: any }) {
             style={{ background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)", color: "#010810" }}
           >
             <Plus size={15} /> New Ticket
-          </button>
-        )}
-        {view === "chat" && activeTicket?.status !== "closed" && (
-          <button
-            onClick={closeTicket}
-            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(107,114,128,0.15)", border: "1px solid rgba(107,114,128,0.3)", color: "rgba(168,237,255,0.5)" }}
-          >
-            <X size={12} /> Close Ticket
           </button>
         )}
       </div>

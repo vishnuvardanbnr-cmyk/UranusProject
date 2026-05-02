@@ -87,24 +87,6 @@ router.get("/support/tickets/:id", requireAuth, async (req, res) => {
   res.json({ ticket: ticketToResponse(ticket), messages: messages.map(messageToResponse) });
 });
 
-// PUT /api/support/tickets/:id/close
-router.put("/support/tickets/:id/close", requireAuth, async (req, res) => {
-  const user = (req as any).user;
-  const id = parseInt(req.params.id);
-  const [ticket] = await db.select().from(supportTicketsTable)
-    .where(and(eq(supportTicketsTable.id, id), eq(supportTicketsTable.userId, user.id)))
-    .limit(1);
-  if (!ticket) {
-    res.status(404).json({ message: "Ticket not found" });
-    return;
-  }
-  const [updated] = await db.update(supportTicketsTable)
-    .set({ status: "closed", updatedAt: new Date() })
-    .where(eq(supportTicketsTable.id, id))
-    .returning();
-  broadcastToTicket(id, { type: "ticket_update", ticket: ticketToResponse(updated) });
-  res.json(ticketToResponse(updated));
-});
 
 // ─── Admin routes ────────────────────────────────────────────────────────────
 
