@@ -59,118 +59,155 @@ function shortId(id: string | number) {
    ──────────────────────────────────────────────── */
 function DetailModal({ item, type, onClose }: { item: any; type: "deposit" | "withdraw"; onClose: () => void }) {
   const cfg = statusConfig[item.status] || statusConfig.pending;
+  const isDeposit = type === "deposit";
+  const accentColor = isDeposit ? TEAL : "#f87171";
 
-  const rows =
-    type === "deposit"
+  const allRows =
+    isDeposit
       ? [
-          { icon: Hash,        label: "Transaction ID",   value: `#${shortId(item.id)}` },
-          { icon: Calendar,    label: "Date",             value: formatDate(item.createdAt, true) },
-          { icon: DollarSign,  label: "Total Amount",     value: `$${item.amount?.toFixed(2)}` },
-          { icon: DollarSign,  label: "USDT",             value: `$${item.usdtAmount?.toFixed(2) ?? "—"}` },
-          { icon: DollarSign,  label: "HYPERCOIN",        value: `$${item.hyperCoinAmount?.toFixed(2) ?? "—"}` },
-          { icon: Percent,     label: "Plan",             value: planLabels[item.plan] ?? item.plan ?? "—" },
-          { icon: TrendingUp,  label: "Expected Return",  value: item.expectedReturn ? `$${item.expectedReturn.toFixed(2)}` : "—" },
-          { icon: Timer,       label: "Duration",         value: item.durationDays ? `${item.durationDays} days` : "—" },
-          { icon: Calendar,    label: "Maturity Date",    value: item.maturityDate ? formatDate(item.maturityDate) : "—" },
+          { icon: Hash,       label: "Transaction ID",  value: `#${shortId(item.id)}`,                                        raw: item.id },
+          { icon: Calendar,   label: "Date",            value: formatDate(item.createdAt, true),                               raw: item.createdAt },
+          { icon: DollarSign, label: "Total Amount",    value: `$${item.amount?.toFixed(2)}`,                                  raw: item.amount },
+          { icon: DollarSign, label: "USDT",            value: item.usdtAmount != null ? `$${item.usdtAmount.toFixed(2)}` : null, raw: item.usdtAmount },
+          { icon: DollarSign, label: "HYPERCOIN",       value: item.hyperCoinAmount != null ? `$${item.hyperCoinAmount.toFixed(2)}` : null, raw: item.hyperCoinAmount },
+          { icon: Percent,    label: "Plan",            value: item.plan ? (planLabels[item.plan] ?? item.plan) : null,        raw: item.plan },
+          { icon: TrendingUp, label: "Expected Return", value: item.expectedReturn != null ? `$${item.expectedReturn.toFixed(2)}` : null, raw: item.expectedReturn },
+          { icon: Timer,      label: "Duration",        value: item.durationDays != null ? `${item.durationDays} days` : null, raw: item.durationDays },
+          { icon: Calendar,   label: "Maturity Date",   value: item.maturityDate ? formatDate(item.maturityDate) : null,       raw: item.maturityDate },
         ]
       : [
-          { icon: Hash,        label: "Transaction ID",   value: `#${shortId(item.id)}` },
-          { icon: Calendar,    label: "Requested",        value: formatDate(item.createdAt, true) },
-          { icon: DollarSign,  label: "Amount",           value: `$${item.amount?.toFixed(2)}` },
-          { icon: MapPin,      label: "Wallet Address",   value: item.walletAddress ?? "—" },
-          { icon: Calendar,    label: "Processed",        value: item.processedAt ? formatDate(item.processedAt, true) : "Awaiting" },
-          ...(item.rejectionReason
-            ? [{ icon: AlertCircle, label: "Reason", value: item.rejectionReason }]
-            : []),
+          { icon: Hash,         label: "Transaction ID", value: `#${shortId(item.id)}`,                                             raw: item.id },
+          { icon: Calendar,     label: "Requested",      value: formatDate(item.createdAt, true),                                   raw: item.createdAt },
+          { icon: DollarSign,   label: "Amount",         value: `$${item.amount?.toFixed(2)}`,                                      raw: item.amount },
+          { icon: MapPin,       label: "Wallet Address", value: item.walletAddress ?? null,                                          raw: item.walletAddress },
+          { icon: Calendar,     label: "Processed",      value: item.processedAt ? formatDate(item.processedAt, true) : "Awaiting", raw: true },
+          { icon: AlertCircle,  label: "Reason",         value: item.rejectionReason ?? null,                                        raw: item.rejectionReason },
         ];
+
+  const rows = allRows.filter(r => r.value !== null);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-      style={{ background: "rgba(1,8,16,0.85)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.88)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl p-5 space-y-4"
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
         style={{
-          background: "rgba(3,14,28,0.97)",
-          border: "1px solid rgba(61,214,245,0.18)",
-          boxShadow: "0 0 60px rgba(61,214,245,0.12)",
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(61,214,245,0.16)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9), 0 0 0 1px rgba(61,214,245,0.06)",
         }}
         onClick={e => e.stopPropagation()}
       >
+        {/* Top accent bar */}
+        <div
+          className="h-0.5 w-full"
+          style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
+        />
+
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: `${cfg.color}18`, border: `1px solid ${cfg.color}33` }}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${accentColor}20, ${accentColor}08)`,
+                border: `1px solid ${accentColor}30`,
+                boxShadow: `0 0 16px ${accentColor}15`,
+              }}
             >
-              {type === "deposit"
-                ? <ArrowDownLeft size={16} style={{ color: cfg.color }} />
-                : <ArrowUpRight  size={16} style={{ color: cfg.color }} />}
+              {isDeposit
+                ? <ArrowDownLeft size={17} style={{ color: accentColor }} />
+                : <ArrowUpRight  size={17} style={{ color: accentColor }} />}
             </div>
             <div>
-              <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.9)" }}>
-                {type === "deposit" ? "Deposit Details" : "Withdrawal Details"}
+              <div
+                className="font-bold text-sm tracking-wide"
+                style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.78rem" }}
+              >
+                {isDeposit ? "Deposit Details" : "Withdrawal Details"}
               </div>
-              <div className="flex items-center gap-1 text-xs mt-0.5">
-                <cfg.icon size={10} style={{ color: cfg.color }} />
-                <span style={{ color: cfg.color }}>{cfg.label}</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: cfg.color, boxShadow: `0 0 6px ${cfg.color}` }}
+                />
+                <span className="text-xs font-semibold" style={{ color: cfg.color }}>{cfg.label}</span>
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(168,237,255,0.05)", border: "1px solid rgba(168,237,255,0.1)" }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}
           >
-            <X size={14} style={{ color: "rgba(168,237,255,0.5)" }} />
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
           </button>
         </div>
 
-        {/* Amount highlight */}
+        {/* Amount hero */}
         <div
-          className="rounded-xl py-4 text-center"
+          className="mx-5 mb-5 rounded-2xl py-5 text-center"
           style={{
-            background: type === "deposit"
-              ? "linear-gradient(135deg, rgba(61,214,245,0.08), rgba(42,179,215,0.04))"
-              : "linear-gradient(135deg, rgba(248,113,113,0.08), rgba(220,80,80,0.04))",
-            border: `1px solid ${type === "deposit" ? "rgba(61,214,245,0.15)" : "rgba(248,113,113,0.15)"}`,
+            background: isDeposit
+              ? "linear-gradient(135deg, rgba(61,214,245,0.07), rgba(42,179,215,0.03))"
+              : "linear-gradient(135deg, rgba(248,113,113,0.07), rgba(220,80,80,0.03))",
+            border: `1px solid ${accentColor}20`,
           }}
         >
-          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>
-            {type === "deposit" ? "Deposited" : "Withdrawn"}
+          <div className="text-xs mb-2 uppercase tracking-widest" style={{ color: "rgba(168,237,255,0.35)" }}>
+            {isDeposit ? "Amount Deposited" : "Amount Withdrawn"}
           </div>
           <div
-            className="text-2xl font-black"
+            className="font-black"
             style={{
               fontFamily: "'Orbitron', sans-serif",
-              color: type === "deposit" ? TEAL : "#f87171",
+              fontSize: "1.75rem",
+              color: accentColor,
+              letterSpacing: "-0.01em",
+              textShadow: `0 0 24px ${accentColor}50`,
             }}
           >
-            {type === "deposit" ? "+" : "-"}${item.amount?.toFixed(2)}
+            {isDeposit ? "+" : "−"}${item.amount?.toFixed(2)}
           </div>
         </div>
 
-        {/* Detail rows */}
-        <div className="space-y-2">
-          {rows.map(row => (
+        {/* Divider */}
+        <div className="mx-5 mb-4 h-px" style={{ background: "rgba(61,214,245,0.07)" }} />
+
+        {/* Detail rows — two-column label/value layout */}
+        <div className="px-5 pb-6 space-y-0">
+          {rows.map((row, i) => (
             <div
               key={row.label}
-              className="flex items-start gap-3 rounded-xl px-3.5 py-2.5"
-              style={{ background: "rgba(0,10,24,0.5)", border: "1px solid rgba(61,214,245,0.06)" }}
+              className="flex items-center justify-between py-3"
+              style={{
+                borderBottom: i < rows.length - 1 ? "1px solid rgba(61,214,245,0.05)" : "none",
+              }}
             >
-              <row.icon size={13} className="mt-0.5 shrink-0" style={{ color: "rgba(168,237,255,0.3)" }} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{row.label}</div>
-                <div
-                  className="text-sm font-medium break-all mt-0.5"
-                  style={{ color: "rgba(168,237,255,0.8)" }}
-                >
-                  {row.value}
-                </div>
+              <div className="flex items-center gap-2.5">
+                <row.icon size={12} style={{ color: "rgba(168,237,255,0.28)" }} />
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.42)" }}>{row.label}</span>
               </div>
+              <span
+                className="text-xs font-semibold text-right max-w-[55%] break-all leading-relaxed"
+                style={{
+                  color: row.label === "Transaction ID"
+                    ? "rgba(168,237,255,0.55)"
+                    : row.label === "Reason"
+                      ? "#f87171"
+                      : row.label === "Processed" && row.value === "Awaiting"
+                        ? "#fbbf24"
+                        : "rgba(200,240,255,0.85)",
+                  fontFamily: row.label === "Transaction ID" || row.label === "Wallet Address"
+                    ? "monospace"
+                    : "inherit",
+                }}
+              >
+                {row.value}
+              </span>
             </div>
           ))}
         </div>
