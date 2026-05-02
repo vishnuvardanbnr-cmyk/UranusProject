@@ -22,6 +22,7 @@ import ProfileSetup from "@/pages/ProfileSetup";
 import Dashboard from "@/pages/Dashboard";
 import Invest from "@/pages/Invest";
 import Income from "@/pages/Income";
+import Transactions from "@/pages/Transactions";
 import Team from "@/pages/Team";
 import Share from "@/pages/Share";
 import Profile from "@/pages/Profile";
@@ -103,6 +104,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/income">
           <RequireAuth user={user}>
             <Income />
+          </RequireAuth>
+        </Route>
+        <Route path="/transactions">
+          <RequireAuth user={user}>
+            <Transactions />
           </RequireAuth>
         </Route>
         <Route path="/team">
