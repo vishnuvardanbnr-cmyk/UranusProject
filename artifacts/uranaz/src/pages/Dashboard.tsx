@@ -323,35 +323,136 @@ export default function Dashboard({ user }: { user: any }) {
       {/* Rank Progress */}
       {rankProgress?.nextRank && (
         <div
-          className="rounded-xl p-4"
+          className="rounded-2xl overflow-hidden relative"
           style={{
-            background: "rgba(5,18,32,0.65)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(61,214,245,0.12)",
+            background: "linear-gradient(155deg, rgba(4,16,32,0.95) 0%, rgba(2,10,22,0.95) 100%)",
+            border: "1px solid rgba(61,214,245,0.16)",
+            boxShadow: "0 0 40px rgba(61,214,245,0.06)",
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Award size={16} style={{ color: TEAL }} />
-            <h2 className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.8)" }}>Rank Progress</h2>
-          </div>
-          <div className="text-sm mb-1" style={{ color: "rgba(168,237,255,0.45)" }}>
-            Next Rank: <span style={{ color: "rgba(168,237,255,0.85)", fontWeight: 600 }}>{rankProgress.nextRank.name}</span>
-          </div>
-          <div className="text-sm mb-3" style={{ color: "rgba(168,237,255,0.45)" }}>
-            Reward: <span style={{ color: TEAL }}>{rankProgress.nextRank.reward}</span>
-          </div>
-          <Link href="/ranks">
-            <button
-              className="w-full py-2 rounded-lg text-sm font-semibold transition-all"
-              style={{
-                border: "1px solid rgba(61,214,245,0.28)",
-                color: TEAL,
-                background: "rgba(61,214,245,0.05)",
-              }}
+          {/* Top accent line */}
+          <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, transparent)" }} />
+
+          {/* Ambient glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.07) 0%, transparent 65%)" }}
+          />
+
+          <div className="relative p-5">
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: "rgba(61,214,245,0.12)", border: "1px solid rgba(61,214,245,0.22)" }}
+                >
+                  <Award size={15} style={{ color: TEAL }} />
+                </div>
+                <span
+                  className="font-bold text-xs tracking-widest uppercase"
+                  style={{ color: "rgba(168,237,255,0.55)", fontFamily: "'Orbitron', sans-serif" }}
+                >
+                  Rank Progress
+                </span>
+              </div>
+              <Link href="/ranks">
+                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: TEAL }}>
+                  Details <ArrowRight size={11} />
+                </span>
+              </Link>
+            </div>
+
+            {/* Current → Next rank journey */}
+            <div className="flex items-center gap-3 mb-4">
+              {/* Current rank */}
+              <div className="flex-1 rounded-xl p-3 text-center"
+                style={{ background: "rgba(0,10,24,0.6)", border: "1px solid rgba(61,214,245,0.08)" }}>
+                <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.32)" }}>Current</div>
+                <div className="font-bold text-sm" style={{ color: "rgba(168,237,255,0.7)" }}>
+                  {rankProgress.currentRank?.name ?? "Unranked"}
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex flex-col items-center gap-0.5 shrink-0">
+                <ArrowRight size={16} style={{ color: "rgba(61,214,245,0.4)" }} />
+              </div>
+
+              {/* Next rank */}
+              <div className="flex-1 rounded-xl p-3 text-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(61,214,245,0.10), rgba(42,179,215,0.05))",
+                  border: "1px solid rgba(61,214,245,0.22)",
+                  boxShadow: "0 0 16px rgba(61,214,245,0.06)",
+                }}>
+                <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.38)" }}>Next Rank</div>
+                <div className="font-bold text-sm" style={{ color: TEAL }}>
+                  {rankProgress.nextRank.name}
+                </div>
+              </div>
+            </div>
+
+            {/* Reward banner */}
+            <div
+              className="flex items-center gap-2.5 rounded-xl px-4 py-3 mb-4"
+              style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.12)" }}
             >
-              View Rank Details
-            </button>
-          </Link>
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "rgba(61,214,245,0.12)", border: "1px solid rgba(61,214,245,0.2)" }}
+              >
+                <Award size={13} style={{ color: TEAL }} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs" style={{ color: "rgba(168,237,255,0.38)" }}>Reward upon achieving</div>
+                <div className="font-bold text-sm truncate" style={{ color: TEAL }}>
+                  {rankProgress.nextRank.reward}
+                </div>
+              </div>
+            </div>
+
+            {/* Criteria */}
+            {rankProgress.nextRank.criteria && (
+              <div className="text-xs mb-4 leading-relaxed" style={{ color: "rgba(168,237,255,0.38)" }}>
+                {rankProgress.nextRank.criteria}
+              </div>
+            )}
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {[
+                { label: "Levels Done",    value: rankProgress.levelsCompleted         ?? 0 },
+                { label: "Ranked Refs",    value: rankProgress.qualifyingReferrersCount ?? 0 },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3 text-center"
+                  style={{ background: "rgba(0,10,24,0.55)", border: "1px solid rgba(61,214,245,0.07)" }}>
+                  <div
+                    className="font-black text-lg"
+                    style={{ color: "rgba(168,237,255,0.85)", fontFamily: "'Orbitron', sans-serif" }}
+                  >
+                    {s.value}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.32)" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <Link href="/ranks">
+              <button
+                className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                  color: "#010810",
+                  letterSpacing: "0.03em",
+                  boxShadow: "0 0 20px rgba(61,214,245,0.25)",
+                }}
+              >
+                View Full Rank Journey
+              </button>
+            </Link>
+          </div>
         </div>
       )}
 
