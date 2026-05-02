@@ -1,6 +1,6 @@
 import { useGetAdminStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Users, TrendingUp, Wallet, Settings, DollarSign, ArrowRight, Shield } from "lucide-react";
+import { Users, TrendingUp, Wallet, Settings, DollarSign, ArrowRight, Shield, MessageCircle } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -83,6 +83,7 @@ export default function Admin() {
           { label: "Investments",      sub: `${stats?.activeInvestments ?? 0} active`, href: "/admin/investments", icon: TrendingUp },
           { label: "Withdrawals",      sub: `${stats?.pendingWithdrawals ?? 0} pending`, href: "/admin/withdrawals", icon: Wallet },
           { label: "Platform Settings",sub: "Configure platform",                    href: "/admin/settings",     icon: Settings },
+          { label: "Support Tickets", sub: "Manage user queries",                   href: "/admin/support",      icon: MessageCircle },
         ].map(item => (
           <Link key={item.label} href={item.href}>
             <div

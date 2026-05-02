@@ -37,6 +37,8 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminInvestments from "@/pages/admin/AdminInvestments";
 import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminSupport from "@/pages/admin/AdminSupport";
+import Support from "@/pages/Support";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,6 +143,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
             <Ranks user={user} />
           </RequireAuth>
         </Route>
+        <Route path="/support">
+          <RequireAuth user={user}>
+            <Support user={user} />
+          </RequireAuth>
+        </Route>
 
         {/* Admin */}
         <Route path="/admin">
@@ -166,6 +173,11 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/admin/settings">
           <RequireAdmin user={user}>
             <AdminSettings />
+          </RequireAdmin>
+        </Route>
+        <Route path="/admin/support">
+          <RequireAdmin user={user}>
+            <AdminSupport />
           </RequireAdmin>
         </Route>
 

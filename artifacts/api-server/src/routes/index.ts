@@ -7,6 +7,7 @@ import teamRouter from "./team";
 import withdrawalsRouter from "./withdrawals";
 import ranksRouter from "./ranks";
 import adminRouter from "./admin";
+import supportRouter from "./support";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(teamRouter);
 router.use(withdrawalsRouter);
 router.use(ranksRouter);
 router.use(adminRouter);
+router.use(supportRouter);
 
 export default router;

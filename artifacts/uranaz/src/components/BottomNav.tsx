@@ -1,12 +1,12 @@
 import { useLocation, Link } from "wouter";
-import { LayoutDashboard, TrendingUp, Users, ArrowLeftRight, Wallet } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Wallet, Users, MessageCircle } from "lucide-react";
 
 const navItems = [
-  { path: "/dashboard",    icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/invest",       icon: TrendingUp,      label: "Invest" },
-  { path: "/wallet",       icon: Wallet,          label: "Wallet" },
-  { path: "/team",         icon: Users,           label: "Team" },
-  { path: "/transactions", icon: ArrowLeftRight,  label: "Transactions" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
+  { path: "/invest",    icon: TrendingUp,      label: "Invest" },
+  { path: "/wallet",    icon: Wallet,          label: "Wallet" },
+  { path: "/team",      icon: Users,           label: "Team" },
+  { path: "/support",   icon: MessageCircle,   label: "Support" },
 ];
 
 interface Props {

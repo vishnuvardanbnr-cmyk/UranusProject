@@ -11,12 +11,13 @@ interface Props {
 const navLinks = [
   { href: "/dashboard",   label: "Dashboard" },
   { href: "/invest",      label: "Invest" },
-  { href: "/income",        label: "Income" },
-  { href: "/transactions",  label: "Transactions" },
+  { href: "/income",      label: "Income" },
+  { href: "/transactions",label: "Transactions" },
   { href: "/wallet",      label: "Wallet" },
   { href: "/team",        label: "Team" },
   { href: "/withdrawals", label: "Withdraw" },
   { href: "/ranks",       label: "Ranks" },
+  { href: "/support",     label: "Support" },
 ];
 
 export default function TopNav({ user, onLogout }: Props) {
