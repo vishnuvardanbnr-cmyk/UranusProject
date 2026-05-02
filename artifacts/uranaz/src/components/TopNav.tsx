@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { clearToken } from "@/lib/auth";
 import { useLogout } from "@workspace/api-client-react";
-import { LogOut, Shield, Orbit } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 
 interface Props {
   user: any;
@@ -43,14 +43,10 @@ export default function TopNav({ user, onLogout }: Props) {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(42,179,215,0.1))",
-              border: "1px solid rgba(61,214,245,0.35)",
-              boxShadow: "0 0 12px rgba(61,214,245,0.25)",
-            }}
+            className="w-8 h-8 shrink-0"
+            style={{ filter: "drop-shadow(0 0 6px rgba(61,214,245,0.55))" }}
           >
-            <Orbit size={16} style={{ color: "#3DD6F5" }} />
+            <img src="/logo.png" alt="URANAZ" className="w-full h-full object-contain" />
           </div>
           <span
             className="font-bold text-sm tracking-widest hidden sm:block"

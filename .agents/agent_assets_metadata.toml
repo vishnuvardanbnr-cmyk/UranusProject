@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "YaF_Ea19-LW2r4IeRelOm"
+uri = "file://artifacts/uranaz/public/logo.png"
+type = "image"
+title = "uranaz trades logo"

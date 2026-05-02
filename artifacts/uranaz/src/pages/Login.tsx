@@ -7,8 +7,6 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Orbit } from "lucide-react";
-
 const schema = z.object({
   email: z.string().email("Valid email required"),
   password: z.string().min(6, "Password required"),
@@ -40,21 +38,10 @@ export default function Login({ onLogin }: Props) {
         {/* Logo + heading */}
         <div className="text-center mb-8">
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 relative"
-            style={{
-              background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(42,179,215,0.08))",
-              border: "1px solid rgba(61,214,245,0.4)",
-              boxShadow: "0 0 30px rgba(61,214,245,0.25), 0 0 60px rgba(61,214,245,0.08)",
-            }}
+            className="w-20 h-20 mx-auto mb-4 relative"
+            style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
           >
-            <Orbit size={28} style={{ color: "#3DD6F5" }} />
-            {/* Orbit ring decoration */}
-            <div
-              className="absolute inset-0 rounded-2xl"
-              style={{
-                background: "radial-gradient(circle at 35% 35%, rgba(168,237,255,0.15) 0%, transparent 60%)",
-              }}
-            />
+            <img src="/logo.png" alt="URANAZ TRADES" className="w-full h-full object-contain" />
           </div>
           <h1
             className="text-2xl font-bold mb-1"
