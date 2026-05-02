@@ -8,8 +8,10 @@ export const withdrawalsTable = pgTable("withdrawals", {
   userName: text("user_name").notNull(),
   amount: numeric("amount", { precision: 20, scale: 6 }).notNull(),
   walletAddress: text("wallet_address").notNull(),
-  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  status: text("status").notNull().default("pending"), // pending, processing, approved, rejected
   note: text("note"),
+  txHash: text("tx_hash"),
+  processingError: text("processing_error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   processedAt: timestamp("processed_at"),
 });

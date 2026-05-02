@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { db, withdrawalsTable, usersTable, incomeTable, otpCodesTable } from "@workspace/db";
+import { db, withdrawalsTable, usersTable, incomeTable, otpCodesTable, platformSettingsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateWithdrawalBody } from "@workspace/api-zod";
 import { isOtpWithdrawalEnabled } from "../lib/email";
+import { getSettings, sendUsdtToAddress } from "../lib/blockchain";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -16,6 +18,8 @@ function withdrawalToResponse(w: typeof withdrawalsTable.$inferSelect) {
     walletAddress: w.walletAddress,
     status: w.status,
     note: w.note,
+    txHash: w.txHash ?? null,
+    processingError: w.processingError ?? null,
     createdAt: w.createdAt.toISOString(),
     processedAt: w.processedAt?.toISOString() ?? null,
   };
@@ -82,6 +86,7 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     return;
   }
 
+  // Insert with pending status first
   const [withdrawal] = await db.insert(withdrawalsTable).values({
     userId: user.id,
     userName: user.name,
@@ -89,6 +94,48 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     walletAddress,
     status: "pending",
   }).returning();
+
+  // Check withdrawal mode — auto-process if configured
+  const settings = await getSettings();
+  if (settings && settings.withdrawalMode === "auto" && settings.withdrawWalletPrivateKey && settings.gasWalletPrivateKey) {
+    // Mark as processing so the user sees immediate feedback
+    await db.update(withdrawalsTable)
+      .set({ status: "processing" })
+      .where(eq(withdrawalsTable.id, withdrawal.id));
+
+    // Fire-and-forget the on-chain send, update record when done
+    (async () => {
+      try {
+        const result = await sendUsdtToAddress(
+          walletAddress,
+          amount,
+          settings.withdrawWalletPrivateKey,
+          settings.gasWalletPrivateKey,
+          settings.bscRpcUrl || "https://bsc-dataseed.binance.org/",
+        );
+        if (result.success) {
+          await db.update(withdrawalsTable)
+            .set({ status: "approved", txHash: result.txHash, processedAt: new Date() })
+            .where(eq(withdrawalsTable.id, withdrawal.id));
+          logger.info({ withdrawalId: withdrawal.id, txHash: result.txHash }, "Auto withdrawal sent");
+        } else {
+          await db.update(withdrawalsTable)
+            .set({ status: "pending", processingError: result.error })
+            .where(eq(withdrawalsTable.id, withdrawal.id));
+          logger.error({ withdrawalId: withdrawal.id, error: result.error }, "Auto withdrawal failed, reverted to pending");
+        }
+      } catch (err: any) {
+        await db.update(withdrawalsTable)
+          .set({ status: "pending", processingError: err?.message })
+          .where(eq(withdrawalsTable.id, withdrawal.id));
+        logger.error({ withdrawalId: withdrawal.id, err }, "Auto withdrawal exception, reverted to pending");
+      }
+    })();
+
+    const [processing] = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.id, withdrawal.id)).limit(1);
+    res.status(201).json(withdrawalToResponse(processing));
+    return;
+  }
 
   res.status(201).json(withdrawalToResponse(withdrawal));
 });

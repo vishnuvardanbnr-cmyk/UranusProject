@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Wallet, Clock, CheckCircle, XCircle, AlertCircle, Mail, ArrowLeft } from "lucide-react";
+import { Wallet, Clock, CheckCircle, XCircle, AlertCircle, Mail, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.12)" } as const;
@@ -19,9 +19,10 @@ const schema = z.object({
 });
 
 const statusConfig: Record<string, { icon: any; color: string; bg: string; label: string }> = {
-  pending:  { icon: Clock,        color: "#fbbf24", bg: "rgba(251,191,36,0.10)",   label: "Pending"  },
-  approved: { icon: CheckCircle,  color: "#34d399", bg: "rgba(52,211,153,0.10)",   label: "Approved" },
-  rejected: { icon: XCircle,      color: "#f87171", bg: "rgba(248,113,113,0.10)",  label: "Rejected" },
+  pending:    { icon: Clock,       color: "#fbbf24", bg: "rgba(251,191,36,0.10)",   label: "Pending"    },
+  processing: { icon: Loader2,     color: "#3DD6F5", bg: "rgba(61,214,245,0.10)",   label: "Processing" },
+  approved:   { icon: CheckCircle, color: "#34d399", bg: "rgba(52,211,153,0.10)",   label: "Approved"   },
+  rejected:   { icon: XCircle,     color: "#f87171", bg: "rgba(248,113,113,0.10)",  label: "Rejected"   },
 };
 
 function formatDate(iso: string) {
@@ -203,9 +204,9 @@ export default function Withdrawals({ user }: { user: any }) {
                 )} />
                 <FormField control={form.control} name="walletAddress" render={({ field }) => (
                   <FormItem>
-                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Wallet Address (TRC20)</FormLabel>
+                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Wallet Address (BEP-20)</FormLabel>
                     <FormControl>
-                      <Input data-testid="input-withdraw-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} style={INPUT_STYLE} />
+                      <Input data-testid="input-withdraw-wallet" placeholder="0x..." {...field} style={INPUT_STYLE} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -318,30 +319,46 @@ export default function Withdrawals({ user }: { user: any }) {
         ) : (
           <div className="space-y-2">
             {withdrawals.map(w => {
-              const cfg = statusConfig[w.status] || statusConfig.pending;
+              const status = (w as any).status || "pending";
+              const cfg = statusConfig[status] || statusConfig.pending;
+              const txHash = (w as any).txHash as string | null;
               return (
                 <div
                   key={w.id}
                   data-testid={`row-withdrawal-${w.id}`}
-                  className="rounded-xl px-4 py-3.5 flex items-center justify-between"
+                  className="rounded-xl px-4 py-3.5"
                   style={GLASS}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }}>
-                      <cfg.icon size={16} style={{ color: cfg.color }} />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center" style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }}>
+                        <cfg.icon size={16} style={{ color: cfg.color }} className={status === "processing" ? "animate-spin" : ""} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>${w.amount.toFixed(2)} USDT</div>
+                        <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{formatDate(w.createdAt)}</div>
+                        <div className="text-xs truncate max-w-36" style={{ color: "rgba(168,237,255,0.3)" }}>{w.walletAddress}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>${w.amount.toFixed(2)} USDT</div>
-                      <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{formatDate(w.createdAt)}</div>
-                      <div className="text-xs truncate max-w-32" style={{ color: "rgba(168,237,255,0.3)" }}>{w.walletAddress}</div>
-                    </div>
+                    <span
+                      className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full"
+                      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}
+                    >
+                      {cfg.label}
+                    </span>
                   </div>
-                  <span
-                    className="text-xs font-semibold px-2 py-1 rounded-full"
-                    style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}
-                  >
-                    {cfg.label}
-                  </span>
+                  {txHash && (
+                    <a
+                      href={`https://bscscan.com/tx/${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 mt-2 pt-2 text-xs font-mono"
+                      style={{ borderTop: "1px solid rgba(61,214,245,0.08)", color: "#3DD6F5" }}
+                    >
+                      <ExternalLink size={10} />
+                      TX: {txHash.slice(0, 18)}…{txHash.slice(-6)}
+                    </a>
+                  )}
                 </div>
               );
             })}

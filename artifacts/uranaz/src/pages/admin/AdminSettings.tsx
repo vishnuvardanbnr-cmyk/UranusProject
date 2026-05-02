@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useGetAdminSettings, useUpdateAdminSettings, getGetAdminSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database, AlertTriangle, CheckCircle2, ArrowUpRight } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -215,6 +215,44 @@ export default function AdminSettings() {
       setWalletSaving(false);
     }
   };
+
+  // Withdrawal settings
+  const [withdrawalLoading, setWithdrawalLoading] = useState(false);
+  const [withdrawalSaving, setWithdrawalSaving] = useState(false);
+  const [showWithdrawKey, setShowWithdrawKey] = useState(false);
+  const withdrawalForm = useForm<{ withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }>({
+    defaultValues: { withdrawalMode: "manual", withdrawWalletPrivateKey: "" },
+  });
+
+  useEffect(() => {
+    setWithdrawalLoading(true);
+    fetch("/api/admin/withdrawal-settings", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => withdrawalForm.reset(d))
+      .catch(() => {})
+      .finally(() => setWithdrawalLoading(false));
+  }, []);
+
+  const onWithdrawalSubmit = async (data: { withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }) => {
+    setWithdrawalSaving(true);
+    try {
+      const res = await fetch("/api/admin/withdrawal-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      const updated = await res.json();
+      withdrawalForm.reset(updated);
+      toast({ title: "Withdrawal settings saved!" });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setWithdrawalSaving(false);
+    }
+  };
+
+  const withdrawalMode = withdrawalForm.watch("withdrawalMode");
 
   if (isLoading) {
     return (
@@ -579,6 +617,129 @@ export default function AdminSettings() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Withdrawal Settings */}
+      <div className="flex items-center gap-3 pt-2">
+        <ArrowUpRight size={20} style={{ color: TEAL }} />
+        <h2
+          className="text-lg font-bold"
+          style={{
+            fontFamily: "'Orbitron', sans-serif",
+            background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Withdrawal Settings
+        </h2>
+      </div>
+
+      <div className="rounded-2xl p-5" style={GLASS}>
+        {withdrawalLoading ? (
+          <div className="space-y-3">
+            {[1,2].map(i => <div key={i} className="h-10 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+          </div>
+        ) : (
+          <form onSubmit={withdrawalForm.handleSubmit(onWithdrawalSubmit)} className="space-y-5">
+
+            {/* Security notice */}
+            <div className="flex gap-3 p-3 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}>
+              <ShieldAlert size={15} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.8)" }} />
+              <div className="text-xs" style={{ color: "rgba(251,191,36,0.75)" }}>
+                <strong>Security Notice:</strong> The withdrawal wallet private key is stored in the database. This wallet should hold USDT for payouts. BNB top-ups come from the gas wallet above when balance is low.
+              </div>
+            </div>
+
+            {/* Mode toggle */}
+            <div className="pb-2" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
+                Processing Mode
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {(["manual", "auto"] as const).map(mode => (
+                <label
+                  key={mode}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: withdrawalMode === mode ? "rgba(61,214,245,0.12)" : "rgba(0,15,30,0.5)",
+                    border: `1px solid ${withdrawalMode === mode ? "rgba(61,214,245,0.4)" : "rgba(61,214,245,0.1)"}`,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    value={mode}
+                    {...withdrawalForm.register("withdrawalMode")}
+                    className="sr-only"
+                  />
+                  <div className="text-sm font-bold capitalize" style={{ color: withdrawalMode === mode ? TEAL : "rgba(168,237,255,0.5)" }}>
+                    {mode}
+                  </div>
+                  <div className="text-xs text-center" style={{ color: "rgba(168,237,255,0.35)" }}>
+                    {mode === "manual" ? "Admin approves each request" : "On-chain send on submit"}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {withdrawalMode === "auto" && (
+              <div className="flex gap-2 p-3 rounded-xl" style={{ background: "rgba(61,214,245,0.06)", border: "1px solid rgba(61,214,245,0.14)" }}>
+                <div className="text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
+                  In <strong style={{ color: TEAL }}>Auto</strong> mode, USDT is sent on-chain immediately when a user submits a withdrawal request. Make sure the withdrawal wallet has sufficient USDT balance.
+                </div>
+              </div>
+            )}
+
+            {/* Withdrawal Wallet Key */}
+            <div className="pb-2 pt-1" style={{ borderBottom: "1px solid rgba(61,214,245,0.08)" }}>
+              <h3 className="font-semibold text-xs tracking-widest uppercase" style={{ color: "rgba(168,237,255,0.4)" }}>
+                Withdrawal Wallet (sends USDT to users)
+              </h3>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium block mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>Withdrawal Wallet Private Key</label>
+              <div className="relative">
+                <input
+                  type={showWithdrawKey ? "text" : "password"}
+                  placeholder="0x... (private key of wallet holding USDT for payouts)"
+                  {...withdrawalForm.register("withdrawWalletPrivateKey")}
+                  className={INPUT_CLS + " pr-10"}
+                  style={INPUT_STYLE}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawKey(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "rgba(168,237,255,0.4)" }}
+                >
+                  {showWithdrawKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.3)" }}>
+                This wallet sends USDT to users. If its BNB runs low, the gas wallet tops it up automatically.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={withdrawalSaving}
+              className="w-full py-3 rounded-xl font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                color: "#010810",
+                letterSpacing: "0.04em",
+                boxShadow: "0 0 20px rgba(61,214,245,0.3)",
+              }}
+            >
+              <Save size={16} />
+              {withdrawalSaving ? "Saving..." : "Save Withdrawal Settings"}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* SMTP Settings */}

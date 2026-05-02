@@ -142,6 +142,64 @@ export async function sweepUsdtToMaster(
   };
 }
 
+export interface SendUsdtResult {
+  success: boolean;
+  txHash?: string;
+  error?: string;
+}
+
+export async function sendUsdtToAddress(
+  toAddress: string,
+  amountUsdt: number,
+  withdrawWalletPrivateKey: string,
+  gasWalletPrivateKey: string,
+  rpcUrl: string,
+): Promise<SendUsdtResult> {
+  const provider = getProvider(rpcUrl);
+  const withdrawWallet = new ethers.Wallet(withdrawWalletPrivateKey, provider);
+  const gasWallet = new ethers.Wallet(gasWalletPrivateKey, provider);
+
+  // 1. Check USDT balance on withdraw wallet
+  const usdtBalance = await getUsdtBalance(withdrawWallet.address, rpcUrl);
+  const amountWei = ethers.parseUnits(amountUsdt.toFixed(6), USDT_DECIMALS);
+  if (usdtBalance < amountWei) {
+    return { success: false, error: `Withdraw wallet has insufficient USDT (has ${ethers.formatUnits(usdtBalance, USDT_DECIMALS)}, need ${amountUsdt})` };
+  }
+
+  // 2. Get fee data
+  const feeData = await provider.getFeeData();
+  const gasPrice = feeData.gasPrice ?? ethers.parseUnits("3", "gwei");
+  const USDT_GAS_LIMIT = 100000n;
+  const usdtTxCost = USDT_GAS_LIMIT * gasPrice;
+
+  // 3. Top up BNB from gas wallet if needed
+  const bnbBalance = await getBnbBalance(withdrawWallet.address, rpcUrl);
+  const BNB_BUFFER = ethers.parseEther("0.00005");
+  if (bnbBalance < usdtTxCost + BNB_BUFFER) {
+    const needed = usdtTxCost + BNB_BUFFER - bnbBalance;
+    logger.info({ needed: ethers.formatEther(needed), to: withdrawWallet.address }, "Topping up BNB for withdrawal gas");
+    const topupTx = await gasWallet.sendTransaction({
+      to: withdrawWallet.address,
+      value: needed,
+      gasLimit: 21000n,
+      gasPrice,
+    });
+    await topupTx.wait(1);
+    logger.info({ txHash: topupTx.hash }, "BNB topped up for withdrawal wallet");
+  }
+
+  // 4. Send USDT to user
+  const usdtContract = new ethers.Contract(USDT_CONTRACT, USDT_ABI, withdrawWallet);
+  const tx = await usdtContract.transfer(toAddress, amountWei, {
+    gasLimit: USDT_GAS_LIMIT,
+    gasPrice,
+  });
+  await tx.wait(1);
+  logger.info({ txHash: tx.hash, to: toAddress, amount: amountUsdt }, "USDT sent to user");
+
+  return { success: true, txHash: tx.hash };
+}
+
 export async function ensureDepositWallet(userId: number): Promise<{ address: string }> {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) throw new Error("User not found");

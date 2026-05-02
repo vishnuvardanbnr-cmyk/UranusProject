@@ -199,14 +199,55 @@ router.get("/admin/withdrawals", requireAdmin, async (req, res) => {
 // POST /api/admin/withdrawals/:id/approve
 router.post("/admin/withdrawals/:id/approve", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
+  const [withdrawal] = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.id, id)).limit(1);
+  if (!withdrawal) {
+    res.status(404).json({ message: "Withdrawal not found" });
+    return;
+  }
+
+  // Try to send on-chain if withdraw wallet is configured
+  const settings = await db.select().from(platformSettingsTable).limit(1).then(r => r[0] ?? null);
+  if (settings && settings.withdrawWalletPrivateKey && settings.gasWalletPrivateKey) {
+    // Mark processing immediately
+    await db.update(withdrawalsTable)
+      .set({ status: "processing" })
+      .where(eq(withdrawalsTable.id, id));
+    res.json(withdrawalToResponse({ ...withdrawal, status: "processing" }));
+
+    // Send on-chain async
+    (async () => {
+      try {
+        const { sendUsdtToAddress } = await import("../lib/blockchain.js");
+        const result = await sendUsdtToAddress(
+          withdrawal.walletAddress,
+          parseFloat(withdrawal.amount),
+          settings.withdrawWalletPrivateKey,
+          settings.gasWalletPrivateKey,
+          settings.bscRpcUrl || "https://bsc-dataseed.binance.org/",
+        );
+        if (result.success) {
+          await db.update(withdrawalsTable)
+            .set({ status: "approved", txHash: result.txHash, processedAt: new Date(), processingError: null })
+            .where(eq(withdrawalsTable.id, id));
+        } else {
+          await db.update(withdrawalsTable)
+            .set({ status: "pending", processingError: result.error })
+            .where(eq(withdrawalsTable.id, id));
+        }
+      } catch (err: any) {
+        await db.update(withdrawalsTable)
+          .set({ status: "pending", processingError: err?.message })
+          .where(eq(withdrawalsTable.id, id));
+      }
+    })();
+    return;
+  }
+
+  // No withdraw wallet configured — approve without on-chain tx
   const [updated] = await db.update(withdrawalsTable)
     .set({ status: "approved", processedAt: new Date() })
     .where(eq(withdrawalsTable.id, id))
     .returning();
-  if (!updated) {
-    res.status(404).json({ message: "Withdrawal not found" });
-    return;
-  }
   res.json(withdrawalToResponse(updated));
 });
 
@@ -283,6 +324,43 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,
   });
+});
+
+// GET /api/admin/withdrawal-settings
+router.get("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
+  let [settings] = await db.select().from(platformSettingsTable).limit(1);
+  if (!settings) {
+    [settings] = await db.insert(platformSettingsTable).values({}).returning();
+  }
+  res.json({
+    withdrawalMode: settings.withdrawalMode,
+    withdrawWalletPrivateKey: settings.withdrawWalletPrivateKey,
+  });
+});
+
+// PUT /api/admin/withdrawal-settings
+router.put("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
+  const body = z.object({
+    withdrawalMode: z.enum(["auto", "manual"]),
+    withdrawWalletPrivateKey: z.string(),
+  }).safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ message: "Invalid input" });
+    return;
+  }
+  const [existing] = await db.select().from(platformSettingsTable).limit(1);
+  let updated;
+  if (existing) {
+    [updated] = await db.update(platformSettingsTable)
+      .set({ withdrawalMode: body.data.withdrawalMode, withdrawWalletPrivateKey: body.data.withdrawWalletPrivateKey })
+      .where(eq(platformSettingsTable.id, existing.id))
+      .returning();
+  } else {
+    [updated] = await db.insert(platformSettingsTable)
+      .values({ withdrawalMode: body.data.withdrawalMode, withdrawWalletPrivateKey: body.data.withdrawWalletPrivateKey })
+      .returning();
+  }
+  res.json({ withdrawalMode: updated.withdrawalMode, withdrawWalletPrivateKey: updated.withdrawWalletPrivateKey });
 });
 
 // GET /api/admin/smtp-settings

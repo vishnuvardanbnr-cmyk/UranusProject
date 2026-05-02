@@ -28,6 +28,9 @@ export const platformSettingsTable = pgTable("platform_settings", {
   gasWalletPrivateKey: text("gas_wallet_private_key").notNull().default(""),
   bscRpcUrl: text("bsc_rpc_url").notNull().default("https://bsc-dataseed.binance.org/"),
   minDepositUsdt: numeric("min_deposit_usdt", { precision: 10, scale: 2 }).notNull().default("1"),
+  // Withdrawal wallet
+  withdrawalMode: text("withdrawal_mode").notNull().default("manual"),
+  withdrawWalletPrivateKey: text("withdraw_wallet_private_key").notNull().default(""),
 });
 
 export const insertPlatformSettingsSchema = createInsertSchema(platformSettingsTable).omit({ id: true });
