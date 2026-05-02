@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { ArrowLeft, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, Pin, Bell, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Save, X, Pin, Bell, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertOctagon, Megaphone, Sparkles } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -87,7 +86,6 @@ function authHeaders() {
 }
 
 export default function AdminNotices() {
-  const [, setLocation] = useLocation();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | "new" | null>(null);
@@ -172,13 +170,6 @@ export default function AdminNotices() {
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => setLocation("/admin")}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={GLASS}
-        >
-          <ArrowLeft size={16} style={{ color: TEAL }} />
-        </button>
         <div className="flex-1">
           <h1
             className="text-xl font-bold"

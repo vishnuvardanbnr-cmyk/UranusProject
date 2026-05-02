@@ -12,6 +12,7 @@ setAuthTokenGetter(getToken);
 import ScrollToTop from "@/components/ScrollToTop";
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
+import AdminLayout from "@/components/AdminLayout";
 import SpaceBackground from "@/components/SpaceBackground";
 import NotFound from "@/pages/not-found";
 
@@ -180,55 +181,37 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
 
         {/* Admin */}
         <Route path="/admin">
-          <RequireAdmin user={user}>
-            <Admin />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><Admin /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/users">
-          <RequireAdmin user={user}>
-            <AdminUsers />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminUsers /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/investments">
-          <RequireAdmin user={user}>
-            <AdminInvestments />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminInvestments /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/withdrawals">
-          <RequireAdmin user={user}>
-            <AdminWithdrawals />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminWithdrawals /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/settings">
-          <RequireAdmin user={user}>
-            <AdminSettings />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminSettings /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/support">
-          <RequireAdmin user={user}>
-            <AdminSupport />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminSupport /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/offers">
-          <RequireAdmin user={user}>
-            <AdminOffers />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminOffers /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/notices">
-          <RequireAdmin user={user}>
-            <AdminNotices />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminNotices /></AdminLayout></RequireAdmin>
         </Route>
         <Route path="/admin/reports">
-          <RequireAdmin user={user}>
-            <AdminReports />
-          </RequireAdmin>
+          <RequireAdmin user={user}><AdminLayout><AdminReports /></AdminLayout></RequireAdmin>
         </Route>
 
         <Route component={NotFound} />
       </Switch>
 
-      <BottomNav isLoggedIn={isLoggedIn} />
+      {!location.startsWith("/admin") && <BottomNav isLoggedIn={isLoggedIn} />}
       <ScrollToTop />
     </>
   );

@@ -1,6 +1,5 @@
-import { useLocation } from "wouter";
 import { useListAdminInvestments } from "@workspace/api-client-react";
-import { TrendingUp, ArrowLeft } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -10,7 +9,6 @@ function formatDate(iso: string) {
 }
 
 export default function AdminInvestments() {
-  const [, setLocation] = useLocation();
   const { data, isLoading } = useListAdminInvestments();
   const investments = data?.investments ?? [];
 
@@ -20,14 +18,6 @@ export default function AdminInvestments() {
   return (
     <div className="px-4 py-6 max-w-4xl mx-auto space-y-5 pb-24 md:pb-8">
       <div className="flex items-center gap-3">
-        <button
-          data-testid="button-back-admin"
-          onClick={() => setLocation("/admin")}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={GLASS}
-        >
-          <ArrowLeft size={16} style={{ color: TEAL }} />
-        </button>
         <h1
           className="text-xl font-bold"
           style={{

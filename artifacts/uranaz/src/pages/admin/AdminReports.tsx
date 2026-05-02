@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import {
   ArrowDownToLine, ArrowUpFromLine, Wallet as WalletIcon, Search, X,
-  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck, ArrowLeft,
+  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -82,7 +81,6 @@ function downloadCSV(filename: string, rows: any[]) {
 }
 
 export default function AdminReports() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [tab, setTab] = useState<TabKey>("deposits");
   const [page, setPage] = useState(1);
@@ -167,14 +165,6 @@ export default function AdminReports() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button
-            data-testid="button-back-admin"
-            onClick={() => setLocation("/admin")}
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={GLASS}
-          >
-            <ArrowLeft size={16} style={{ color: TEAL }} />
-          </button>
           <div>
             <h1
               className="text-xl font-bold"

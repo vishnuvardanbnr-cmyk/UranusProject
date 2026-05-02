@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { useListAdminWithdrawals, useApproveWithdrawal, getListAdminWithdrawalsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, CheckCircle, XCircle, ExternalLink, Loader2, AlertCircle, MessageSquare, ArrowLeft } from "lucide-react";
+import { Wallet, CheckCircle, XCircle, ExternalLink, Loader2, AlertCircle, MessageSquare } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -24,7 +23,6 @@ function getToken() {
 }
 
 export default function AdminWithdrawals() {
-  const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<"all" | "pending" | "processing" | "approved" | "rejected">("pending");
   const { data: withdrawals, isLoading } = useListAdminWithdrawals(
     filter === "all" ? undefined : { status: filter }
@@ -83,14 +81,6 @@ export default function AdminWithdrawals() {
   return (
     <div className="px-4 py-6 max-w-4xl mx-auto space-y-5 pb-24 md:pb-8">
       <div className="flex items-center gap-3">
-        <button
-          data-testid="button-back-admin"
-          onClick={() => setLocation("/admin")}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={GLASS}
-        >
-          <ArrowLeft size={16} style={{ color: TEAL }} />
-        </button>
         <h1
           className="text-xl font-bold"
           style={{
