@@ -38,6 +38,12 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
     currentRankId: user.currentRankId,
     isAdmin: user.isAdmin,
     isActive: user.isActive,
+    withdrawalBlocked: user.withdrawalBlocked,
+    p2pBlocked: user.p2pBlocked,
+    investmentBlocked: user.investmentBlocked,
+    blockReason: user.blockReason,
+    walletBalance: parseFloat(user.walletBalance ?? "0"),
+    hyperCoinBalance: parseFloat(user.hyperCoinBalance ?? "0"),
     profileComplete: user.profileComplete,
     totalEarnings: parseFloat(user.totalEarnings),
     totalInvested: parseFloat(user.totalInvested),
@@ -134,17 +140,42 @@ router.put("/admin/users/:id", requireAdmin, async (req, res) => {
     res.status(400).json({ message: "Invalid input" });
     return;
   }
+  const d = parsed.data;
   const updates: Partial<typeof usersTable.$inferInsert> = {};
-  if (parsed.data.isActive !== undefined) updates.isActive = parsed.data.isActive;
-  if (parsed.data.isAdmin !== undefined) updates.isAdmin = parsed.data.isAdmin;
-  if (parsed.data.currentLevel !== undefined) updates.currentLevel = parsed.data.currentLevel;
+  if (d.name !== undefined) updates.name = d.name;
+  if (d.email !== undefined) updates.email = d.email;
+  if (d.phone !== undefined) updates.phone = d.phone;
+  if (d.country !== undefined) updates.country = d.country;
+  if (d.walletAddress !== undefined) updates.walletAddress = d.walletAddress;
+  if (d.isActive !== undefined) updates.isActive = d.isActive;
+  if (d.isAdmin !== undefined) updates.isAdmin = d.isAdmin;
+  if (d.withdrawalBlocked !== undefined) updates.withdrawalBlocked = d.withdrawalBlocked;
+  if (d.p2pBlocked !== undefined) updates.p2pBlocked = d.p2pBlocked;
+  if (d.investmentBlocked !== undefined) updates.investmentBlocked = d.investmentBlocked;
+  if (d.blockReason !== undefined) updates.blockReason = d.blockReason;
+  if (d.currentLevel !== undefined) updates.currentLevel = d.currentLevel;
+  if (d.walletBalance !== undefined) updates.walletBalance = d.walletBalance.toString();
+  if (d.hyperCoinBalance !== undefined) updates.hyperCoinBalance = d.hyperCoinBalance.toString();
 
-  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
-  if (!updated) {
-    res.status(404).json({ message: "User not found" });
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ message: "No fields to update" });
     return;
   }
-  res.json(userToResponse(updated));
+
+  try {
+    const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
+    if (!updated) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    res.json(userToResponse(updated));
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      res.status(409).json({ message: "Email already in use" });
+      return;
+    }
+    throw err;
+  }
 });
 
 // GET /api/admin/investments

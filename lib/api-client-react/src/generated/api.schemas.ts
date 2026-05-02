@@ -47,6 +47,12 @@ export interface User {
   currentRankId?: number | null;
   isAdmin: boolean;
   isActive: boolean;
+  withdrawalBlocked: boolean;
+  p2pBlocked: boolean;
+  investmentBlocked: boolean;
+  blockReason?: string | null;
+  walletBalance: number;
+  hyperCoinBalance: number;
   profileComplete: boolean;
   totalEarnings: number;
   totalInvested: number;
@@ -270,9 +276,20 @@ export interface InvestmentsPaginated {
 }
 
 export interface AdminUpdateUserBody {
+  name?: string;
+  email?: string;
+  phone?: string;
+  country?: string | null;
+  walletAddress?: string | null;
   isActive?: boolean;
   isAdmin?: boolean;
+  withdrawalBlocked?: boolean;
+  p2pBlocked?: boolean;
+  investmentBlocked?: boolean;
+  blockReason?: string | null;
   currentLevel?: number;
+  walletBalance?: number;
+  hyperCoinBalance?: number;
 }
 
 export type AdminUpdateInvestmentBodyStatus =

@@ -637,6 +637,19 @@ components:
           type: boolean
         isActive:
           type: boolean
+        withdrawalBlocked:
+          type: boolean
+        p2pBlocked:
+          type: boolean
+        investmentBlocked:
+          type: boolean
+        blockReason:
+          type: string
+          nullable: true
+        walletBalance:
+          type: number
+        hyperCoinBalance:
+          type: number
         profileComplete:
           type: boolean
         totalEarnings:
@@ -645,7 +658,7 @@ components:
           type: number
         createdAt:
           type: string
-      required: [id, name, email, phone, referralCode, currentLevel, isAdmin, isActive, profileComplete, totalEarnings, totalInvested, createdAt]
+      required: [id, name, email, phone, referralCode, currentLevel, isAdmin, isActive, withdrawalBlocked, p2pBlocked, investmentBlocked, walletBalance, hyperCoinBalance, profileComplete, totalEarnings, totalInvested, createdAt]
 
     UserDetail:
       type: object
@@ -999,12 +1012,37 @@ components:
     AdminUpdateUserBody:
       type: object
       properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+          nullable: true
+        walletAddress:
+          type: string
+          nullable: true
         isActive:
           type: boolean
         isAdmin:
           type: boolean
+        withdrawalBlocked:
+          type: boolean
+        p2pBlocked:
+          type: boolean
+        investmentBlocked:
+          type: boolean
+        blockReason:
+          type: string
+          nullable: true
         currentLevel:
           type: integer
+        walletBalance:
+          type: number
+        hyperCoinBalance:
+          type: number
 
     AdminUpdateInvestmentBody:
       type: object

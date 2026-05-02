@@ -45,7 +45,7 @@ lib/
 
 ### Admin Pages
 - `/admin` — Platform stats overview
-- `/admin/users` — User list with status toggle
+- `/admin/users` — User list + edit drawer (Profile / Access / Balance tabs). Per-user toggles for: account active, withdrawals blocked, P2P blocked, new investments blocked, admin role. Edit name/email/phone/country/wallet, adjust USDT + HyperCoin balances, set level, set block reason (shown in the user-facing error). Enforced server-side in `withdrawals POST`, `wallet/p2p/transfer POST`, `investments POST` with HTTP 403 + reason.
 - `/admin/investments` — All investments list
 - `/admin/withdrawals` — Withdrawal approval/rejection
 - `/admin/reports` — Detailed reports (deposits, withdrawals, wallet-address change history); CSV export, date/status/search filters

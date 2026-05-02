@@ -20,6 +20,12 @@ export interface User {
   currentRankId?: number | null;
   isAdmin: boolean;
   isActive: boolean;
+  withdrawalBlocked: boolean;
+  p2pBlocked: boolean;
+  investmentBlocked: boolean;
+  blockReason?: string | null;
+  walletBalance: number;
+  hyperCoinBalance: number;
   profileComplete: boolean;
   totalEarnings: number;
   totalInvested: number;

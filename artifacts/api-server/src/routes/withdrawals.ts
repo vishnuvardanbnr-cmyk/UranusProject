@@ -49,6 +49,15 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     return;
   }
 
+  if (user.withdrawalBlocked) {
+    res.status(403).json({
+      message: user.blockReason
+        ? `Withdrawals are blocked: ${user.blockReason}`
+        : "Withdrawals have been blocked on your account. Please contact support.",
+    });
+    return;
+  }
+
   // OTP verification
   const otpRequired = await isOtpWithdrawalEnabled();
   if (otpRequired) {

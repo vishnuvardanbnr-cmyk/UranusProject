@@ -213,7 +213,7 @@ router.get("/wallet/p2p/lookup", requireAuth, async (req, res) => {
 
   const [recipient] = await db.select({
     id: usersTable.id,
-    fullName: usersTable.fullName,
+    name: usersTable.name,
     email: usersTable.email,
   }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
 
@@ -222,7 +222,7 @@ router.get("/wallet/p2p/lookup", requireAuth, async (req, res) => {
     return;
   }
 
-  res.json({ id: recipient.id, name: recipient.fullName, email: recipient.email });
+  res.json({ id: recipient.id, name: recipient.name, email: recipient.email });
 });
 
 // POST /api/wallet/p2p/transfer — send USDT or HYPERCOIN to another user
@@ -239,6 +239,15 @@ router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
   }
   if (recipientId === sender.id) {
     res.status(400).json({ message: "You cannot transfer to yourself" });
+    return;
+  }
+
+  if (sender.p2pBlocked) {
+    res.status(403).json({
+      message: sender.blockReason
+        ? `P2P transfers are blocked: ${sender.blockReason}`
+        : "P2P transfers have been blocked on your account. Please contact support.",
+    });
     return;
   }
 
@@ -272,7 +281,7 @@ router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
 
   const [updatedSender] = await db.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
   res.json({
-    message: `$${transferAmount.toFixed(2)} ${coin.toUpperCase()} sent to ${recipient.fullName}`,
+    message: `$${transferAmount.toFixed(2)} ${coin.toUpperCase()} sent to ${recipient.name}`,
     walletBalance: parseFloat(updatedSender.walletBalance ?? "0"),
     hyperCoinBalance: parseFloat(updatedSender.hyperCoinBalance ?? "0"),
   });

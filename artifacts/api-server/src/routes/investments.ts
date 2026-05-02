@@ -59,6 +59,15 @@ router.post("/investments", requireAuth, async (req, res) => {
   const user = (req as any).user;
   const { amount, hyperCoinAmount, usdtAmount } = parsed.data;
 
+  if (user.investmentBlocked) {
+    res.status(403).json({
+      message: user.blockReason
+        ? `New investments are blocked: ${user.blockReason}`
+        : "New investments have been blocked on your account. Please contact support.",
+    });
+    return;
+  }
+
   if (amount % 100 !== 0) {
     res.status(400).json({ message: "Investment must be a multiple of 100" });
     return;

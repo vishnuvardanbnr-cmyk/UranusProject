@@ -7,7 +7,18 @@
  */
 
 export interface AdminUpdateUserBody {
+  name?: string;
+  email?: string;
+  phone?: string;
+  country?: string | null;
+  walletAddress?: string | null;
   isActive?: boolean;
   isAdmin?: boolean;
+  withdrawalBlocked?: boolean;
+  p2pBlocked?: boolean;
+  investmentBlocked?: boolean;
+  blockReason?: string | null;
   currentLevel?: number;
+  walletBalance?: number;
+  hyperCoinBalance?: number;
 }
