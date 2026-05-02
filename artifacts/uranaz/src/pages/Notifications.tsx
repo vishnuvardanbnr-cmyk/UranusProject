@@ -128,7 +128,7 @@ export default function Notifications() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/dashboard")}
+          onClick={() => setLocation("/dashboard")}
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
           style={{ background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" }}
         >
