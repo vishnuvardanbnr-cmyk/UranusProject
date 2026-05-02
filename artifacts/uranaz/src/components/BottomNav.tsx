@@ -1,8 +1,7 @@
 import { useLocation, Link } from "wouter";
-import { LayoutDashboard, TrendingUp, Users, DollarSign, Home } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Users, DollarSign } from "lucide-react";
 
 const navItems = [
-  { path: "/",          icon: Home,            label: "Home" },
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/invest",    icon: TrendingUp,      label: "Invest" },
   { path: "/team",      icon: Users,           label: "Team" },
