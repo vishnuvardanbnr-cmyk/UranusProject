@@ -12,7 +12,10 @@ function hashPassword(password: string): string {
 }
 
 function generateReferralCode(): string {
-  return randomBytes(4).toString("hex").toUpperCase();
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const bytes = randomBytes(7);
+  const suffix = Array.from(bytes).map(b => chars[b % chars.length]).join("");
+  return "U" + suffix;
 }
 
 function userToResponse(user: typeof usersTable.$inferSelect) {

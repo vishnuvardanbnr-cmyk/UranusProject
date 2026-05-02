@@ -1,6 +1,7 @@
-import { useGetTeam, useGetTeamStats } from "@workspace/api-client-react";
-import { Users, ChevronDown, ChevronRight } from "lucide-react";
+import { useGetTeam, useGetTeamStats, useGetReferralLink } from "@workspace/api-client-react";
+import { Users, ChevronDown, ChevronRight, Copy, CheckCircle, Link as LinkIcon } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
@@ -15,7 +16,27 @@ const levelUnlockRequirements: Record<number, number> = {
 export default function Team({ user }: { user: any }) {
   const { data: team, isLoading: loadingTeam } = useGetTeam();
   const { data: stats, isLoading: loadingStats } = useGetTeamStats();
+  const { data: referral } = useGetReferralLink();
+  const { toast } = useToast();
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [expanded, setExpanded] = useState<number[]>([1]);
+
+  const copyLink = async () => {
+    if (!referral?.referralLink) return;
+    await navigator.clipboard.writeText(referral.referralLink);
+    setCopiedLink(true);
+    toast({ title: "Copied!", description: "Referral link copied to clipboard" });
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const copyCode = async () => {
+    if (!referral?.referralCode) return;
+    await navigator.clipboard.writeText(referral.referralCode);
+    setCopiedCode(true);
+    toast({ title: "Copied!", description: "Referral code copied" });
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   const toggleLevel = (level: number) =>
     setExpanded(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
@@ -34,6 +55,98 @@ export default function Team({ user }: { user: any }) {
       >
         My Team
       </h1>
+
+      {/* Referral Link Card */}
+      {referral && (
+        <div
+          className="rounded-2xl overflow-hidden relative"
+          style={{
+            background: "linear-gradient(155deg, rgba(4,16,32,0.97) 0%, rgba(2,10,22,0.97) 100%)",
+            border: "1px solid rgba(61,214,245,0.18)",
+            boxShadow: "0 0 40px rgba(61,214,245,0.07)",
+          }}
+        >
+          <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #3DD6F5, transparent)" }} />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.08) 0%, transparent 60%)" }}
+          />
+          <div className="relative p-5 space-y-4">
+            {/* Header */}
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: "rgba(61,214,245,0.12)", border: "1px solid rgba(61,214,245,0.22)" }}
+              >
+                <LinkIcon size={14} style={{ color: TEAL }} />
+              </div>
+              <span
+                className="font-bold text-xs tracking-widest uppercase"
+                style={{ color: "rgba(168,237,255,0.55)", fontFamily: "'Orbitron', sans-serif" }}
+              >
+                Your Referral
+              </span>
+            </div>
+
+            {/* Referral Code */}
+            <div>
+              <div className="text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.38)" }}>Referral Code</div>
+              <div
+                className="flex items-center justify-between rounded-xl px-4 py-3"
+                style={{ background: "rgba(0,10,24,0.7)", border: "1px solid rgba(61,214,245,0.14)" }}
+              >
+                <span
+                  className="font-black tracking-widest text-base"
+                  style={{ color: TEAL, fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.12em" }}
+                >
+                  {referral.referralCode}
+                </span>
+                <button
+                  onClick={copyCode}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all"
+                  style={copiedCode
+                    ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }
+                    : { background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }
+                  }
+                >
+                  {copiedCode ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+                </button>
+              </div>
+            </div>
+
+            {/* Referral Link */}
+            <div>
+              <div className="text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.38)" }}>Referral Link</div>
+              <div
+                className="flex items-center gap-2 rounded-xl px-4 py-3"
+                style={{ background: "rgba(0,10,24,0.7)", border: "1px solid rgba(61,214,245,0.14)" }}
+              >
+                <span
+                  className="flex-1 text-xs font-mono truncate"
+                  style={{ color: "rgba(168,237,255,0.5)" }}
+                >
+                  {referral.referralLink}
+                </span>
+                <button
+                  onClick={copyLink}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all shrink-0"
+                  style={copiedLink
+                    ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" }
+                    : { background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }
+                  }
+                >
+                  {copiedLink ? <><CheckCircle size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+                </button>
+              </div>
+            </div>
+
+            {/* Hint */}
+            <p className="text-xs" style={{ color: "rgba(168,237,255,0.28)" }}>
+              Share your link or code to earn referral commissions on every investment your team makes.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats grid */}
       {loadingStats ? (
