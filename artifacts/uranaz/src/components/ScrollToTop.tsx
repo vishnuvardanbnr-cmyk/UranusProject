@@ -16,9 +16,14 @@ export default function ScrollToTop() {
     <button
       data-testid="scroll-to-top"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className="fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+      className="fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+      style={{
+        background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+        color: "#010810",
+        boxShadow: "0 0 16px rgba(61,214,245,0.45), 0 4px 12px rgba(0,0,0,0.4)",
+      }}
     >
-      <ArrowUp size={18} />
+      <ArrowUp size={17} />
     </button>
   );
 }

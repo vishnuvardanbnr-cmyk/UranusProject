@@ -12,6 +12,7 @@ setAuthTokenGetter(getToken);
 import ScrollToTop from "@/components/ScrollToTop";
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
+import SpaceBackground from "@/components/SpaceBackground";
 import NotFound from "@/pages/not-found";
 
 import Landing from "@/pages/Landing";
@@ -183,12 +184,23 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-            <span className="text-primary font-bold">UT</span>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#010810" }}>
+        <SpaceBackground />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(42,179,215,0.1))",
+              border: "1px solid rgba(61,214,245,0.4)",
+              boxShadow: "0 0 30px rgba(61,214,245,0.3)",
+            }}
+          >
+            <span style={{ color: "#3DD6F5", fontFamily: "'Orbitron',sans-serif", fontWeight: 700 }}>UT</span>
           </div>
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div
+            className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: "rgba(61,214,245,0.6)", borderTopColor: "transparent" }}
+          />
         </div>
       </div>
     );
@@ -196,7 +208,10 @@ function AppInner() {
 
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-      <Router user={user} setUser={setUser} />
+      <SpaceBackground />
+      <div className="relative z-10 min-h-screen">
+        <Router user={user} setUser={setUser} />
+      </div>
     </WouterRouter>
   );
 }

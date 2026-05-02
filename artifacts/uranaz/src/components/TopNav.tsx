@@ -1,16 +1,25 @@
 import { Link, useLocation } from "wouter";
 import { clearToken } from "@/lib/auth";
 import { useLogout } from "@workspace/api-client-react";
-import { LogOut, Shield, Bell } from "lucide-react";
+import { LogOut, Shield, Orbit } from "lucide-react";
 
 interface Props {
   user: any;
   onLogout: () => void;
 }
 
+const navLinks = [
+  { href: "/dashboard",   label: "Dashboard" },
+  { href: "/invest",      label: "Invest" },
+  { href: "/income",      label: "Income" },
+  { href: "/team",        label: "Team" },
+  { href: "/withdrawals", label: "Withdraw" },
+  { href: "/ranks",       label: "Ranks" },
+];
+
 export default function TopNav({ user, onLogout }: Props) {
   const logout = useLogout();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const handleLogout = async () => {
     try { await logout.mutateAsync(); } catch {}
@@ -20,40 +29,102 @@ export default function TopNav({ user, onLogout }: Props) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-card/90 backdrop-blur border-b border-border">
+    <header
+      className="sticky top-0 z-30"
+      style={{
+        background: "rgba(1, 12, 24, 0.80)",
+        backdropFilter: "blur(20px) saturate(1.6)",
+        WebkitBackdropFilter: "blur(20px) saturate(1.6)",
+        borderBottom: "1px solid rgba(61, 214, 245, 0.12)",
+        boxShadow: "0 1px 0 rgba(61,214,245,0.06), 0 4px 24px rgba(0,0,0,0.5)",
+      }}
+    >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-xs font-bold">UT</span>
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 group">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.2), rgba(42,179,215,0.1))",
+              border: "1px solid rgba(61,214,245,0.35)",
+              boxShadow: "0 0 12px rgba(61,214,245,0.25)",
+            }}
+          >
+            <Orbit size={16} style={{ color: "#3DD6F5" }} />
           </div>
-          <span className="font-bold text-sm tracking-wide hidden sm:block">URANAZ TRADES</span>
+          <span
+            className="font-bold text-sm tracking-widest hidden sm:block"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              background: "linear-gradient(135deg, #a8edff 0%, #3DD6F5 60%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            URANAZ
+          </span>
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm">
-          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
-          <Link href="/invest" className="text-muted-foreground hover:text-foreground transition-colors">Invest</Link>
-          <Link href="/income" className="text-muted-foreground hover:text-foreground transition-colors">Income</Link>
-          <Link href="/team" className="text-muted-foreground hover:text-foreground transition-colors">Team</Link>
-          <Link href="/withdrawals" className="text-muted-foreground hover:text-foreground transition-colors">Withdraw</Link>
-          <Link href="/ranks" className="text-muted-foreground hover:text-foreground transition-colors">Ranks</Link>
+        <nav className="hidden md:flex items-center gap-1 text-sm">
+          {navLinks.map(({ href, label }) => {
+            const active = location === href || (href !== "/" && location.startsWith(href));
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="px-3 py-1.5 rounded-lg transition-all duration-200 font-medium"
+                style={{
+                  color: active ? "#3DD6F5" : "rgba(168,237,255,0.55)",
+                  background: active ? "rgba(61,214,245,0.08)" : "transparent",
+                  textShadow: active ? "0 0 10px rgba(61,214,245,0.5)" : "none",
+                  border: active ? "1px solid rgba(61,214,245,0.18)" : "1px solid transparent",
+                }}
+              >
+                {label}
+              </Link>
+            );
+          })}
           {user?.isAdmin && (
-            <Link href="/admin" className="text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-              <Shield size={14} /> Admin
+            <Link
+              href="/admin"
+              className="px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-all"
+              style={{
+                color: "#f97316",
+                background: "rgba(249,115,22,0.08)",
+                border: "1px solid rgba(249,115,22,0.2)",
+              }}
+            >
+              <Shield size={13} /> Admin
             </Link>
           )}
         </nav>
 
+        {/* Right side */}
         <div className="flex items-center gap-2">
-          <Link href="/profile" data-testid="link-profile" className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+          <Link
+            href="/profile"
+            data-testid="link-profile"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.25), rgba(42,179,215,0.15))",
+              border: "1px solid rgba(61,214,245,0.35)",
+              color: "#3DD6F5",
+              boxShadow: "0 0 10px rgba(61,214,245,0.2)",
+            }}
+          >
             {user?.name?.charAt(0)?.toUpperCase() || "U"}
           </Link>
           <button
             data-testid="button-logout"
             onClick={handleLogout}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            style={{ color: "rgba(168,237,255,0.4)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(168,237,255,0.4)")}
           >
-            <LogOut size={16} />
+            <LogOut size={15} />
           </button>
         </div>
       </div>

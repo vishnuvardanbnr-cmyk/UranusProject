@@ -7,6 +7,7 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Orbit } from "lucide-react";
 
 const schema = z.object({
   email: z.string().email("Valid email required"),
@@ -34,34 +35,95 @@ export default function Login({ onLogin }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(246,195,67,0.07)_0%,_transparent_60%)] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="relative w-full max-w-sm">
+        {/* Logo + heading */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-4">
-            <span className="text-primary font-bold text-xl">UT</span>
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 relative"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(42,179,215,0.08))",
+              border: "1px solid rgba(61,214,245,0.4)",
+              boxShadow: "0 0 30px rgba(61,214,245,0.25), 0 0 60px rgba(61,214,245,0.08)",
+            }}
+          >
+            <Orbit size={28} style={{ color: "#3DD6F5" }} />
+            {/* Orbit ring decoration */}
+            <div
+              className="absolute inset-0 rounded-2xl"
+              style={{
+                background: "radial-gradient(circle at 35% 35%, rgba(168,237,255,0.15) 0%, transparent 60%)",
+              }}
+            />
           </div>
-          <h1 className="text-2xl font-bold">Welcome Back</h1>
-          <p className="text-muted-foreground text-sm mt-1">Sign in to your URANAZ TRADES account</p>
+          <h1
+            className="text-2xl font-bold mb-1"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Welcome Back
+          </h1>
+          <p style={{ color: "rgba(168,237,255,0.5)", fontSize: "0.875rem" }}>
+            Sign in to your URANAZ TRADES account
+          </p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
+        {/* Card */}
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "rgba(5, 18, 32, 0.75)",
+            backdropFilter: "blur(24px) saturate(1.5)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.5)",
+            border: "1px solid rgba(61, 214, 245, 0.20)",
+            boxShadow: "0 0 0 1px rgba(61,214,245,0.06) inset, 0 20px 60px rgba(0,0,0,0.5), 0 0 100px rgba(61,214,245,0.05)",
+          }}
+        >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address</FormLabel>
+                  <FormLabel style={{ color: "rgba(168,237,255,0.7)", fontSize: "0.8rem", letterSpacing: "0.05em" }}>
+                    Email Address
+                  </FormLabel>
                   <FormControl>
-                    <Input data-testid="input-email" type="email" placeholder="you@example.com" {...field} />
+                    <Input
+                      data-testid="input-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      {...field}
+                      style={{
+                        background: "rgba(0,20,40,0.6)",
+                        border: "1px solid rgba(61,214,245,0.18)",
+                        color: "rgba(168,237,255,0.9)",
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel style={{ color: "rgba(168,237,255,0.7)", fontSize: "0.8rem", letterSpacing: "0.05em" }}>
+                    Password
+                  </FormLabel>
                   <FormControl>
-                    <Input data-testid="input-password" type="password" placeholder="Enter your password" {...field} />
+                    <Input
+                      data-testid="input-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      {...field}
+                      style={{
+                        background: "rgba(0,20,40,0.6)",
+                        border: "1px solid rgba(61,214,245,0.18)",
+                        color: "rgba(168,237,255,0.9)",
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -70,20 +132,34 @@ export default function Login({ onLogin }: Props) {
                 data-testid="button-submit-login"
                 type="submit"
                 disabled={login.isPending}
-                className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                className="w-full py-2.5 rounded-xl font-semibold transition-all duration-200 disabled:opacity-60 mt-2"
+                style={{
+                  background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                  color: "#010810",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  boxShadow: "0 0 20px rgba(61,214,245,0.35), 0 4px 16px rgba(0,0,0,0.4)",
+                }}
               >
                 {login.isPending ? "Signing in..." : "Sign In"}
               </button>
             </form>
           </Form>
 
-          <div className="mt-5 text-center text-sm text-muted-foreground">
+          <div className="mt-5 text-center text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>
             Don't have an account?{" "}
-            <Link href="/register" className="text-primary font-semibold hover:underline">
+            <Link href="/register" style={{ color: "#3DD6F5", fontWeight: 600 }} className="hover:underline">
               Register
             </Link>
           </div>
-          <div className="mt-3 text-center text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+          <div
+            className="mt-3 text-center text-xs rounded-lg p-2"
+            style={{
+              background: "rgba(61,214,245,0.05)",
+              border: "1px solid rgba(61,214,245,0.10)",
+              color: "rgba(168,237,255,0.35)",
+            }}
+          >
             Demo: john@example.com / demo123 &nbsp;|&nbsp; Admin: admin@uranaz.com / admin123
           </div>
         </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -57,61 +57,74 @@
 }
 
 :root {
-  --button-outline: rgba(0,0,0,.10);
-  --badge-outline: rgba(0,0,0,.05);
+  --button-outline: rgba(0,0,0,.12);
+  --badge-outline: rgba(0,0,0,.06);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(255,255,255,.04);
-  --elevate-2: rgba(255,255,255,.08);
+  --elevate-1: rgba(61,214,245,0.06);
+  --elevate-2: rgba(61,214,245,0.10);
 
-  /* Dark navy/charcoal theme */
-  --background: 222 47% 7%;
-  --foreground: 43 100% 92%;
-  --border: 222 30% 18%;
-  --card: 222 40% 10%;
-  --card-foreground: 43 80% 88%;
-  --card-border: 222 30% 20%;
-  --sidebar: 222 45% 8%;
-  --sidebar-foreground: 43 80% 88%;
-  --sidebar-border: 222 30% 18%;
-  --sidebar-primary: 43 96% 56%;
-  --sidebar-primary-foreground: 222 47% 7%;
-  --sidebar-accent: 222 40% 14%;
-  --sidebar-accent-foreground: 43 80% 88%;
-  --sidebar-ring: 43 96% 56%;
-  --popover: 222 40% 10%;
-  --popover-foreground: 43 80% 88%;
-  --popover-border: 222 30% 20%;
-  --primary: 43 96% 56%;
-  --primary-foreground: 222 47% 7%;
-  --secondary: 222 40% 14%;
-  --secondary-foreground: 43 80% 88%;
-  --muted: 222 35% 13%;
-  --muted-foreground: 222 20% 55%;
-  --accent: 43 96% 56%;
-  --accent-foreground: 222 47% 7%;
+  /* === URANUS DEEP SPACE THEME === */
+  /* Deep space background — nearly black with cool blue tint */
+  --background: 210 88% 3%;
+  --foreground: 195 80% 92%;
+
+  --border: 200 50% 14%;
+  /* Glass card surfaces */
+  --card: 205 60% 6%;
+  --card-foreground: 195 70% 88%;
+  --card-border: 195 50% 18%;
+
+  --sidebar: 208 65% 5%;
+  --sidebar-foreground: 195 70% 88%;
+  --sidebar-border: 200 50% 14%;
+  --sidebar-primary: 192 91% 60%;
+  --sidebar-primary-foreground: 210 88% 4%;
+  --sidebar-accent: 205 55% 10%;
+  --sidebar-accent-foreground: 195 70% 88%;
+  --sidebar-ring: 192 91% 60%;
+
+  --popover: 205 60% 6%;
+  --popover-foreground: 195 70% 88%;
+  --popover-border: 195 50% 18%;
+
+  /* Uranus teal/cyan — #3DD6F5 */
+  --primary: 192 91% 60%;
+  --primary-foreground: 210 88% 4%;
+
+  --secondary: 205 55% 10%;
+  --secondary-foreground: 195 70% 88%;
+
+  --muted: 205 50% 8%;
+  --muted-foreground: 200 30% 50%;
+
+  --accent: 192 91% 60%;
+  --accent-foreground: 210 88% 4%;
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --input: 222 30% 18%;
-  --ring: 43 96% 56%;
-  --chart-1: 43 96% 56%;
-  --chart-2: 142 76% 56%;
-  --chart-3: 221 83% 53%;
-  --chart-4: 262 83% 58%;
+
+  --input: 200 45% 12%;
+  --ring: 192 91% 60%;
+
+  --chart-1: 192 91% 60%;
+  --chart-2: 165 80% 55%;
+  --chart-3: 220 80% 60%;
+  --chart-4: 270 70% 65%;
   --chart-5: 0 84% 60%;
 
   --app-font-sans: 'Inter', sans-serif;
-  --app-font-serif: 'Rajdhani', sans-serif;
+  --app-font-serif: 'Orbitron', 'Rajdhani', sans-serif;
   --app-font-mono: Menlo, monospace;
   --radius: .75rem;
 
-  --shadow-2xs: 0px 2px 8px 0px rgba(0,0,0,0.4);
-  --shadow-xs: 0px 2px 8px 0px rgba(0,0,0,0.4);
-  --shadow-sm: 0px 4px 12px 0px rgba(0,0,0,0.5);
-  --shadow: 0px 4px 16px 0px rgba(0,0,0,0.5);
-  --shadow-md: 0px 8px 24px 0px rgba(0,0,0,0.5);
-  --shadow-lg: 0px 12px 32px 0px rgba(0,0,0,0.6);
-  --shadow-xl: 0px 20px 48px 0px rgba(0,0,0,0.6);
-  --shadow-2xl: 0px 32px 64px 0px rgba(0,0,0,0.7);
+  --shadow-2xs: 0px 2px 8px 0px rgba(0,0,0,0.6);
+  --shadow-xs: 0px 2px 8px 0px rgba(0,0,0,0.6);
+  --shadow-sm: 0px 4px 12px 0px rgba(0,0,0,0.7);
+  --shadow: 0px 4px 20px 0px rgba(61,214,245,0.08),0px 4px 16px rgba(0,0,0,0.6);
+  --shadow-md: 0px 8px 24px 0px rgba(61,214,245,0.10),0px 8px 24px rgba(0,0,0,0.6);
+  --shadow-lg: 0px 12px 40px 0px rgba(61,214,245,0.12),0px 12px 32px rgba(0,0,0,0.7);
+  --shadow-xl: 0px 20px 60px 0px rgba(61,214,245,0.15),0px 20px 48px rgba(0,0,0,0.7);
+  --shadow-2xl: 0px 32px 80px 0px rgba(61,214,245,0.18),0px 32px 64px rgba(0,0,0,0.8);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -122,43 +135,320 @@
   --muted-border: hsl(var(--muted));
   --accent-border: hsl(var(--accent));
   --destructive-border: hsl(var(--destructive));
+
+  /* Uranus-specific color tokens */
+  --uranus-teal: #3DD6F5;
+  --uranus-teal-dim: #2AB3CF;
+  --uranus-ice: #a8edff;
+  --uranus-ring: rgba(61, 214, 245, 0.18);
+  --uranus-glow: rgba(61, 214, 245, 0.25);
+  --uranus-nebula: rgba(100, 60, 200, 0.12);
+  --space-black: #010810;
 }
 
+/* ======================================
+   BASE
+   ====================================== */
 @layer base {
   * { @apply border-border; }
-  body { @apply font-sans antialiased bg-background text-foreground; }
+  body {
+    @apply font-sans antialiased;
+    background-color: var(--space-black);
+    color: hsl(var(--foreground));
+    overflow-x: hidden;
+  }
 }
 
-/* Gold gradient text */
-.gold-text {
-  background: linear-gradient(135deg, #f6c343 0%, #e8a000 50%, #f6c343 100%);
+/* ======================================
+   ANIMATED STAR FIELD
+   ====================================== */
+.star-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.star-field::before,
+.star-field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 8%, rgba(168,237,255,0.8) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 35%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 18%, rgba(168,237,255,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 42%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 82% 9%, rgba(255,255,255,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 28%, rgba(168,237,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 30% 70%, rgba(255,255,255,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 48% 62%, rgba(168,237,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 63% 78%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 78% 65%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 85%, rgba(168,237,255,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5% 85%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 92%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 88%, rgba(168,237,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 95%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 67% 90%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 72%, rgba(168,237,255,0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 7% 38%, rgba(255,255,255,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 44% 50%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 73% 22%, rgba(168,237,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 58% 5%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 48%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 98% 15%, rgba(168,237,255,0.8) 0%, transparent 100%);
+  background-size: 100% 100%;
+}
+
+.star-field::after {
+  background-image:
+    radial-gradient(1px 1px at 18% 3%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 33% 22%, rgba(168,237,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 47% 12%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 61% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 76% 5%, rgba(168,237,255,0.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 90% 38%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 12% 48%, rgba(255,255,255,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 27% 60%, rgba(168,237,255,0.4) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 42% 75%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 57% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 71% 82%, rgba(168,237,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 86% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 3% 70%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 38% 95%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 53% 80%, rgba(168,237,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 68% 95%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 83% 75%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 96% 90%, rgba(168,237,255,0.5) 0%, transparent 100%);
+  animation: twinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0%   { opacity: 0.6; transform: scale(1); }
+  50%  { opacity: 1;   transform: scale(1.02); }
+  100% { opacity: 0.7; transform: scale(0.98); }
+}
+
+/* ======================================
+   PLANET GLOW — background element
+   ====================================== */
+.planet-glow {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: planet-pulse 12s ease-in-out infinite;
+}
+
+.planet-glow-primary {
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  right: -150px;
+  background: radial-gradient(circle,
+    rgba(61, 214, 245, 0.12) 0%,
+    rgba(42, 179, 215, 0.08) 40%,
+    transparent 70%
+  );
+}
+
+.planet-glow-secondary {
+  width: 500px;
+  height: 400px;
+  bottom: -120px;
+  left: -100px;
+  background: radial-gradient(circle,
+    rgba(100, 60, 200, 0.10) 0%,
+    rgba(61, 214, 245, 0.05) 50%,
+    transparent 70%
+  );
+  animation-delay: -6s;
+}
+
+@keyframes planet-pulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.05); }
+}
+
+/* ======================================
+   URANUS RING DECORATION
+   ====================================== */
+.uranus-rings {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  top: -60px;
+  right: -200px;
+  width: 700px;
+  height: 700px;
+  animation: ring-rotate 60s linear infinite;
+}
+
+.uranus-rings svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.18;
+}
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ======================================
+   NEBULA OVERLAY
+   ====================================== */
+.nebula-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 80% 10%,  rgba(61,214,245,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 10% 80%,  rgba(120,60,220,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 40% at 50% 50%, rgba(30,180,220,0.03) 0%, transparent 70%);
+}
+
+/* ======================================
+   GLASSMORPHISM CARDS
+   ====================================== */
+.glass-card {
+  background: rgba(10, 25, 40, 0.65);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(61, 214, 245, 0.15);
+  box-shadow:
+    0 0 0 1px rgba(61, 214, 245, 0.05) inset,
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(61, 214, 245, 0.04);
+}
+
+.glass-card-bright {
+  background: rgba(10, 30, 50, 0.75);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(61, 214, 245, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(61, 214, 245, 0.08) inset,
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(61, 214, 245, 0.06);
+}
+
+/* ======================================
+   TEAL GRADIENT TEXT
+   ====================================== */
+.uranus-text {
+  background: linear-gradient(135deg, #a8edff 0%, #3DD6F5 40%, #2AB3CF 70%, #3DD6F5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Gold glow */
-.gold-glow {
-  box-shadow: 0 0 24px rgba(246, 195, 67, 0.25), 0 0 48px rgba(246, 195, 67, 0.1);
+.uranus-text-gold {
+  background: linear-gradient(135deg, #3DD6F5 0%, #a8edff 50%, #3DD6F5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Card shimmer border */
+/* Keep old gold-text for legacy use */
+.gold-text {
+  background: linear-gradient(135deg, #3DD6F5 0%, #a8edff 50%, #3DD6F5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ======================================
+   URANUS GLOW EFFECTS
+   ====================================== */
+.uranus-glow {
+  box-shadow:
+    0 0 20px rgba(61, 214, 245, 0.30),
+    0 0 60px rgba(61, 214, 245, 0.12),
+    0 0 120px rgba(61, 214, 245, 0.06);
+}
+
+.uranus-glow-sm {
+  box-shadow:
+    0 0 12px rgba(61, 214, 245, 0.25),
+    0 0 30px rgba(61, 214, 245, 0.08);
+}
+
+/* Legacy gold-glow → now teal */
+.gold-glow {
+  box-shadow:
+    0 0 20px rgba(61, 214, 245, 0.28),
+    0 0 50px rgba(61, 214, 245, 0.10);
+}
+
+/* ======================================
+   SHIMMER BORDER (teal)
+   ====================================== */
 .shimmer-border {
   border: 1px solid;
-  border-image: linear-gradient(135deg, rgba(246,195,67,0.6), rgba(246,195,67,0.1), rgba(246,195,67,0.4)) 1;
+  border-image: linear-gradient(135deg,
+    rgba(61,214,245,0.7),
+    rgba(61,214,245,0.1),
+    rgba(168,237,255,0.5)
+  ) 1;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.5); }
+/* ======================================
+   TEAL PROGRESS BAR / LINE
+   ====================================== */
+.uranus-progress {
+  background: linear-gradient(90deg, #2AB3CF 0%, #3DD6F5 50%, #a8edff 100%);
+  box-shadow: 0 0 8px rgba(61,214,245,0.6);
+}
 
-/* Bottom nav safe area */
+/* ======================================
+   SCROLLBAR — space themed
+   ====================================== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: rgba(1, 8, 16, 0.8); }
+::-webkit-scrollbar-thumb { background: rgba(61, 214, 245, 0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(61, 214, 245, 0.45); }
+
+/* ======================================
+   BOTTOM NAV SAFE AREA
+   ====================================== */
 .bottom-nav-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ======================================
+   FLOATING PARTICLE
+   ====================================== */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.4; }
+  33%       { transform: translateY(-15px) translateX(8px);  opacity: 0.8; }
+  66%       { transform: translateY(-8px)  translateX(-5px); opacity: 0.6; }
+}
+
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(61,214,245,0.8) 0%, transparent 70%);
+}
+
+/* ======================================
+   NAV LINK ACTIVE GLOW
+   ====================================== */
+.nav-active {
+  color: var(--uranus-teal);
+  text-shadow: 0 0 12px rgba(61,214,245,0.6);
+}
+
+/* ======================================
+   UTILITY LAYER
+   ====================================== */
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button { @apply hidden; }
 

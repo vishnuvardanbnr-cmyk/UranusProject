@@ -6,8 +6,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { User, Copy, Shield } from "lucide-react";
+import { Copy, Shield } from "lucide-react";
 import { Link } from "wouter";
+
+const TEAL = "#3DD6F5";
+const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
+const INPUT_STYLE = { background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" };
+const LABEL_STYLE = { color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" };
 
 const schema = z.object({
   walletAddress: z.string().min(10, "Valid wallet address required"),
@@ -46,20 +51,46 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
   };
 
   return (
-    <div className="px-4 py-6 max-w-2xl mx-auto space-y-6 pb-24 md:pb-6">
-      <h1 className="text-xl font-bold">My Profile</h1>
+    <div className="px-4 py-6 max-w-2xl mx-auto space-y-6 pb-24 md:pb-8">
+      <h1
+        className="text-xl font-bold"
+        style={{
+          fontFamily: "'Orbitron', sans-serif",
+          background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        My Profile
+      </h1>
 
-      {/* Avatar / Info */}
-      <div className="bg-card border border-border rounded-2xl p-6 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center text-primary text-2xl font-bold shrink-0">
+      {/* Avatar card */}
+      <div
+        className="rounded-2xl p-6 flex items-center gap-4 relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, rgba(61,214,245,0.10), rgba(42,179,215,0.05))",
+          border: "1px solid rgba(61,214,245,0.22)",
+        }}
+      >
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, rgba(61,214,245,0.12) 0%, transparent 60%)" }} />
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shrink-0 relative"
+          style={{
+            background: "linear-gradient(135deg, rgba(61,214,245,0.20), rgba(42,179,215,0.10))",
+            border: "2px solid rgba(61,214,245,0.45)",
+            color: TEAL,
+            boxShadow: "0 0 20px rgba(61,214,245,0.2)",
+          }}
+        >
           {user?.name?.charAt(0)?.toUpperCase()}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-lg" data-testid="text-username">{user?.name}</div>
-          <div className="text-sm text-muted-foreground">{user?.email}</div>
-          <div className="text-sm text-muted-foreground">{user?.phone}</div>
+        <div className="flex-1 min-w-0 relative">
+          <div className="font-bold text-lg" data-testid="text-username" style={{ color: "rgba(168,237,255,0.92)" }}>{user?.name}</div>
+          <div className="text-sm" style={{ color: "rgba(168,237,255,0.45)" }}>{user?.email}</div>
+          <div className="text-sm" style={{ color: "rgba(168,237,255,0.35)" }}>{user?.phone}</div>
           {user?.isAdmin && (
-            <div className="flex items-center gap-1 text-primary text-xs mt-1">
+            <div className="flex items-center gap-1 text-xs mt-1" style={{ color: "#f97316" }}>
               <Shield size={12} /> Admin
             </div>
           )}
@@ -71,27 +102,41 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
         {[
           { label: "Total Invested", value: `$${user?.totalInvested?.toFixed(2) || "0.00"}` },
           { label: "Total Earnings", value: `$${user?.totalEarnings?.toFixed(2) || "0.00"}` },
-          { label: "Current Level", value: `Level ${user?.currentLevel ?? 0}` },
-          { label: "Member Since", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—" },
+          { label: "Current Level",  value: `Level ${user?.currentLevel ?? 0}` },
+          { label: "Member Since",   value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—" },
         ].map(item => (
-          <div key={item.label} className="bg-card border border-border rounded-xl p-4">
-            <div className="text-xs text-muted-foreground">{item.label}</div>
-            <div className="font-bold text-sm mt-1">{item.value}</div>
+          <div key={item.label} className="rounded-xl p-4" style={GLASS}>
+            <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{item.label}</div>
+            <div className="font-bold text-sm mt-1" style={{ color: "rgba(168,237,255,0.85)" }}>{item.value}</div>
           </div>
         ))}
       </div>
 
       {/* Referral Code */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="text-xs text-muted-foreground mb-2">Your Referral Code</div>
+      <div className="rounded-xl p-4" style={GLASS}>
+        <div className="text-xs mb-2" style={{ color: "rgba(168,237,255,0.4)" }}>Your Referral Code</div>
         <div className="flex items-center gap-3">
-          <div className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 font-mono font-bold text-primary tracking-widest text-center">
+          <div
+            className="flex-1 rounded-lg px-4 py-2.5 font-mono font-bold text-center tracking-widest"
+            style={{
+              background: "rgba(0,10,24,0.6)",
+              border: "1px solid rgba(61,214,245,0.18)",
+              color: TEAL,
+              fontFamily: "'Orbitron', monospace",
+              letterSpacing: "0.12em",
+            }}
+          >
             {user?.referralCode}
           </div>
           <button
             data-testid="button-copy-referral"
             onClick={copyReferral}
-            className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary"
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{
+              background: "rgba(61,214,245,0.08)",
+              border: "1px solid rgba(61,214,245,0.2)",
+              color: TEAL,
+            }}
           >
             <Copy size={16} />
           </button>
@@ -99,28 +144,28 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
       </div>
 
       {/* Edit Form */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <h2 className="font-semibold text-sm mb-4">Update Profile</h2>
+      <div className="rounded-2xl p-5" style={GLASS}>
+        <h2 className="font-semibold text-sm mb-4" style={{ color: "rgba(168,237,255,0.75)" }}>Update Profile</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="walletAddress" render={({ field }) => (
               <FormItem>
-                <FormLabel>USDT Wallet Address (TRC20)</FormLabel>
-                <FormControl><Input data-testid="input-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} /></FormControl>
+                <FormLabel style={LABEL_STYLE}>USDT Wallet Address (TRC20)</FormLabel>
+                <FormControl><Input data-testid="input-wallet" placeholder="TXxxxxxxxxxxxxxxxxx" {...field} style={INPUT_STYLE} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="country" render={({ field }) => (
               <FormItem>
-                <FormLabel>Country</FormLabel>
-                <FormControl><Input data-testid="input-country" placeholder="e.g. Singapore" {...field} /></FormControl>
+                <FormLabel style={LABEL_STYLE}>Country</FormLabel>
+                <FormControl><Input data-testid="input-country" placeholder="e.g. Singapore" {...field} style={INPUT_STYLE} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="idNumber" render={({ field }) => (
               <FormItem>
-                <FormLabel>ID / Passport Number</FormLabel>
-                <FormControl><Input data-testid="input-id" placeholder="Optional" {...field} /></FormControl>
+                <FormLabel style={LABEL_STYLE}>ID / Passport Number</FormLabel>
+                <FormControl><Input data-testid="input-id" placeholder="Optional" {...field} style={INPUT_STYLE} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -128,7 +173,13 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
               data-testid="button-save-profile"
               type="submit"
               disabled={setup.isPending}
-              className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+              className="w-full py-2.5 rounded-xl font-bold transition-all disabled:opacity-60"
+              style={{
+                background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                color: "#010810",
+                letterSpacing: "0.04em",
+                boxShadow: "0 0 16px rgba(61,214,245,0.3)",
+              }}
             >
               {setup.isPending ? "Saving..." : "Save Changes"}
             </button>
@@ -138,16 +189,21 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
 
       {/* Links */}
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/terms">
-          <div className="bg-card border border-border rounded-xl p-4 text-sm font-medium hover:border-primary/30 transition-colors cursor-pointer">
-            Terms & Conditions
-          </div>
-        </Link>
-        <Link href="/privacy">
-          <div className="bg-card border border-border rounded-xl p-4 text-sm font-medium hover:border-primary/30 transition-colors cursor-pointer">
-            Privacy Policy
-          </div>
-        </Link>
+        {[
+          { href: "/terms",   label: "Terms & Conditions" },
+          { href: "/privacy", label: "Privacy Policy" },
+        ].map(item => (
+          <Link key={item.href} href={item.href}>
+            <div
+              className="rounded-xl p-4 text-sm font-medium cursor-pointer transition-all"
+              style={{ ...GLASS, color: "rgba(168,237,255,0.6)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(61,214,245,0.25)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(61,214,245,0.10)"; }}
+            >
+              {item.label}
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

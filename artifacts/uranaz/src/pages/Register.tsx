@@ -7,6 +7,7 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Orbit } from "lucide-react";
 
 const schema = z.object({
   name: z.string().min(2, "Full name required"),
@@ -17,6 +18,9 @@ const schema = z.object({
 });
 
 interface Props { onLogin: (user: any) => void; }
+
+const LABEL_STYLE = { color: "rgba(168,237,255,0.7)", fontSize: "0.8rem", letterSpacing: "0.05em" };
+const INPUT_STYLE = { background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" };
 
 export default function Register({ onLogin }: Props) {
   const [, setLocation] = useLocation();
@@ -43,74 +47,91 @@ export default function Register({ onLogin }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(246,195,67,0.07)_0%,_transparent_60%)] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-4">
-            <span className="text-primary font-bold text-xl">UT</span>
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{
+              background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(42,179,215,0.08))",
+              border: "1px solid rgba(61,214,245,0.4)",
+              boxShadow: "0 0 30px rgba(61,214,245,0.25), 0 0 60px rgba(61,214,245,0.08)",
+            }}
+          >
+            <Orbit size={28} style={{ color: "#3DD6F5" }} />
           </div>
-          <h1 className="text-2xl font-bold">Create Account</h1>
-          <p className="text-muted-foreground text-sm mt-1">Join URANAZ TRADES and start earning</p>
+          <h1
+            className="text-2xl font-bold mb-1"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Create Account
+          </h1>
+          <p style={{ color: "rgba(168,237,255,0.5)", fontSize: "0.875rem" }}>
+            Join URANAZ TRADES and start earning
+          </p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "rgba(5, 18, 32, 0.75)",
+            backdropFilter: "blur(24px) saturate(1.5)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.5)",
+            border: "1px solid rgba(61, 214, 245, 0.20)",
+            boxShadow: "0 0 0 1px rgba(61,214,245,0.06) inset, 0 20px 60px rgba(0,0,0,0.5)",
+          }}
+        >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl><Input data-testid="input-name" placeholder="Your full name" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email Address</FormLabel>
-                  <FormControl><Input data-testid="input-email" type="email" placeholder="you@example.com" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="phone" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl><Input data-testid="input-phone" placeholder="+65 8123 4567" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="password" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl><Input data-testid="input-password" type="password" placeholder="Min 6 characters" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="referralCode" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Referral Code (Optional)</FormLabel>
-                  <FormControl><Input data-testid="input-referral" placeholder="Enter referral code" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              {[
+                { name: "name" as const,         label: "Full Name",                testId: "input-name",     type: "text",     placeholder: "Your full name" },
+                { name: "email" as const,        label: "Email Address",            testId: "input-email",    type: "email",    placeholder: "you@example.com" },
+                { name: "phone" as const,        label: "Phone Number",             testId: "input-phone",    type: "tel",      placeholder: "+65 8123 4567" },
+                { name: "password" as const,     label: "Password",                 testId: "input-password", type: "password", placeholder: "Min 6 characters" },
+                { name: "referralCode" as const, label: "Referral Code (Optional)", testId: "input-referral", type: "text",     placeholder: "Enter referral code" },
+              ].map(f => (
+                <FormField key={f.name} control={form.control} name={f.name} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={LABEL_STYLE}>{f.label}</FormLabel>
+                    <FormControl>
+                      <Input data-testid={f.testId} type={f.type} placeholder={f.placeholder} {...field} style={INPUT_STYLE} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              ))}
               <button
                 data-testid="button-submit-register"
                 type="submit"
                 disabled={register.isPending}
-                className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                className="w-full py-2.5 rounded-xl font-semibold transition-all duration-200 disabled:opacity-60 mt-2"
+                style={{
+                  background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)",
+                  color: "#010810",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  boxShadow: "0 0 20px rgba(61,214,245,0.35), 0 4px 16px rgba(0,0,0,0.4)",
+                }}
               >
                 {register.isPending ? "Creating account..." : "Create Account"}
               </button>
             </form>
           </Form>
 
-          <div className="mt-5 text-center text-sm text-muted-foreground">
+          <div className="mt-5 text-center text-sm" style={{ color: "rgba(168,237,255,0.4)" }}>
             Already have an account?{" "}
-            <Link href="/login" className="text-primary font-semibold hover:underline">Sign In</Link>
+            <Link href="/login" style={{ color: "#3DD6F5", fontWeight: 600 }} className="hover:underline">Sign In</Link>
           </div>
-          <div className="mt-3 text-xs text-muted-foreground text-center">
+          <div className="mt-3 text-xs text-center" style={{ color: "rgba(168,237,255,0.3)" }}>
             By registering, you agree to our{" "}
-            <Link href="/terms" className="text-primary hover:underline">Terms</Link> and{" "}
-            <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+            <Link href="/terms" style={{ color: "#3DD6F5" }} className="hover:underline">Terms</Link> and{" "}
+            <Link href="/privacy" style={{ color: "#3DD6F5" }} className="hover:underline">Privacy Policy</Link>
           </div>
         </div>
       </div>
