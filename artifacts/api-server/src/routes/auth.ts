@@ -4,7 +4,7 @@ import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
-import { sendOtpEmail, isOtpRegistrationEnabled } from "../lib/email";
+import { sendOtpEmail, sendWelcomeEmail, isOtpRegistrationEnabled } from "../lib/email";
 
 const router = Router();
 
@@ -209,6 +209,9 @@ router.post("/auth/register", async (req, res) => {
     res.status(500).json({ message: "Registration failed. Please try again." });
     return;
   }
+
+  // Send welcome email (fire-and-forget)
+  sendWelcomeEmail(result.user.email, result.user.name ?? "").catch(() => {});
 
   const token = signToken(result.user.id);
   res.status(201).json({ user: userToResponse(result.user), token });

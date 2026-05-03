@@ -631,9 +631,11 @@ function P2PModal({ usdtBalance, hyperBalance, hyperEnabled, onClose, onSuccess 
                 <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Recipient User ID</label>
                 <div className="flex gap-2">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={userId}
-                    onChange={e => { setUserId(e.target.value); setVerified(null); setVerifyError(""); }}
+                    onChange={e => { setUserId(e.target.value.replace(/\D/g, "")); setVerified(null); setVerifyError(""); }}
                     placeholder="Enter user ID..."
                     className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none"
                     style={{

@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings } from "../lib/blockchain";
 import { ethers } from "ethers";
 import { logger } from "../lib/logger";
+import { sendDepositCreditedEmail } from "../lib/email";
 
 const router = Router();
 
@@ -111,6 +112,9 @@ router.post("/deposits/check", requireAuth, async (req, res) => {
       creditedAt: new Date(),
       amount: result.amount.toString(),
     }).where(eq(depositsTable.id, deposit.id));
+
+    // Send deposit credited email (fire-and-forget)
+    sendDepositCreditedEmail(freshUser.email, freshUser.name ?? "", result.amount).catch(() => {});
 
     res.json({
       status: "credited",
