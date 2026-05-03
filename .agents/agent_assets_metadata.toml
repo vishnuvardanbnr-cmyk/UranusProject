@@ -6,3 +6,9 @@ id = "YaF_Ea19-LW2r4IeRelOm"
 uri = "file://artifacts/uranaz/public/logo.png"
 type = "image"
 title = "uranaz trades logo"
+
+[[generated]]
+id = "ig-zxDVW0tyXkg2lpubsi"
+uri = "file://attached_assets/uranus_logo_new.png"
+type = "image"
+title = "uranus trades logo"
