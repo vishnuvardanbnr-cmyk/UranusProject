@@ -238,11 +238,20 @@ const GLASS = {
   border: "1px solid rgba(61,214,245,0.12)",
 } as const;
 
-const plans = [
-  { tier: "tier1", range: "$100 – $400",       rate: 0.006, days: 300, label: "0.6% Daily", min: 100,  max: 400  },
-  { tier: "tier2", range: "$500 – $900",       rate: 0.007, days: 260, label: "0.7% Daily", min: 500,  max: 900,  popular: true },
-  { tier: "tier3", range: "$1,000 – $1,500",   rate: 0.008, days: 225, label: "0.8% Daily", min: 1000, max: 1500 },
+const DEFAULT_PLANS = [
+  { tier: "tier1", range: "$100 – $400",     rate: 0.005, days: 360, label: "0.5% Daily", min: 100,  max: 400  },
+  { tier: "tier2", range: "$500 – $900",     rate: 0.0055, days: 328, label: "0.55% Daily", min: 500,  max: 900,  popular: true },
+  { tier: "tier3", range: "$1,000 – $1,500", rate: 0.006, days: 300, label: "0.6% Daily", min: 1000, max: 1500 },
 ];
+
+function buildPlans(apiPlans: any) {
+  if (!apiPlans) return DEFAULT_PLANS;
+  return [
+    { tier: "tier1", range: "$100 – $400",     rate: apiPlans.tier1.dailyRate, days: apiPlans.tier1.days, label: `${(apiPlans.tier1.dailyRate * 100).toFixed(2)}% Daily`, min: 100,  max: 400  },
+    { tier: "tier2", range: "$500 – $900",     rate: apiPlans.tier2.dailyRate, days: apiPlans.tier2.days, label: `${(apiPlans.tier2.dailyRate * 100).toFixed(2)}% Daily`, min: 500,  max: 900, popular: true },
+    { tier: "tier3", range: "$1,000 – $1,500", rate: apiPlans.tier3.dailyRate, days: apiPlans.tier3.days, label: `${(apiPlans.tier3.dailyRate * 100).toFixed(2)}% Daily`, min: 1000, max: 1500 },
+  ];
+}
 
 const schema = z.object({
   amount: z.coerce.number().min(100).max(1500),
@@ -252,15 +261,16 @@ const schema = z.object({
 
 export default function Invest({ user }: { user: any }) {
   const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
-  const [selectedTier, setSelectedTier] = useState<string>("tier2");
+  const [selectedTier, setSelectedTier] = useState<string>("tier1");
   const [limitModal, setLimitModal] = useState<{ currentTotal: number; remaining: number } | null>(null);
   const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
+  const [plans, setPlans] = useState(DEFAULT_PLANS);
   const createInvestment = useCreateInvestment();
   const { data: investments } = useListInvestments();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch live admin-configured HYPERCOIN minimum %
+  // Fetch live admin-configured settings (rates, days, HC min %)
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
@@ -268,15 +278,18 @@ export default function Invest({ user }: { user: any }) {
         if (typeof d.hyperCoinMinPercent === "number") {
           setHyperCoinMinPercent(d.hyperCoinMinPercent);
         }
+        if (d.plans) {
+          setPlans(buildPlans(d.plans));
+        }
       })
       .catch(() => {});
   }, []);
 
-  const plan = plans.find(p => p.tier === selectedTier)!;
+  const plan = plans.find(p => p.tier === selectedTier) ?? plans[0];
 
   const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { amount: 500, hyperCoinAmount: 250, usdtAmount: 250 },
+    defaultValues: { amount: 100, hyperCoinAmount: 50, usdtAmount: 50 },
   });
 
   const watchedAmount = form.watch("amount");
@@ -308,8 +321,9 @@ export default function Invest({ user }: { user: any }) {
       await createInvestment.mutateAsync({ data });
       await queryClient.invalidateQueries({ queryKey: getListInvestmentsQueryKey() });
       toast({ title: "Investment created!", description: `$${data.amount} invested successfully` });
-      const defaultHyper = Math.ceil(500 * (hyperCoinMinPercent / 100));
-      form.reset({ amount: 500, hyperCoinAmount: defaultHyper, usdtAmount: 500 - defaultHyper });
+      const defaultHyper = Math.ceil(100 * (hyperCoinMinPercent / 100));
+      form.reset({ amount: 100, hyperCoinAmount: defaultHyper, usdtAmount: 100 - defaultHyper });
+      setSelectedTier("tier1");
     } catch (err: any) {
       const data = err?.data;
       if (data?.code === "MAX_INVESTMENT_EXCEEDED") {
