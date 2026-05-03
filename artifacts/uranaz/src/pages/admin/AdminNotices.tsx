@@ -72,7 +72,7 @@ const BLANK_NOTICE = {
 
 const TEMPLATES: { name: string; emoji: string; data: Partial<typeof BLANK_NOTICE> }[] = [
   { name: "Maintenance",      emoji: "⚙️", data: { title: "Scheduled Maintenance",   message: "Platform will be under maintenance for ~30 minutes.",                    type: "warning",      priority: "high",   icon: "⚙️",  pinned: true } },
-  { name: "Welcome",          emoji: "👋", data: { title: "Welcome to URANAZ TRADES", message: "Glad to have you on board. Explore your dashboard and start earning.", type: "success",      priority: "normal", icon: "👋",  ctaLabel: "Explore", ctaUrl: "/dashboard" } },
+  { name: "Welcome",          emoji: "👋", data: { title: "Welcome to URANUS TRADES", message: "Glad to have you on board. Explore your dashboard and start earning.", type: "success",      priority: "normal", icon: "👋",  ctaLabel: "Explore", ctaUrl: "/dashboard" } },
   { name: "Promo",            emoji: "🎉", data: { title: "Limited-Time Bonus",       message: "Invest this week and get a special launch bonus!",                     type: "promo",        priority: "high",   icon: "🎉",  ctaLabel: "Invest Now", ctaUrl: "/invest" } },
   { name: "Critical Update",  emoji: "🚨", data: { title: "Important Notice",         message: "Please update your wallet address before the next payout cycle.",       type: "critical",     priority: "urgent", icon: "🚨",  pinned: true, ctaLabel: "Update", ctaUrl: "/profile" } },
   { name: "Announcement",     emoji: "📢", data: { title: "New Feature Available",    message: "We've launched a brand-new dashboard. Check it out!",                   type: "announcement", priority: "normal", icon: "📢" } },

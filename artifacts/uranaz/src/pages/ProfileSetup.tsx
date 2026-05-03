@@ -42,7 +42,7 @@ export default function ProfileSetup({ onUpdate }: Props) {
       onUpdate(user);
       toast({
         title: walletAddress ? "Profile complete!" : "Profile saved!",
-        description: walletAddress ? "Welcome to URANAZ TRADES" : "You can add your wallet address later from your profile.",
+        description: walletAddress ? "Welcome to URANUS TRADES" : "You can add your wallet address later from your profile.",
       });
       setLocation("/dashboard");
     } catch (err: any) {

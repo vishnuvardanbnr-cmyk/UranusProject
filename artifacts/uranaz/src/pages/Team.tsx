@@ -41,7 +41,7 @@ export default function Team({ user }: { user: any }) {
   const shareWhatsApp = () => {
     if (!referral?.referralLink) return;
     const msg = encodeURIComponent(
-      `🚀 Join URANAZ TRADES and start earning daily returns!\n\nUse my referral link to sign up:\n${referral.referralLink}\n\nMy referral code: ${referral.referralCode}`
+      `🚀 Join URANUS TRADES and start earning daily returns!\n\nUse my referral link to sign up:\n${referral.referralLink}\n\nMy referral code: ${referral.referralCode}`
     );
     window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
@@ -50,7 +50,7 @@ export default function Team({ user }: { user: any }) {
     if (!referral?.referralLink) return;
     if (navigator.share) {
       await navigator.share({
-        title: "Join URANAZ TRADES",
+        title: "Join URANUS TRADES",
         text: `Use my referral code ${referral.referralCode} to sign up and earn daily returns!`,
         url: referral.referralLink,
       });

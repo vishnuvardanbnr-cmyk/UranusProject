@@ -153,7 +153,7 @@ export default function AdminReports() {
       const r = await fetch(`${tabConfig.endpoint}?${params.toString()}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       const json = await r.json();
       const ts = new Date().toISOString().slice(0, 10);
-      downloadCSV(`uranaz-${tab}-${ts}.csv`, json.rows ?? []);
+      downloadCSV(`uranus-${tab}-${ts}.csv`, json.rows ?? []);
       toast({ title: "Exported", description: `${json.rows?.length ?? 0} rows` });
     } catch (e: any) {
       toast({ title: "Export failed", description: e?.message, variant: "destructive" });

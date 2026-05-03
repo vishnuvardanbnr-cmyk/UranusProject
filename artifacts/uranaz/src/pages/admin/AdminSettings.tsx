@@ -238,7 +238,7 @@ export default function AdminSettings() {
       smtpUser: "",
       smtpPassword: "",
       smtpFrom: "",
-      smtpFromName: "URANAZ TRADES",
+      smtpFromName: "URANUS TRADES",
       otpRegistrationEnabled: false,
       otpWithdrawalEnabled: false,
       otpWalletUpdateEnabled: false,
@@ -1016,7 +1016,7 @@ export default function AdminSettings() {
                   <FieldLabel>From Email</FieldLabel>
                   <input
                     type="email"
-                    placeholder="noreply@uranaz.com"
+                    placeholder="noreply@uranus.com"
                     {...smtpForm.register("smtpFrom")}
                     className={INPUT_CLS}
                     style={INPUT_STYLE}
@@ -1026,7 +1026,7 @@ export default function AdminSettings() {
                   <FieldLabel>From Name</FieldLabel>
                   <input
                     type="text"
-                    placeholder="URANAZ TRADES"
+                    placeholder="URANUS TRADES"
                     {...smtpForm.register("smtpFromName")}
                     className={INPUT_CLS}
                     style={INPUT_STYLE}
