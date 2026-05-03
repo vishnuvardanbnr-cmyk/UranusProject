@@ -7,6 +7,7 @@ export const platformSettingsTable = pgTable("platform_settings", {
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
   minDeposit: numeric("min_deposit", { precision: 10, scale: 2 }).notNull().default("100"),
   maxDeposit: numeric("max_deposit", { precision: 10, scale: 2 }).notNull().default("1500"),
+  maxTotalInvestment: numeric("max_total_investment", { precision: 10, scale: 2 }).notNull().default("2000"),
   hyperCoinMinPercent: numeric("hyper_coin_min_percent", { precision: 5, scale: 2 }).notNull().default("50"),
   spotReferralRate: numeric("spot_referral_rate", { precision: 5, scale: 4 }).notNull().default("0.05"),
   launchOfferActive: boolean("launch_offer_active").notNull().default(true),

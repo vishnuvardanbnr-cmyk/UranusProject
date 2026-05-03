@@ -96,19 +96,19 @@ router.post("/investments", requireAuth, async (req, res) => {
     return;
   }
 
-  // Enforce $2000 total active investment limit
-  const MAX_TOTAL_INVESTMENT = 2000;
+  // Enforce configurable total active investment limit
+  const maxTotalInvestment = parseFloat(settings?.maxTotalInvestment ?? "2000");
   const [{ total: activeTotal }] = await db
     .select({ total: sum(investmentsTable.amount) })
     .from(investmentsTable)
     .where(and(eq(investmentsTable.userId, user.id), eq(investmentsTable.status, "active")));
   const currentActiveTotal = parseFloat(activeTotal ?? "0");
-  if (currentActiveTotal + amount > MAX_TOTAL_INVESTMENT) {
-    const remaining = Math.max(0, MAX_TOTAL_INVESTMENT - currentActiveTotal);
+  if (currentActiveTotal + amount > maxTotalInvestment) {
+    const remaining = Math.max(0, maxTotalInvestment - currentActiveTotal);
     res.status(400).json({
-      message: `Maximum total investment is $${MAX_TOTAL_INVESTMENT}. You have $${currentActiveTotal.toFixed(2)} currently active, so you can only invest up to $${remaining.toFixed(2)} more.`,
+      message: `Maximum total investment is $${maxTotalInvestment}. You have $${currentActiveTotal.toFixed(2)} currently active, so you can only invest up to $${remaining.toFixed(2)} more.`,
       code: "MAX_INVESTMENT_EXCEEDED",
-      maxTotal: MAX_TOTAL_INVESTMENT,
+      maxTotal: maxTotalInvestment,
       currentTotal: currentActiveTotal,
       remaining,
     });

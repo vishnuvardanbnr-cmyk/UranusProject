@@ -46,6 +46,7 @@ type SettingsForm = {
   maintenanceMode: boolean;
   minDeposit: number;
   maxDeposit: number;
+  maxTotalInvestment: number;
   hyperCoinMinPercent: number;
   hyperCoinPrice: number;
   spotReferralRate: number;
@@ -554,11 +555,12 @@ export default function AdminSettings() {
             <SubHeader>Deposit & Pricing</SubHeader>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { label: "Min Deposit (USDT)",      testId: "input-min-deposit",     name: "minDeposit" as const,         type: "number", extra: {} },
-                { label: "Max Deposit (USDT)",      testId: "input-max-deposit",     name: "maxDeposit" as const,         type: "number", extra: {} },
-                { label: "Min HYPERCOIN % (0–100)", testId: "input-hypercoin-pct",   name: "hyperCoinMinPercent" as const, type: "number", extra: { step: "1", min: "0", max: "100" } },
-                { label: "HYPERCOIN Price (USDT)",  testId: "input-hypercoin-price", name: "hyperCoinPrice" as const,      type: "number", extra: { step: "0.0001", min: "0.0001" } },
-                { label: "Spot Referral Rate (%)",  testId: "input-spot-commission", name: "spotReferralRate" as const,    type: "number", extra: { step: "0.01" } },
+                { label: "Min Deposit (USDT)",           testId: "input-min-deposit",        name: "minDeposit" as const,          type: "number", extra: {} },
+                { label: "Max Deposit (USDT)",           testId: "input-max-deposit",        name: "maxDeposit" as const,          type: "number", extra: {} },
+                { label: "Max Total Investment (USDT)",  testId: "input-max-total-invest",   name: "maxTotalInvestment" as const,  type: "number", extra: { step: "100", min: "100" } },
+                { label: "Min HYPERCOIN % (0–100)",      testId: "input-hypercoin-pct",      name: "hyperCoinMinPercent" as const,  type: "number", extra: { step: "1", min: "0", max: "100" } },
+                { label: "HYPERCOIN Price (USDT)",       testId: "input-hypercoin-price",    name: "hyperCoinPrice" as const,       type: "number", extra: { step: "0.0001", min: "0.0001" } },
+                { label: "Spot Referral Rate (%)",       testId: "input-spot-commission",    name: "spotReferralRate" as const,     type: "number", extra: { step: "0.01" } },
               ].map(f => (
                 <div key={f.name}>
                   <FieldLabel>{f.label}</FieldLabel>

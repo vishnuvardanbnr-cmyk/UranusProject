@@ -307,6 +307,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
       maintenanceMode: created.maintenanceMode,
       minDeposit: parseFloat(created.minDeposit),
       maxDeposit: parseFloat(created.maxDeposit),
+      maxTotalInvestment: parseFloat(created.maxTotalInvestment),
       hyperCoinMinPercent: parseFloat(created.hyperCoinMinPercent),
       hyperCoinPrice: parseFloat(created.hyperCoinPrice),
       spotReferralRate: parseFloat(created.spotReferralRate),
@@ -320,6 +321,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     maintenanceMode: settings.maintenanceMode,
     minDeposit: parseFloat(settings.minDeposit),
     maxDeposit: parseFloat(settings.maxDeposit),
+    maxTotalInvestment: parseFloat(settings.maxTotalInvestment),
     hyperCoinMinPercent: parseFloat(settings.hyperCoinMinPercent),
     hyperCoinPrice: parseFloat(settings.hyperCoinPrice),
     spotReferralRate: parseFloat(settings.spotReferralRate),
@@ -345,6 +347,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     if (parsed.data.withdrawalEnabled !== undefined) updates.withdrawalEnabled = parsed.data.withdrawalEnabled;
     if (parsed.data.minDeposit !== undefined) updates.minDeposit = parsed.data.minDeposit.toString();
     if (parsed.data.maxDeposit !== undefined) updates.maxDeposit = parsed.data.maxDeposit.toString();
+    if (parsed.data.maxTotalInvestment !== undefined) updates.maxTotalInvestment = parsed.data.maxTotalInvestment.toString();
     if (parsed.data.hyperCoinMinPercent !== undefined) updates.hyperCoinMinPercent = parsed.data.hyperCoinMinPercent.toString();
     if (parsed.data.hyperCoinPrice !== undefined) updates.hyperCoinPrice = parsed.data.hyperCoinPrice.toString();
     if (parsed.data.spotReferralRate !== undefined) updates.spotReferralRate = parsed.data.spotReferralRate.toString();
@@ -359,6 +362,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     maintenanceMode: updated.maintenanceMode,
     minDeposit: parseFloat(updated.minDeposit),
     maxDeposit: parseFloat(updated.maxDeposit),
+    maxTotalInvestment: parseFloat(updated.maxTotalInvestment),
     hyperCoinMinPercent: parseFloat(updated.hyperCoinMinPercent),
     hyperCoinPrice: parseFloat(updated.hyperCoinPrice),
     spotReferralRate: parseFloat(updated.spotReferralRate),
