@@ -139,16 +139,6 @@ export default function Login({ onLogin }: Props) {
               Register
             </Link>
           </div>
-          <div
-            className="mt-3 text-center text-xs rounded-lg p-2"
-            style={{
-              background: "rgba(61,214,245,0.05)",
-              border: "1px solid rgba(61,214,245,0.10)",
-              color: "rgba(168,237,255,0.35)",
-            }}
-          >
-            Demo: john@example.com / demo123 &nbsp;|&nbsp; Admin: admin@uranus.com / admin123
-          </div>
         </div>
       </div>
     </div>
