@@ -915,6 +915,14 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  function copyUsername() {
+    navigator.clipboard.writeText(user?.name ?? "").then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1022,17 +1030,28 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
           <div className="px-5 pb-6 space-y-4">
             {/* User info card */}
             <div
-              className="rounded-2xl p-4 space-y-2.5"
+              className="rounded-2xl p-4"
               style={{ background: "rgba(184,127,255,0.06)", border: "1px solid rgba(184,127,255,0.16)" }}
             >
-              <div className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(168,237,255,0.35)" }}>Your HC Account Info</div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>Username</span>
-                <span className="text-xs font-bold" style={{ color: "#b87fff" }}>{user?.name}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>Referral Code</span>
-                <span className="text-xs font-mono font-bold" style={{ color: "rgba(200,240,255,0.8)" }}>{user?.referralCode}</span>
+              <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "rgba(168,237,255,0.35)" }}>Your HC Account Info</div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs shrink-0" style={{ color: "rgba(168,237,255,0.45)" }}>Username</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold" style={{ color: "#b87fff" }}>{user?.name}</span>
+                  <button
+                    onClick={copyUsername}
+                    className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:brightness-125 shrink-0"
+                    style={{
+                      background: copied ? "rgba(52,211,153,0.18)" : "rgba(184,127,255,0.15)",
+                      border: `1px solid ${copied ? "rgba(52,211,153,0.35)" : "rgba(184,127,255,0.3)"}`,
+                    }}
+                    title="Copy username"
+                  >
+                    {copied
+                      ? <CheckCircle size={11} style={{ color: "#34d399" }} />
+                      : <Copy size={11} style={{ color: "#b87fff" }} />}
+                  </button>
+                </div>
               </div>
             </div>
 
