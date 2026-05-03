@@ -1220,17 +1220,32 @@ export default function WalletPage({ user }: { user: any }) {
       {/* ── HYPERCOIN Balance (only when enabled) ── */}
       {hyperEnabled && (
         <div
-          className="rounded-xl p-4"
+          className="rounded-xl px-4 py-3 flex items-center justify-between"
           style={{
             background: "linear-gradient(135deg, rgba(184,127,255,0.12), rgba(139,92,246,0.06))",
             border: "1px solid rgba(184,127,255,0.28)",
             boxShadow: "0 0 20px rgba(184,127,255,0.07)",
           }}
         >
-          <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
-          <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
-            ${hyperBalance.toFixed(2)}
+          <div>
+            <div className="text-xs mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HYPERCOIN Balance</div>
+            <div className="font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: "#b87fff", fontSize: "1.05rem" }}>
+              ${hyperBalance.toFixed(2)}
+            </div>
           </div>
+          <button
+            onClick={() => setShowHcDepositModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all active:scale-[0.97] hover:brightness-125"
+            style={{
+              background: "linear-gradient(135deg, rgba(184,127,255,0.22), rgba(139,92,246,0.14))",
+              border: "1px solid rgba(184,127,255,0.38)",
+              color: "#b87fff",
+              boxShadow: "0 0 14px rgba(184,127,255,0.15)",
+            }}
+          >
+            <Coins size={13} strokeWidth={2.5} />
+            Deposit
+          </button>
         </div>
       )}
 
@@ -1251,7 +1266,7 @@ export default function WalletPage({ user }: { user: any }) {
       </div>
 
       {/* ── Action Buttons ── */}
-      <div className={`grid gap-2 ${hyperEnabled ? "grid-cols-4" : "grid-cols-3"}`}>
+      <div className="grid gap-2 grid-cols-3">
         {/* Deposit */}
         <button
           onClick={() => setShowDepositModal(true)}
@@ -1280,23 +1295,6 @@ export default function WalletPage({ user }: { user: any }) {
           <ArrowLeftRight size={16} strokeWidth={2.5} />
           P2P
         </button>
-
-        {/* HC Deposit — only when HYPERCOIN is active */}
-        {hyperEnabled && (
-          <button
-            onClick={() => setShowHcDepositModal(true)}
-            className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
-            style={{
-              background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(139,92,246,0.10))",
-              border: "1px solid rgba(184,127,255,0.32)",
-              color: "#b87fff",
-              boxShadow: "0 0 20px rgba(184,127,255,0.12)",
-            }}
-          >
-            <Coins size={16} strokeWidth={2.5} />
-            HC Dep.
-          </button>
-        )}
 
         {/* Withdraw */}
         <button
