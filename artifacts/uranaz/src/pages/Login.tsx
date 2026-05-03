@@ -41,7 +41,7 @@ export default function Login({ onLogin }: Props) {
             className="w-44 h-44 mx-auto mb-4 relative"
             style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
           >
-            <img src="/logo.svg" alt="URANUS TRADES" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="URANUS TRADES" className="w-full h-full object-contain" />
           </div>
           <h1
             className="text-2xl font-bold mb-1"

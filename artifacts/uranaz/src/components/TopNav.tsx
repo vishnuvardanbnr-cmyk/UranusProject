@@ -49,7 +49,7 @@ export default function TopNav({ user, onLogout }: Props) {
             className="w-20 h-20 shrink-0"
             style={{ filter: "drop-shadow(0 0 8px rgba(61,214,245,0.6))" }}
           >
-            <img src="/logo.svg" alt="URANUS" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="URANUS" className="w-full h-full object-contain" />
           </div>
         </Link>
 
