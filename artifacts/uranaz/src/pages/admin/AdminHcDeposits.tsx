@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Coins, Clock, CheckCircle, XCircle, RefreshCw, Eye, X, Check, Ban,
+  CircleDollarSign, Clock, CheckCircle, XCircle, RefreshCw, Eye, X, Check, Ban,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -290,7 +290,7 @@ export default function AdminHcDeposits() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl p-12 text-center" style={GLASS}>
-          <Coins size={32} className="mx-auto mb-3" style={{ color: "rgba(168,237,255,0.15)" }} />
+          <CircleDollarSign size={32} className="mx-auto mb-3" style={{ color: "rgba(168,237,255,0.15)" }} />
           <p className="text-sm" style={{ color: "rgba(168,237,255,0.3)" }}>No {filter !== "all" ? filter : ""} HC deposit requests</p>
         </div>
       ) : (
@@ -310,7 +310,7 @@ export default function AdminHcDeposits() {
                       className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: `${PURPLE}12`, border: `1px solid ${PURPLE}28` }}
                     >
-                      <Coins size={16} style={{ color: PURPLE }} />
+                      <CircleDollarSign size={16} style={{ color: PURPLE }} />
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold truncate" style={{ color: "rgba(168,237,255,0.85)" }}>

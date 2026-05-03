@@ -30,7 +30,7 @@ import {
   ExternalLink,
   ShieldAlert,
   Upload,
-  Coins,
+  CircleDollarSign,
 } from "lucide-react";
 
 function getToken() {
@@ -986,7 +986,7 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
                 boxShadow: "0 0 16px rgba(184,127,255,0.15)",
               }}
             >
-              <Coins size={17} style={{ color: "#b87fff" }} />
+              <CircleDollarSign size={17} style={{ color: "#b87fff" }} />
             </div>
             <div>
               <div className="font-bold tracking-wide text-sm" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif" }}>
@@ -1243,7 +1243,7 @@ export default function WalletPage({ user }: { user: any }) {
               boxShadow: "0 0 14px rgba(184,127,255,0.15)",
             }}
           >
-            <Coins size={13} strokeWidth={2.5} />
+            <CircleDollarSign size={13} strokeWidth={2.5} />
             Deposit
           </button>
         </div>
