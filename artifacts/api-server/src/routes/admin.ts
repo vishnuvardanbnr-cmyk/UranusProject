@@ -549,6 +549,14 @@ router.get("/admin/income-settings", requireAdmin, async (req, res) => {
     levelUnlockL6: parseFloat(s.levelUnlockL6),
     levelUnlockL7: parseFloat(s.levelUnlockL7),
     levelUnlockL8: parseFloat(s.levelUnlockL8),
+    levelDaysL1: s.levelDaysL1,
+    levelDaysL2: s.levelDaysL2,
+    levelDaysL3: s.levelDaysL3,
+    levelDaysL4: s.levelDaysL4,
+    levelDaysL5: s.levelDaysL5,
+    levelDaysL6: s.levelDaysL6,
+    levelDaysL7: s.levelDaysL7,
+    levelDaysL8: s.levelDaysL8,
   });
 });
 
@@ -575,6 +583,14 @@ const IncomeSettingsBody = z.object({
   levelUnlockL6: z.number().min(0),
   levelUnlockL7: z.number().min(0),
   levelUnlockL8: z.number().min(0),
+  levelDaysL1: z.number().int().min(0),
+  levelDaysL2: z.number().int().min(0),
+  levelDaysL3: z.number().int().min(0),
+  levelDaysL4: z.number().int().min(0),
+  levelDaysL5: z.number().int().min(0),
+  levelDaysL6: z.number().int().min(0),
+  levelDaysL7: z.number().int().min(0),
+  levelDaysL8: z.number().int().min(0),
 });
 
 // PUT /api/admin/income-settings
@@ -608,6 +624,14 @@ router.put("/admin/income-settings", requireAdmin, async (req, res) => {
     levelUnlockL6: d.levelUnlockL6.toString(),
     levelUnlockL7: d.levelUnlockL7.toString(),
     levelUnlockL8: d.levelUnlockL8.toString(),
+    levelDaysL1: d.levelDaysL1,
+    levelDaysL2: d.levelDaysL2,
+    levelDaysL3: d.levelDaysL3,
+    levelDaysL4: d.levelDaysL4,
+    levelDaysL5: d.levelDaysL5,
+    levelDaysL6: d.levelDaysL6,
+    levelDaysL7: d.levelDaysL7,
+    levelDaysL8: d.levelDaysL8,
   };
   const [existing] = await db.select().from(platformSettingsTable).limit(1);
   let s;
@@ -639,6 +663,14 @@ router.put("/admin/income-settings", requireAdmin, async (req, res) => {
     levelUnlockL6: parseFloat(s.levelUnlockL6),
     levelUnlockL7: parseFloat(s.levelUnlockL7),
     levelUnlockL8: parseFloat(s.levelUnlockL8),
+    levelDaysL1: s.levelDaysL1,
+    levelDaysL2: s.levelDaysL2,
+    levelDaysL3: s.levelDaysL3,
+    levelDaysL4: s.levelDaysL4,
+    levelDaysL5: s.levelDaysL5,
+    levelDaysL6: s.levelDaysL6,
+    levelDaysL7: s.levelDaysL7,
+    levelDaysL8: s.levelDaysL8,
   });
 });
 

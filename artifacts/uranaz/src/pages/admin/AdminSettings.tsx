@@ -78,6 +78,14 @@ type IncomeForm = {
   levelUnlockL6: number;
   levelUnlockL7: number;
   levelUnlockL8: number;
+  levelDaysL1: number;
+  levelDaysL2: number;
+  levelDaysL3: number;
+  levelDaysL4: number;
+  levelDaysL5: number;
+  levelDaysL6: number;
+  levelDaysL7: number;
+  levelDaysL8: number;
 };
 
 type SmtpForm = {
@@ -347,6 +355,8 @@ export default function AdminSettings() {
       levelCommL4: 4, levelCommL5: 4, levelCommL6: 4, levelCommL7: 4, levelCommL8: 4,
       levelUnlockL2: 1000, levelUnlockL3: 3000,
       levelUnlockL4: 10000, levelUnlockL5: 10000, levelUnlockL6: 10000, levelUnlockL7: 10000, levelUnlockL8: 10000,
+      levelDaysL1: 0, levelDaysL2: 0, levelDaysL3: 0, levelDaysL4: 0,
+      levelDaysL5: 0, levelDaysL6: 0, levelDaysL7: 0, levelDaysL8: 0,
     },
   });
 
@@ -909,6 +919,27 @@ export default function AdminSettings() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Level Commission Active Days */}
+              <div>
+                <SubHeader hint="Number of days from investment start that each level earns commission. Set 0 for unlimited (no expiry).">
+                  <span className="inline-flex items-center gap-1.5"><Layers size={12} />Level Commission Days (0 = unlimited)</span>
+                </SubHeader>
+                <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mt-3">
+                  {([1,2,3,4,5,6,7,8] as const).map(lvl => (
+                    <div key={lvl}>
+                      <FieldLabel>L{lvl}</FieldLabel>
+                      <input type="number" min="0" step="1"
+                        {...incomeForm.register(`levelDaysL${lvl}` as keyof IncomeForm, { valueAsNumber: true })}
+                        className={INPUT_CLS + " text-center"} style={INPUT_STYLE}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] mt-2" style={{ color: "rgba(168,237,255,0.35)" }}>
+                  Example: L1 = 180 means the direct upline receives Level 1 commission only for the first 180 days of each investment. After that, L1 commission stops for that investment.
+                </p>
               </div>
 
               <div className="pt-2 flex justify-end">

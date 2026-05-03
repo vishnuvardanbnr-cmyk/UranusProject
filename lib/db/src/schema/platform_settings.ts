@@ -65,6 +65,15 @@ export const platformSettingsTable = pgTable("platform_settings", {
   levelUnlockL6: numeric("level_unlock_l6", { precision: 10, scale: 2 }).notNull().default("10000"),
   levelUnlockL7: numeric("level_unlock_l7", { precision: 10, scale: 2 }).notNull().default("10000"),
   levelUnlockL8: numeric("level_unlock_l8", { precision: 10, scale: 2 }).notNull().default("10000"),
+  // Level commission active days (0 = unlimited)
+  levelDaysL1: integer("level_days_l1").notNull().default(0),
+  levelDaysL2: integer("level_days_l2").notNull().default(0),
+  levelDaysL3: integer("level_days_l3").notNull().default(0),
+  levelDaysL4: integer("level_days_l4").notNull().default(0),
+  levelDaysL5: integer("level_days_l5").notNull().default(0),
+  levelDaysL6: integer("level_days_l6").notNull().default(0),
+  levelDaysL7: integer("level_days_l7").notNull().default(0),
+  levelDaysL8: integer("level_days_l8").notNull().default(0),
 });
 
 export const insertPlatformSettingsSchema = createInsertSchema(platformSettingsTable).omit({ id: true });

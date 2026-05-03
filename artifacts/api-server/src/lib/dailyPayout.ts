@@ -26,6 +26,16 @@ async function getIncomeSettings() {
       7: parseFloat(s.levelUnlockL7),
       8: parseFloat(s.levelUnlockL8),
     } as Record<number, number>,
+    levelDays: {
+      1: s.levelDaysL1,
+      2: s.levelDaysL2,
+      3: s.levelDaysL3,
+      4: s.levelDaysL4,
+      5: s.levelDaysL5,
+      6: s.levelDaysL6,
+      7: s.levelDaysL7,
+      8: s.levelDaysL8,
+    } as Record<number, number>,
   };
 }
 
@@ -38,6 +48,9 @@ const DEFAULT_LEVEL_UNLOCKS: Record<number, number> = {
   1: 0, 2: 1000, 3: 3000,
   4: 10000, 5: 10000, 6: 10000, 7: 10000, 8: 10000,
 };
+const DEFAULT_LEVEL_DAYS: Record<number, number> = {
+  1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0,
+};
 
 export async function processDailyPayout(): Promise<{ processed: number; skipped: number; errors: number }> {
   const stats = { processed: 0, skipped: 0, errors: 0 };
@@ -47,6 +60,7 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
   const cfg = await getIncomeSettings();
   const levelRates   = cfg?.levelRates   ?? DEFAULT_LEVEL_RATES;
   const levelUnlocks = cfg?.levelUnlocks ?? DEFAULT_LEVEL_UNLOCKS;
+  const levelDays    = cfg?.levelDays    ?? DEFAULT_LEVEL_DAYS;
 
   const activeInvestments = await db
     .select()
@@ -89,6 +103,9 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
 
       // Level commissions — walk up the sponsor chain (up to 8 levels)
       if (investor) {
+        // How many days has this investment been running?
+        const daysElapsed = inv.durationDays - inv.remainingDays;
+
         let currentUserId: number | null = investor.sponsorId;
         let level = 1;
 
@@ -98,6 +115,14 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
 
           const unlockThreshold = levelUnlocks[level] ?? 0;
           const uplineEarnings  = parseFloat(upline.totalEarnings);
+          const maxDays         = levelDays[level] ?? 0; // 0 = unlimited
+
+          // Skip if this level's commission period has expired
+          if (maxDays > 0 && daysElapsed > maxDays) {
+            currentUserId = upline.sponsorId;
+            level++;
+            continue;
+          }
 
           if (uplineEarnings >= unlockThreshold) {
             const rate       = levelRates[level] ?? 0;
