@@ -294,6 +294,9 @@ export default function AdminSettings() {
   const [showBackups, setShowBackups] = useState(false);
   const [backups, setBackups] = useState<any[]>([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
+  const [backupSearch, setBackupSearch] = useState("");
+  const [backupPage, setBackupPage] = useState(1);
+  const BACKUP_PAGE_SIZE = 5;
 
   const loadWalletStats = () => {
     fetch("/api/admin/wallet-stats", { headers: { Authorization: `Bearer ${getToken()}` } })
@@ -1186,34 +1189,95 @@ export default function AdminSettings() {
                 )}
               </button>
 
-              {showBackups && (
-                <div className="mt-4 space-y-2">
-                  {backupsLoading ? (
-                    <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
-                  ) : backups.length === 0 ? (
-                    <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.4)" }}>No backups yet</p>
-                  ) : (
-                    backups.map(b => (
-                      <div
-                        key={b.id}
-                        className="p-3 rounded-xl space-y-1.5"
-                        style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.10)" }}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>{b.userName ?? `User #${b.userId}`}</span>
-                          <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
+              {showBackups && (() => {
+                const q = backupSearch.toLowerCase().trim();
+                const filtered = q
+                  ? backups.filter(b =>
+                      (b.userName ?? "").toLowerCase().includes(q) ||
+                      (b.userEmail ?? "").toLowerCase().includes(q) ||
+                      (b.oldAddress ?? "").toLowerCase().includes(q) ||
+                      String(b.userId) === q,
+                    )
+                  : backups;
+                const totalPages = Math.max(1, Math.ceil(filtered.length / BACKUP_PAGE_SIZE));
+                const safePage = Math.min(backupPage, totalPages);
+                const pageRows = filtered.slice((safePage - 1) * BACKUP_PAGE_SIZE, safePage * BACKUP_PAGE_SIZE);
+                return (
+                  <div className="mt-4 space-y-3">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(168,237,255,0.35)" }} />
+                      <input
+                        value={backupSearch}
+                        onChange={e => { setBackupSearch(e.target.value); setBackupPage(1); }}
+                        placeholder="Search by name, email or address…"
+                        className="w-full text-xs pl-8 pr-8 py-2 rounded-lg outline-none"
+                        style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
+                      />
+                      {backupSearch && (
+                        <button onClick={() => { setBackupSearch(""); setBackupPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "rgba(168,237,255,0.4)" }}>
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* List */}
+                    {backupsLoading ? (
+                      <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
+                    ) : pageRows.length === 0 ? (
+                      <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.4)" }}>
+                        {backupSearch ? "No backups match your search" : "No backups yet"}
+                      </p>
+                    ) : (
+                      pageRows.map(b => (
+                        <div
+                          key={b.id}
+                          className="p-3 rounded-xl space-y-1.5"
+                          style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.10)" }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>{b.userName ?? `User #${b.userId}`}</span>
+                            <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.55)" }}>
+                            <span style={{ color: "rgba(168,237,255,0.4)" }}>Addr: </span>{b.oldAddress}
+                          </div>
+                          <div className="text-xs font-mono break-all" style={{ color: "rgba(248,113,113,0.55)" }}>
+                            <span style={{ color: "rgba(168,237,255,0.4)" }}>Key: </span>{b.oldPrivateKey}
+                          </div>
                         </div>
-                        <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.55)" }}>
-                          <span style={{ color: "rgba(168,237,255,0.4)" }}>Addr: </span>{b.oldAddress}
-                        </div>
-                        <div className="text-xs font-mono break-all" style={{ color: "rgba(248,113,113,0.55)" }}>
-                          <span style={{ color: "rgba(168,237,255,0.4)" }}>Key: </span>{b.oldPrivateKey}
+                      ))
+                    )}
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.4)" }}>
+                          {filtered.length} result{filtered.length !== 1 ? "s" : ""} — page {safePage} / {totalPages}
+                        </span>
+                        <div className="flex gap-1.5">
+                          <button
+                            disabled={safePage <= 1}
+                            onClick={() => setBackupPage(p => Math.max(1, p - 1))}
+                            className="p-1.5 rounded-md disabled:opacity-30 transition-all"
+                            style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: "#3DD6F5" }}
+                          >
+                            <ChevronLeft size={13} />
+                          </button>
+                          <button
+                            disabled={safePage >= totalPages}
+                            onClick={() => setBackupPage(p => Math.min(totalPages, p + 1))}
+                            className="p-1.5 rounded-md disabled:opacity-30 transition-all"
+                            style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: "#3DD6F5" }}
+                          >
+                            <ChevronRight size={13} />
+                          </button>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </SectionCard>
