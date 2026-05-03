@@ -184,12 +184,6 @@ export default function Register({ onLogin }: Props) {
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
-          <div
-            className="w-44 h-44 mx-auto mb-4 relative"
-            style={{ filter: "drop-shadow(0 0 18px rgba(61,214,245,0.5))" }}
-          >
-            <img src="/logo.png" alt="URANAZ TRADES" className="w-full h-full object-contain" />
-          </div>
           <h1
             className="text-2xl font-bold mb-1"
             style={{
