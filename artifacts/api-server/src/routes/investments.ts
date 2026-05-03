@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, investmentsTable, usersTable, incomeTable, platformSettingsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sum } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateInvestmentBody } from "@workspace/api-zod";
 import { sendDepositConfirmationEmail } from "../lib/email";
@@ -93,6 +93,25 @@ router.post("/investments", requireAuth, async (req, res) => {
   const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
   if (!freshUser) {
     res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  // Enforce $2000 total active investment limit
+  const MAX_TOTAL_INVESTMENT = 2000;
+  const [{ total: activeTotal }] = await db
+    .select({ total: sum(investmentsTable.amount) })
+    .from(investmentsTable)
+    .where(and(eq(investmentsTable.userId, user.id), eq(investmentsTable.status, "active")));
+  const currentActiveTotal = parseFloat(activeTotal ?? "0");
+  if (currentActiveTotal + amount > MAX_TOTAL_INVESTMENT) {
+    const remaining = Math.max(0, MAX_TOTAL_INVESTMENT - currentActiveTotal);
+    res.status(400).json({
+      message: `Maximum total investment is $${MAX_TOTAL_INVESTMENT}. You have $${currentActiveTotal.toFixed(2)} currently active, so you can only invest up to $${remaining.toFixed(2)} more.`,
+      code: "MAX_INVESTMENT_EXCEEDED",
+      maxTotal: MAX_TOTAL_INVESTMENT,
+      currentTotal: currentActiveTotal,
+      remaining,
+    });
     return;
   }
 

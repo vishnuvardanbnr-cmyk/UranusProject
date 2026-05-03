@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown } from "lucide-react";
+import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown, AlertTriangle } from "lucide-react";
 
 const TEAL = "#3DD6F5";
 
@@ -148,6 +148,90 @@ function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyper
     </div>
   );
 }
+/* ── Max Investment Limit Modal ── */
+function MaxInvestmentModal({
+  currentTotal,
+  remaining,
+  onClose,
+}: {
+  currentTotal: number;
+  remaining: number;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(1,8,16,0.92)", backdropFilter: "blur(12px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(255,100,100,0.25)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #ff6464, transparent)" }} />
+
+        <div className="p-6 text-center">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: "rgba(255,100,100,0.1)", border: "1px solid rgba(255,100,100,0.25)" }}
+          >
+            <AlertTriangle size={26} style={{ color: "#ff6464" }} />
+          </div>
+
+          <h2
+            className="font-bold text-base mb-2"
+            style={{ fontFamily: "'Orbitron', sans-serif", color: "rgba(200,240,255,0.92)" }}
+          >
+            Investment Limit Reached
+          </h2>
+          <p className="text-sm mb-5" style={{ color: "rgba(168,237,255,0.5)" }}>
+            The maximum total investment per account is{" "}
+            <span style={{ color: "#ff6464", fontWeight: 700 }}>$2,000</span>.
+          </p>
+
+          <div
+            className="rounded-2xl p-4 mb-5 text-left space-y-3"
+            style={{ background: "rgba(255,100,100,0.05)", border: "1px solid rgba(255,100,100,0.15)" }}
+          >
+            <div className="flex justify-between text-sm">
+              <span style={{ color: "rgba(168,237,255,0.45)" }}>Currently Active</span>
+              <span style={{ color: "rgba(200,240,255,0.85)", fontWeight: 600 }}>${currentTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span style={{ color: "rgba(168,237,255,0.45)" }}>Maximum Allowed</span>
+              <span style={{ color: "rgba(200,240,255,0.85)", fontWeight: 600 }}>$2,000.00</span>
+            </div>
+            <div className="h-px" style={{ background: "rgba(255,100,100,0.12)" }} />
+            <div className="flex justify-between text-sm">
+              <span style={{ color: "rgba(168,237,255,0.45)" }}>You Can Still Invest</span>
+              <span style={{ color: remaining > 0 ? TEAL : "#ff6464", fontWeight: 700 }}>
+                {remaining > 0 ? `$${remaining.toFixed(2)}` : "Nothing"}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl font-bold text-sm"
+            style={{
+              background: "rgba(61,214,245,0.1)",
+              border: "1px solid rgba(61,214,245,0.2)",
+              color: TEAL,
+            }}
+          >
+            Got It
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const GLASS = {
   background: "rgba(5,18,32,0.65)",
   backdropFilter: "blur(14px)",
@@ -169,6 +253,7 @@ const schema = z.object({
 export default function Invest({ user }: { user: any }) {
   const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
   const [selectedTier, setSelectedTier] = useState<string>("tier2");
+  const [limitModal, setLimitModal] = useState<{ currentTotal: number; remaining: number } | null>(null);
   const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
   const createInvestment = useCreateInvestment();
   const { data: investments } = useListInvestments();
@@ -226,7 +311,15 @@ export default function Invest({ user }: { user: any }) {
       const defaultHyper = Math.ceil(500 * (hyperCoinMinPercent / 100));
       form.reset({ amount: 500, hyperCoinAmount: defaultHyper, usdtAmount: 500 - defaultHyper });
     } catch (err: any) {
-      toast({ title: "Investment failed", description: err?.message || "Please try again", variant: "destructive" });
+      const data = err?.data;
+      if (data?.code === "MAX_INVESTMENT_EXCEEDED") {
+        setLimitModal({
+          currentTotal: data.currentTotal ?? 0,
+          remaining: data.remaining ?? 0,
+        });
+        return;
+      }
+      toast({ title: "Investment failed", description: data?.message || err?.message || "Please try again", variant: "destructive" });
     }
   };
 
@@ -418,6 +511,14 @@ export default function Invest({ user }: { user: any }) {
           inv={selectedInvestment}
           hyperEnabled={hyperEnabled}
           onClose={() => setSelectedInvestment(null)}
+        />
+      )}
+
+      {limitModal && (
+        <MaxInvestmentModal
+          currentTotal={limitModal.currentTotal}
+          remaining={limitModal.remaining}
+          onClose={() => setLimitModal(null)}
         />
       )}
     </div>
