@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, hcDepositRequestsTable, usersTable } from "@workspace/db";
+import { db, hcDepositRequestsTable, usersTable, platformSettingsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 
@@ -83,17 +83,25 @@ router.put("/admin/hc-deposits/:id/approve", requireAdmin, async (req, res) => {
     return;
   }
 
-  const newBalance = (parseFloat(targetUser.hyperCoinBalance ?? "0") + parseFloat(amount)).toFixed(6);
+  // Fetch HC price from platform settings
+  const [settings] = await db.select().from(platformSettingsTable).limit(1);
+  const hcPrice = parseFloat(settings?.hyperCoinPrice ?? "1.0000");
+
+  // Convert HC amount → USD value
+  const hcAmount = parseFloat(amount);
+  const usdValue = (hcAmount * hcPrice).toFixed(6);
+
+  const newBalance = (parseFloat(targetUser.hyperCoinBalance ?? "0") + parseFloat(usdValue)).toFixed(6);
 
   await db.update(usersTable)
     .set({ hyperCoinBalance: newBalance })
     .where(eq(usersTable.id, targetUser.id));
 
   await db.update(hcDepositRequestsTable)
-    .set({ status: "approved", amount: String(amount), processedAt: new Date() })
+    .set({ status: "approved", amount: String(hcAmount), processedAt: new Date() })
     .where(eq(hcDepositRequestsTable.id, id));
 
-  res.json({ success: true });
+  res.json({ success: true, hcAmount, usdValue: parseFloat(usdValue), hcPrice });
 });
 
 // PUT /api/admin/hc-deposits/:id/reject — admin rejects

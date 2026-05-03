@@ -64,20 +64,30 @@ function ScreenshotModal({ url, onClose }: { url: string; onClose: () => void })
 }
 
 function ApproveModal({ request, onClose, onDone }: { request: HcRequest; onClose: () => void; onDone: () => void }) {
-  const [amount, setAmount] = useState("");
+  const [hcAmount, setHcAmount] = useState("");
+  const [hcPrice, setHcPrice] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.json())
+      .then(d => setHcPrice(d.hyperCoinPrice ?? 1))
+      .catch(() => {});
+  }, []);
+
+  const hcVal = parseFloat(hcAmount) || 0;
+  const usdPreview = (hcVal * hcPrice).toFixed(2);
+
   async function handleApprove() {
-    const val = parseFloat(amount);
-    if (!val || val <= 0) { setError("Enter a valid positive amount"); return; }
+    if (!hcVal || hcVal <= 0) { setError("Enter a valid positive HC amount"); return; }
     setSubmitting(true);
     setError("");
     try {
       const res = await fetch(`/api/admin/hc-deposits/${request.id}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ amount: val }),
+        body: JSON.stringify({ amount: hcVal }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
       onDone();
@@ -118,29 +128,39 @@ function ApproveModal({ request, onClose, onDone }: { request: HcRequest; onClos
 
           <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(184,127,255,0.06)", border: "1px solid rgba(184,127,255,0.16)" }}>
             <div className="flex justify-between text-xs">
-              <span style={{ color: "rgba(168,237,255,0.4)" }}>Referral Code</span>
-              <span className="font-mono font-bold" style={{ color: PURPLE }}>{request.referralCode}</span>
+              <span style={{ color: "rgba(168,237,255,0.4)" }}>User</span>
+              <span className="font-bold" style={{ color: PURPLE }}>{request.userName}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span style={{ color: "rgba(168,237,255,0.4)" }}>Submitted</span>
               <span style={{ color: "rgba(168,237,255,0.7)" }}>{formatDate(request.createdAt)}</span>
             </div>
+            <div className="flex justify-between text-xs">
+              <span style={{ color: "rgba(168,237,255,0.4)" }}>HC Rate</span>
+              <span className="font-bold" style={{ color: TEAL }}>1 HC = ${hcPrice.toFixed(4)} USDT</span>
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold mb-2" style={{ color: "rgba(168,237,255,0.6)" }}>
-              Amount to Credit (HYPERCOIN)
+              HyperCoins to Credit
             </label>
             <input
               type="number"
               min="0"
-              step="0.01"
+              step="0.000001"
               placeholder="e.g. 100"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
+              value={hcAmount}
+              onChange={e => setHcAmount(e.target.value)}
               className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
               style={{ background: "rgba(0,20,40,0.7)", border: "1px solid rgba(52,211,153,0.3)", color: "rgba(168,237,255,0.9)" }}
             />
+            {hcVal > 0 && (
+              <div className="mt-2 flex items-center justify-between px-1">
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>USD value credited</span>
+                <span className="text-xs font-bold" style={{ color: "#34d399" }}>${usdPreview} USDT</span>
+              </div>
+            )}
           </div>
 
           {error && <div className="text-xs text-center" style={{ color: "#f87171" }}>{error}</div>}
