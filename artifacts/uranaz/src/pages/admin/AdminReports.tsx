@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Wallet as WalletIcon, Search, X,
-  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck,
+  ChevronLeft, ChevronRight, ExternalLink, Calendar, Download, ShieldCheck, ArrowLeftRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -9,12 +9,13 @@ const TEAL = "#3DD6F5";
 const GLASS = { background: "rgba(5,18,32,0.65)", backdropFilter: "blur(14px)", border: "1px solid rgba(61,214,245,0.10)" } as const;
 const INPUT_STYLE = { background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" };
 
-type TabKey = "deposits" | "withdrawals" | "wallet-changes";
+type TabKey = "deposits" | "withdrawals" | "wallet-changes" | "p2p";
 
 const tabs: Array<{ key: TabKey; label: string; icon: any; endpoint: string }> = [
-  { key: "deposits",       label: "Deposits",       icon: ArrowDownToLine, endpoint: "/api/admin/reports/deposits" },
-  { key: "withdrawals",    label: "Withdrawals",    icon: ArrowUpFromLine, endpoint: "/api/admin/reports/withdrawals" },
-  { key: "wallet-changes", label: "Wallet Changes", icon: WalletIcon,      endpoint: "/api/admin/reports/wallet-changes" },
+  { key: "deposits",       label: "Deposits",       icon: ArrowDownToLine,  endpoint: "/api/admin/reports/deposits" },
+  { key: "withdrawals",    label: "Withdrawals",    icon: ArrowUpFromLine,  endpoint: "/api/admin/reports/withdrawals" },
+  { key: "wallet-changes", label: "Wallet Changes", icon: WalletIcon,       endpoint: "/api/admin/reports/wallet-changes" },
+  { key: "p2p",            label: "P2P Transfers",  icon: ArrowLeftRight,   endpoint: "/api/admin/reports/p2p" },
 ];
 
 const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
@@ -109,6 +110,7 @@ export default function AdminReports() {
         if (from) params.set("from", from);
         if (to) params.set("to", to);
         if (tab === "wallet-changes" && otpOnly) params.set("otpOnly", "true");
+        if (tab === "p2p" && currency) params.set("currency", currency);
 
         const r = await fetch(`${tabConfig.endpoint}?${params.toString()}`, {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -124,7 +126,7 @@ export default function AdminReports() {
     };
     fetchData();
     return () => { cancelled = true; };
-  }, [tab, page, status, search, from, to, otpOnly, tabConfig.endpoint]);
+  }, [tab, page, status, search, from, to, otpOnly, currency, tabConfig.endpoint]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / limit)) : 1;
   const summary = data?.summary;
@@ -135,7 +137,10 @@ export default function AdminReports() {
     deposits: ["", "credited", "pending", "sweeping", "failed"],
     withdrawals: ["", "pending", "processing", "approved", "rejected"],
     "wallet-changes": [],
+    p2p: [],
   };
+  const [currency, setCurrency] = useState<string>("");
+  useEffect(() => { setCurrency(""); }, [tab]);
 
   const handleExport = async () => {
     if (!rows.length) {
@@ -149,6 +154,7 @@ export default function AdminReports() {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (tab === "wallet-changes" && otpOnly) params.set("otpOnly", "true");
+    if (tab === "p2p" && currency) params.set("currency", currency);
     try {
       const r = await fetch(`${tabConfig.endpoint}?${params.toString()}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       const json = await r.json();
@@ -234,6 +240,11 @@ export default function AdminReports() {
             <StatCard label="Updates"         value={summary.updateCount}       sub="(non-initial)" color="#fbbf24" />
             <StatCard label="OTP Verified"    value={summary.otpVerifiedCount}  color="#34d399" />
           </>)}
+          {tab === "p2p" && (<>
+            <StatCard label="Total Transfers" value={summary.totalCount}                              sub={fmtMoney(summary.totalAmount)} color={TEAL} />
+            <StatCard label="USDT"            value={summary.usdtCount}                              color="#34d399" />
+            <StatCard label="HYPERCOIN"       value={summary.hyperCount}                             color="#a78bfa" />
+          </>)}
         </div>
       )}
 
@@ -279,6 +290,18 @@ export default function AdminReports() {
               />
               OTP-verified only
             </label>
+          )}
+          {tab === "p2p" && (
+            <select
+              value={currency}
+              onChange={e => { setCurrency(e.target.value); setPage(1); }}
+              className="text-xs px-3 py-2 rounded-lg outline-none"
+              style={INPUT_STYLE}
+            >
+              <option value="">All currencies</option>
+              <option value="usdt">USDT</option>
+              <option value="hypercoin">HYPERCOIN</option>
+            </select>
           )}
         </div>
 
@@ -342,6 +365,11 @@ export default function AdminReports() {
                       <Th>User</Th><Th>Old → New</Th><Th>Type</Th><Th>OTP</Th><Th className="hidden sm:table-cell">IP</Th><Th>When</Th>
                     </>
                   )}
+                  {tab === "p2p" && (
+                    <>
+                      <Th>Sender</Th><Th>Recipient</Th><Th>Amount</Th><Th>Currency</Th><Th>When</Th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -367,6 +395,24 @@ export default function AdminReports() {
                         <Td><span className="font-mono text-[11px]" style={{ color: "rgba(168,237,255,0.7)" }}>{shortAddr(r.walletAddress)}</span></Td>
                         <Td><Pill label={r.status} color={cfg.color} bg={cfg.bg} /></Td>
                         <Td className="hidden sm:table-cell">{r.txHash ? <TxLink hash={r.txHash} /> : <span style={{ color: "rgba(168,237,255,0.3)" }}>—</span>}</Td>
+                        <Td><span style={{ color: "rgba(168,237,255,0.55)" }}>{fmtDate(r.createdAt)}</span></Td>
+                      </Tr>
+                    );
+                  }
+                  if (tab === "p2p") {
+                    const isUsdt = r.currency === "usdt";
+                    return (
+                      <Tr key={r.id} testId={`row-p2p-${r.id}`}>
+                        <Td><UserCell name={r.senderName} email={r.senderEmail} id={r.senderId} /></Td>
+                        <Td><UserCell name={r.recipientName} email={r.recipientEmail} id={r.recipientId} /></Td>
+                        <Td><span className="font-bold" style={{ color: TEAL }}>{fmtMoney(r.amount)}</span></Td>
+                        <Td>
+                          <Pill
+                            label={isUsdt ? "USDT" : "HYPERCOIN"}
+                            color={isUsdt ? "#34d399" : "#a78bfa"}
+                            bg={isUsdt ? "rgba(52,211,153,0.10)" : "rgba(167,139,250,0.10)"}
+                          />
+                        </Td>
                         <Td><span style={{ color: "rgba(168,237,255,0.55)" }}>{fmtDate(r.createdAt)}</span></Td>
                       </Tr>
                     );

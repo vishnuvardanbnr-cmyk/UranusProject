@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable } from "@workspace/db";
+import { db, usersTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, p2pTransfersTable } from "@workspace/db";
 import { eq, or, isNull, lte, gte, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -290,6 +290,17 @@ router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
     await db.update(usersTable).set({ hyperCoinBalance: (senderHyper - transferAmount).toString() }).where(eq(usersTable.id, sender.id));
     await db.update(usersTable).set({ hyperCoinBalance: (recipientHyper + transferAmount).toString() }).where(eq(usersTable.id, recipientId));
   }
+
+  await db.insert(p2pTransfersTable).values({
+    senderId: freshSender.id,
+    senderName: freshSender.name ?? "",
+    senderEmail: freshSender.email ?? "",
+    recipientId: recipient.id,
+    recipientName: recipient.name ?? "",
+    recipientEmail: recipient.email ?? "",
+    amount: transferAmount.toString(),
+    currency: coin,
+  });
 
   const [updatedSender] = await db.select().from(usersTable).where(eq(usersTable.id, sender.id)).limit(1);
   res.json({

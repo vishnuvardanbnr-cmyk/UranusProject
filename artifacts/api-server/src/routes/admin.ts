@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable } from "@workspace/db";
 import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -1021,6 +1021,44 @@ router.get("/admin/reports/wallet-changes", requireAdmin, async (req, res) => {
   };
 
   const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// GET /api/admin/reports/p2p
+router.get("/admin/reports/p2p", requireAdmin, async (req, res) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const search = (req.query.search as string || "").toLowerCase().trim();
+  const { from, to } = dateRange(req.query);
+  const currency = req.query.currency as string | undefined;
+
+  let rows = await db.select().from(p2pTransfersTable).orderBy(desc(p2pTransfersTable.createdAt));
+  if (from) rows = rows.filter(r => r.createdAt >= from);
+  if (to)   rows = rows.filter(r => r.createdAt <= to);
+  if (currency) rows = rows.filter(r => r.currency === currency);
+  if (search) {
+    rows = rows.filter(r =>
+      r.senderName.toLowerCase().includes(search) ||
+      r.senderEmail.toLowerCase().includes(search) ||
+      r.recipientName.toLowerCase().includes(search) ||
+      r.recipientEmail.toLowerCase().includes(search) ||
+      String(r.senderId) === search ||
+      String(r.recipientId) === search,
+    );
+  }
+
+  const totalAmount = rows.reduce((s, r) => s + parseFloat(r.amount ?? "0"), 0);
+  const usdtCount = rows.filter(r => r.currency === "usdt").length;
+  const hyperCount = rows.filter(r => r.currency === "hypercoin").length;
+
+  const summary = {
+    totalCount: rows.length,
+    totalAmount,
+    usdtCount,
+    hyperCount,
+  };
+
+  const { rows: pageRows, total } = paginate(rows, page, limit);
   res.json({ rows: pageRows, total, page, limit, summary });
 });
 
