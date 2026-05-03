@@ -29,6 +29,8 @@ import {
   RefreshCw,
   ExternalLink,
   ShieldAlert,
+  Upload,
+  Coins,
 } from "lucide-react";
 
 function getToken() {
@@ -906,6 +908,189 @@ function EmptyState() {
 }
 
 /* ────────────────────────────────────────────────
+   HC DEPOSIT MODAL
+   ──────────────────────────────────────────────── */
+function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large — max 5 MB");
+      return;
+    }
+    setError("");
+    const reader = new FileReader();
+    reader.onload = () => setScreenshot(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSubmit() {
+    if (!screenshot) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/hc-deposits", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ screenshotUrl: screenshot }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setDone(true);
+    } catch {
+      setError("Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+      style={{ background: "rgba(1,8,16,0.88)", backdropFilter: "blur(10px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(170deg, rgba(4,16,32,0.99) 0%, rgba(2,10,22,0.99) 100%)",
+          border: "1px solid rgba(184,127,255,0.22)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9), 0 0 0 1px rgba(184,127,255,0.06)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, transparent, #b87fff, transparent)" }} />
+
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(184,127,255,0.2), rgba(139,92,246,0.08))",
+                border: "1px solid rgba(184,127,255,0.3)",
+                boxShadow: "0 0 16px rgba(184,127,255,0.15)",
+              }}
+            >
+              <Coins size={17} style={{ color: "#b87fff" }} />
+            </div>
+            <div>
+              <div className="font-bold tracking-wide text-sm" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif" }}>
+                HC Deposit
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HyperCoin top-up request</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
+            style={{ background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.09)" }}
+          >
+            <X size={14} style={{ color: "rgba(168,237,255,0.45)" }} />
+          </button>
+        </div>
+
+        {done ? (
+          <div className="px-5 pb-8 text-center">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)" }}
+            >
+              <CheckCircle size={28} style={{ color: "#34d399" }} />
+            </div>
+            <div className="text-sm font-bold mb-2" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif" }}>
+              Request Submitted!
+            </div>
+            <div className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+              Our team will review your screenshot and credit your HyperCoin balance shortly.
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-5 w-full py-3 rounded-2xl font-bold text-xs transition-all"
+              style={{ background: "linear-gradient(135deg, #b87fff, #8b5cf6)", color: "#010810", boxShadow: "0 0 24px rgba(184,127,255,0.3)" }}
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="px-5 pb-6 space-y-4">
+            {/* User info card */}
+            <div
+              className="rounded-2xl p-4 space-y-2.5"
+              style={{ background: "rgba(184,127,255,0.06)", border: "1px solid rgba(184,127,255,0.16)" }}
+            >
+              <div className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(168,237,255,0.35)" }}>Your HC Account Info</div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>Username</span>
+                <span className="text-xs font-bold" style={{ color: "#b87fff" }}>{user?.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>Referral Code</span>
+                <span className="text-xs font-mono font-bold" style={{ color: "rgba(200,240,255,0.8)" }}>{user?.referralCode}</span>
+              </div>
+            </div>
+
+            <div className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.45)" }}>
+              Transfer your HyperCoin and upload a screenshot of the transaction confirmation below. Admin will verify and credit your balance.
+            </div>
+
+            {/* Screenshot upload */}
+            <div>
+              <div className="text-xs font-semibold mb-2" style={{ color: "rgba(168,237,255,0.6)" }}>Upload Transfer Screenshot</div>
+              <label
+                className="block w-full rounded-2xl border-2 border-dashed cursor-pointer transition-all"
+                style={{
+                  borderColor: screenshot ? "rgba(52,211,153,0.45)" : "rgba(184,127,255,0.25)",
+                  background: screenshot ? "rgba(52,211,153,0.04)" : "rgba(184,127,255,0.04)",
+                }}
+              >
+                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+                {screenshot ? (
+                  <div className="p-2">
+                    <img src={screenshot} alt="preview" className="w-full rounded-xl max-h-36 object-cover" />
+                    <div className="text-center text-xs mt-2 font-semibold" style={{ color: "#34d399" }}>✓ Screenshot selected</div>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <Upload size={22} className="mx-auto mb-2" style={{ color: "rgba(184,127,255,0.45)" }} />
+                    <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Tap to upload screenshot</div>
+                    <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.25)" }}>JPG, PNG · Max 5 MB</div>
+                  </div>
+                )}
+              </label>
+            </div>
+
+            {error && (
+              <div className="text-xs text-center" style={{ color: "#f87171" }}>{error}</div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={!screenshot || submitting}
+              className="w-full py-3 rounded-2xl font-bold text-xs transition-all"
+              style={{
+                background: !screenshot ? "rgba(184,127,255,0.08)" : "linear-gradient(135deg, #b87fff, #8b5cf6)",
+                color: !screenshot ? "rgba(168,237,255,0.3)" : "#010810",
+                cursor: !screenshot || submitting ? "not-allowed" : "pointer",
+                boxShadow: screenshot ? "0 0 24px rgba(184,127,255,0.3)" : "none",
+              }}
+            >
+              {submitting ? "Submitting..." : "Submit Request"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────
    MAIN PAGE
    ──────────────────────────────────────────────── */
 const WALLET_PAGE_SIZE = 10;
@@ -917,6 +1102,7 @@ export default function WalletPage({ user }: { user: any }) {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showP2PModal, setShowP2PModal] = useState(false);
+  const [showHcDepositModal, setShowHcDepositModal] = useState(false);
   const [page, setPage] = useState(1);
   const [localUsdtBal, setLocalUsdtBal] = useState<number | null>(null);
   const [localHyperBal, setLocalHyperBal] = useState<number | null>(null);
@@ -1052,10 +1238,10 @@ export default function WalletPage({ user }: { user: any }) {
           P2P
         </button>
 
-        {/* Transfer — only when HYPERCOIN is active */}
+        {/* HC Deposit — only when HYPERCOIN is active */}
         {hyperEnabled && (
           <button
-            onClick={() => setShowTransferModal(true)}
+            onClick={() => setShowHcDepositModal(true)}
             className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl font-bold text-xs transition-all active:scale-[0.97]"
             style={{
               background: "linear-gradient(135deg, rgba(184,127,255,0.18), rgba(139,92,246,0.10))",
@@ -1064,8 +1250,8 @@ export default function WalletPage({ user }: { user: any }) {
               boxShadow: "0 0 20px rgba(184,127,255,0.12)",
             }}
           >
-            <ArrowLeftRight size={16} strokeWidth={2.5} />
-            Swap
+            <Coins size={16} strokeWidth={2.5} />
+            HC Dep.
           </button>
         )}
 
@@ -1208,6 +1394,11 @@ export default function WalletPage({ user }: { user: any }) {
             setLocalHyperBal(newHyper);
           }}
         />
+      )}
+
+      {/* HC Deposit Modal */}
+      {showHcDepositModal && (
+        <HcDepositModal user={user} onClose={() => setShowHcDepositModal(false)} />
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import adminRouter from "./admin";
 import supportRouter from "./support";
 import depositsRouter from "./deposits";
 import walletRouter from "./wallet";
+import hcDepositsRouter from "./hcDeposits";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(adminRouter);
 router.use(supportRouter);
 router.use(depositsRouter);
 router.use(walletRouter);
+router.use(hcDepositsRouter);
 
 export default router;
