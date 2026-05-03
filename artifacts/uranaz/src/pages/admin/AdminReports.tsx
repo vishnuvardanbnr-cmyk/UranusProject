@@ -94,10 +94,11 @@ export default function AdminReports() {
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [currency, setCurrency] = useState<string>("");
 
   const tabConfig = tabs.find(t => t.key === tab)!;
 
-  useEffect(() => { setPage(1); setStatus(""); setSearch(""); setOtpOnly(false); }, [tab]);
+  useEffect(() => { setPage(1); setStatus(""); setSearch(""); setOtpOnly(false); setCurrency(""); }, [tab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,8 +140,6 @@ export default function AdminReports() {
     "wallet-changes": [],
     p2p: [],
   };
-  const [currency, setCurrency] = useState<string>("");
-  useEffect(() => { setCurrency(""); }, [tab]);
 
   const handleExport = async () => {
     if (!rows.length) {
