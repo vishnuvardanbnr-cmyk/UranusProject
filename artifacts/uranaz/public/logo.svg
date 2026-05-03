@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0a1a2e"/>
+      <stop offset="100%" stop-color="#040d1a"/>
+    </radialGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#40ffee"/>
+      <stop offset="100%" stop-color="#00b8d4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="110" cy="100" r="90" fill="url(#bgGrad)"/>
+  <!-- Glow halo -->
+  <circle cx="110" cy="100" r="54" fill="url(#glowGrad)"/>
+
+  <!-- Outer star points (6-pointed snowflake/star) -->
+  <g filter="url(#glow)" transform="translate(110,100)">
+    <!-- Star arms -->
+    <line x1="0" y1="-52" x2="0" y2="52" stroke="url(#starGrad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="-45" y1="-26" x2="45" y2="26" stroke="url(#starGrad)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="45" y1="-26" x2="-45" y2="26" stroke="url(#starGrad)" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Star tip diamonds -->
+    <polygon points="0,-52 4,-44 0,-36 -4,-44" fill="#00e5ff"/>
+    <polygon points="0,52 4,44 0,36 -4,44" fill="#00e5ff"/>
+    <polygon points="-45,-26 -37,-22 -29,-26 -37,-30" fill="#00e5ff"/>
+    <polygon points="45,-26 37,-22 29,-26 37,-30" fill="#00e5ff"/>
+    <polygon points="-45,26 -37,22 -29,26 -37,30" fill="#00e5ff"/>
+    <polygon points="45,26 37,22 29,26 37,30" fill="#00e5ff"/>
+
+    <!-- Planet circle -->
+    <circle cx="0" cy="0" r="19" fill="#061828" stroke="#00c8d8" stroke-width="2"/>
+    <!-- Planet glow -->
+    <circle cx="0" cy="0" r="19" fill="none" stroke="#00e5ff" stroke-width="0.8" opacity="0.6"/>
+
+    <!-- Orbit ring 1 -->
+    <ellipse cx="0" cy="0" rx="28" ry="10" fill="none" stroke="#00d4e8" stroke-width="1.6" opacity="0.85" transform="rotate(-30)"/>
+    <!-- Orbit ring 2 -->
+    <ellipse cx="0" cy="0" rx="28" ry="10" fill="none" stroke="#00d4e8" stroke-width="1.6" opacity="0.6" transform="rotate(30)"/>
+
+    <!-- Center M/wave mark -->
+    <polyline points="-7,5 -3.5,-5 0,3 3.5,-5 7,5" fill="none" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- URANUS text -->
+  <text
+    x="110" y="172"
+    text-anchor="middle"
+    font-family="'Arial Black', 'Arial', sans-serif"
+    font-weight="900"
+    font-size="22"
+    letter-spacing="4"
+    fill="#d0f8ff"
+    filter="url(#glow)"
+  >URANUS</text>
+
+  <!-- TRADES text -->
+  <text
+    x="110" y="188"
+    text-anchor="middle"
+    font-family="'Arial', sans-serif"
+    font-weight="400"
+    font-size="9"
+    letter-spacing="5"
+    fill="#6ec8d8"
+  >TRADES</text>
+</svg>
