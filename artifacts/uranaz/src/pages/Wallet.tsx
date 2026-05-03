@@ -918,9 +918,17 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [hcDepositUsername, setHcDepositUsername] = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.json())
+      .then(d => { if (d.hcDepositUsername) setHcDepositUsername(d.hcDepositUsername); })
+      .catch(() => {});
+  }, []);
 
   function copyUsername() {
-    navigator.clipboard.writeText(user?.name ?? "").then(() => {
+    navigator.clipboard.writeText(hcDepositUsername).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
@@ -1039,7 +1047,7 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs shrink-0" style={{ color: "rgba(168,237,255,0.45)" }}>Username</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold" style={{ color: "#b87fff" }}>{user?.name}</span>
+                  <span className="text-xs font-bold" style={{ color: "#b87fff" }}>{hcDepositUsername || "—"}</span>
                   <button
                     onClick={copyUsername}
                     className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:brightness-125 shrink-0"

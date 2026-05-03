@@ -53,6 +53,7 @@ type SettingsForm = {
   launchOfferActive: boolean;
   withdrawalEnabled: boolean;
   launchOfferEndDate: string;
+  hcDepositUsername: string;
 };
 
 type IncomeForm = {
@@ -587,6 +588,20 @@ export default function AdminSettings() {
                   />
                 </div>
               ))}
+            </div>
+            <SubHeader>HyperCoin Deposit Account</SubHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>HC Deposit Username</FieldLabel>
+                <input
+                  type="text"
+                  placeholder="e.g. uranaz_official"
+                  {...register("hcDepositUsername")}
+                  className={INPUT_CLS}
+                  style={INPUT_STYLE}
+                />
+                <FieldHint>Users will be shown this username to send HyperCoin to during HC deposits.</FieldHint>
+              </div>
             </div>
 
             <SubHeader>Platform Toggles</SubHeader>

@@ -23,6 +23,7 @@ router.get("/settings/public", async (_req, res) => {
       tier2: { dailyRate: parseFloat(settings?.tier2DailyRate ?? "0.007"), days: settings?.tier2Days ?? 260, min: 500, max: 900 },
       tier3: { dailyRate: parseFloat(settings?.tier3DailyRate ?? "0.008"), days: settings?.tier3Days ?? 225, min: 1000, max: 1500 },
     },
+    hcDepositUsername: settings?.hcDepositUsername ?? "",
   });
 });
 

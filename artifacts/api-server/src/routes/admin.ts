@@ -323,6 +323,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
       launchOfferActive: created.launchOfferActive,
       withdrawalEnabled: created.withdrawalEnabled,
       launchOfferEndDate: created.launchOfferEndDate ? created.launchOfferEndDate.toISOString().slice(0, 16) : "",
+      hcDepositUsername: created.hcDepositUsername,
     });
     return;
   }
@@ -337,6 +338,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     launchOfferActive: settings.launchOfferActive,
     withdrawalEnabled: settings.withdrawalEnabled,
     launchOfferEndDate: settings.launchOfferEndDate ? settings.launchOfferEndDate.toISOString().slice(0, 16) : "",
+    hcDepositUsername: settings.hcDepositUsername,
   });
 });
 
@@ -363,6 +365,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     if (parsed.data.launchOfferEndDate !== undefined) {
       updates.launchOfferEndDate = parsed.data.launchOfferEndDate ? new Date(parsed.data.launchOfferEndDate) : null;
     }
+    if (parsed.data.hcDepositUsername !== undefined) updates.hcDepositUsername = parsed.data.hcDepositUsername;
     [updated] = await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id)).returning();
   } else {
     [updated] = await db.insert(platformSettingsTable).values({}).returning();
@@ -378,6 +381,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,
     launchOfferEndDate: updated.launchOfferEndDate ? updated.launchOfferEndDate.toISOString().slice(0, 16) : "",
+    hcDepositUsername: updated.hcDepositUsername,
   });
 });
 

@@ -692,6 +692,7 @@ export const UpdateAdminSettingsBody = zod.object({
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
   launchOfferEndDate: zod.string().optional(),
+  hcDepositUsername: zod.string().optional(),
 });
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -705,4 +706,5 @@ export const UpdateAdminSettingsResponse = zod.object({
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
   launchOfferEndDate: zod.string().optional(),
+  hcDepositUsername: zod.string().optional(),
 });
