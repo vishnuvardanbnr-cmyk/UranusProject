@@ -97,14 +97,16 @@ export async function sweepUsdtToMaster(
   const totalUsdtSweepCost = USDT_GAS_LIMIT * 2n * gasPrice;
   const bnbReturnCost = BNB_TRANSFER_GAS * gasPrice;
 
-  // 4. Check BNB balance on deposit wallet
+  // 4. Always top up deposit wallet with a generous buffer so both USDT transfers
+  //    go through without re-checking mid-sweep. Any leftover BNB is recovered after.
+  const EXTRA_BNB_BUFFER = ethers.parseEther("0.0003");
+  const targetBnb = totalUsdtSweepCost + bnbReturnCost + EXTRA_BNB_BUFFER;
+
   const bnbBefore = await getBnbBalance(depositWallet.address, rpcUrl);
 
-  const totalGasNeeded = totalUsdtSweepCost + bnbReturnCost + ethers.parseEther("0.00005");
-
-  if (bnbBefore < totalGasNeeded) {
-    const needed = totalGasNeeded - bnbBefore;
-    logger.info({ needed: ethers.formatEther(needed) }, "Sending BNB for gas from gas wallet");
+  if (bnbBefore < targetBnb) {
+    const needed = targetBnb - bnbBefore;
+    logger.info({ needed: ethers.formatEther(needed), target: ethers.formatEther(targetBnb) }, "Sending BNB for gas from gas wallet");
 
     const gasTx = await gasWallet.sendTransaction({
       to: depositWallet.address,
@@ -134,18 +136,19 @@ export async function sweepUsdtToMaster(
   await sweepTx.wait(1);
   logger.info({ txHash: sweepTx.hash, amount: masterUsdt }, "USDT swept to master wallet");
 
-  // 7. Return any remaining BNB back to gas wallet
+  // 7. Return all remaining BNB back to gas wallet (recover the buffer + any unspent gas)
   let bnbReturnTxHash: string | undefined;
   try {
     const bnbAfter = await getBnbBalance(depositWallet.address, rpcUrl);
     const bnbReturnFee = BNB_TRANSFER_GAS * gasPrice;
-    const DUST_THRESHOLD = bnbReturnFee + ethers.parseEther("0.000005");
+    // Dust threshold: only skip if leftover can't even cover the cost of returning it
+    const DUST_THRESHOLD = bnbReturnFee + ethers.parseEther("0.000001");
 
     if (bnbAfter > DUST_THRESHOLD) {
       const returnAmount = bnbAfter - bnbReturnFee;
       logger.info(
         { returnAmount: ethers.formatEther(returnAmount), gasWallet: gasWallet.address },
-        "Returning residual BNB to gas wallet",
+        "Recovering residual BNB to gas wallet",
       );
       const returnTx = await depositWallet.sendTransaction({
         to: gasWallet.address,
@@ -155,12 +158,12 @@ export async function sweepUsdtToMaster(
       });
       await returnTx.wait(1);
       bnbReturnTxHash = returnTx.hash;
-      logger.info({ txHash: returnTx.hash }, "Residual BNB returned to gas wallet");
+      logger.info({ txHash: returnTx.hash, recovered: ethers.formatEther(returnAmount) }, "BNB recovered to gas wallet");
     } else {
-      logger.info({ bnbAfter: ethers.formatEther(bnbAfter) }, "No significant BNB to return (dust)");
+      logger.info({ bnbAfter: ethers.formatEther(bnbAfter) }, "BNB remainder is dust, skipping recovery");
     }
   } catch (err) {
-    logger.warn({ err }, "BNB return step failed (non-fatal), sweep still succeeded");
+    logger.warn({ err }, "BNB recovery step failed (non-fatal), both USDT sweeps already succeeded");
   }
 
   return {
