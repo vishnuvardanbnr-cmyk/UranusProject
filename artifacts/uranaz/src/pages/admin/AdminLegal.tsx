@@ -24,7 +24,7 @@ export default function AdminLegal() {
 
   useEffect(() => {
     fetch("/api/admin/legal", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem("uranaz_token")}` },
     })
       .then(r => r.json())
       .then(d => {
@@ -45,7 +45,7 @@ export default function AdminLegal() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("uranaz_token")}`,
         },
         body: JSON.stringify(body),
       });
