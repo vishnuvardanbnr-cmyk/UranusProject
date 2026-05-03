@@ -1172,25 +1172,49 @@ export default function WalletPage({ user }: { user: any }) {
         Wallet
       </h1>
 
-      {/* ── Available Balance Hero ── */}
-      <div
-        className="rounded-2xl p-5 text-center"
-        style={{
-          background: "linear-gradient(135deg, rgba(61,214,245,0.13), rgba(42,179,215,0.05))",
-          border: "1px solid rgba(61,214,245,0.28)",
-          boxShadow: "0 0 32px rgba(61,214,245,0.10)",
-        }}
-      >
-        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "rgba(168,237,255,0.4)" }}>
-          Available Balance
-        </div>
+      {/* ── Balance Cards ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Deposit Balance */}
         <div
-          className="font-black"
-          style={{ fontFamily: "'Orbitron', sans-serif", color: TEAL, fontSize: "2.2rem", textShadow: `0 0 28px ${TEAL}55`, lineHeight: 1.1 }}
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(61,214,245,0.13), rgba(42,179,215,0.05))",
+            border: "1px solid rgba(61,214,245,0.28)",
+            boxShadow: "0 0 24px rgba(61,214,245,0.08)",
+          }}
         >
-          ${(summary?.availableBalance ?? 0).toFixed(2)}
+          <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "rgba(168,237,255,0.4)" }}>
+            Deposit Balance
+          </div>
+          <div
+            className="font-black"
+            style={{ fontFamily: "'Orbitron', sans-serif", color: TEAL, fontSize: "1.5rem", textShadow: `0 0 20px ${TEAL}55`, lineHeight: 1.1 }}
+          >
+            ${usdtBalance.toFixed(2)}
+          </div>
+          <div className="text-xs mt-2" style={{ color: "rgba(168,237,255,0.28)" }}>USDT · For investment</div>
         </div>
-        <div className="text-xs mt-2" style={{ color: "rgba(168,237,255,0.28)" }}>USDT · Ready to withdraw</div>
+
+        {/* Earnings Balance */}
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.05))",
+            border: "1px solid rgba(52,211,153,0.28)",
+            boxShadow: "0 0 24px rgba(52,211,153,0.08)",
+          }}
+        >
+          <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "rgba(168,237,255,0.4)" }}>
+            Earnings Balance
+          </div>
+          <div
+            className="font-black"
+            style={{ fontFamily: "'Orbitron', sans-serif", color: "#34d399", fontSize: "1.5rem", textShadow: "0 0 20px rgba(52,211,153,0.55)", lineHeight: 1.1 }}
+          >
+            ${(summary?.availableBalance ?? 0).toFixed(2)}
+          </div>
+          <div className="text-xs mt-2" style={{ color: "rgba(168,237,255,0.28)" }}>USDT · Ready to withdraw</div>
+        </div>
       </div>
 
       {/* ── HYPERCOIN Balance (only when enabled) ── */}
