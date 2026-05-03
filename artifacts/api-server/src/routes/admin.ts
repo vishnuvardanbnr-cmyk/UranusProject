@@ -190,9 +190,18 @@ router.get("/admin/investments", requireAdmin, async (req, res) => {
     allInvestments = allInvestments.filter(i => i.status === status);
   }
 
+  const userIds = Array.from(new Set(allInvestments.map(i => i.userId)));
+  const users = userIds.length
+    ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u.name]));
+
   const paginated = allInvestments.slice(offset, offset + limit);
   res.json({
-    investments: paginated.map(investmentToResponse),
+    investments: paginated.map(i => ({
+      ...investmentToResponse(i),
+      userName: uMap.get(i.userId) ?? `User #${i.userId}`,
+    })),
     total: allInvestments.length,
     page,
     limit,

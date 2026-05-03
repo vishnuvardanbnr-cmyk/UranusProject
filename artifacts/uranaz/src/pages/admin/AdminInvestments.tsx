@@ -69,7 +69,7 @@ export default function AdminInvestments() {
             <div key={inv.id} data-testid={`row-investment-${inv.id}`} className="rounded-xl p-4" style={GLASS}>
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>User #{inv.userId}</div>
+                  <div className="font-semibold text-sm" style={{ color: "rgba(168,237,255,0.85)" }}>{(inv as any).userName ?? `User #${inv.userId}`}</div>
                   <div className="text-xs capitalize" style={{ color: "rgba(168,237,255,0.4)" }}>
                     {inv.planTier.replace("tier", "Tier ")}
                   </div>

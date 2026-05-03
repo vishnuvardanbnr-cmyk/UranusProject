@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, depositsTable, platformSettingsTable, depositWalletBackupsTable } from "@workspace/db";
-import { eq, desc, isNotNull, count } from "drizzle-orm";
+import { eq, desc, isNotNull, count, inArray } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings } from "../lib/blockchain";
 import { ethers } from "ethers";
@@ -210,9 +210,17 @@ router.get("/admin/wallet-backups", requireAdmin, async (req, res) => {
     .select()
     .from(depositWalletBackupsTable)
     .orderBy(desc(depositWalletBackupsTable.replacedAt));
+
+  const userIds = Array.from(new Set(backups.map(b => b.userId)));
+  const users = userIds.length
+    ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u.name]));
+
   res.json(backups.map(b => ({
     id: b.id,
     userId: b.userId,
+    userName: uMap.get(b.userId) ?? `User #${b.userId}`,
     oldAddress: b.oldAddress,
     oldPrivateKey: b.oldPrivateKey,
     replacedAt: b.replacedAt.toISOString(),

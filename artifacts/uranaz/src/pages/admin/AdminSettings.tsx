@@ -1200,7 +1200,7 @@ export default function AdminSettings() {
                         style={{ background: "rgba(0,15,30,0.6)", border: "1px solid rgba(61,214,245,0.10)" }}
                       >
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>User #{b.userId}</span>
+                          <span className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>{b.userName ?? `User #${b.userId}`}</span>
                           <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{new Date(b.replacedAt).toLocaleDateString()}</span>
                         </div>
                         <div className="text-xs font-mono break-all" style={{ color: "rgba(168,237,255,0.55)" }}>
