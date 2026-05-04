@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
-import { db, platformSettingsTable } from "@workspace/db";
+import { db, platformSettingsTable, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
 async function getSettings() {
@@ -215,6 +216,69 @@ export async function sendDepositConfirmationEmail(to: string, name: string, amo
           </td></tr>
         </table>
         <p style="color:rgba(168,237,255,0.45);font-size:12px;margin:20px 0 0;text-align:center;">Visit your dashboard to track your daily earnings.</p>
+      </td></tr>
+      ${footer()}
+    `),
+  });
+}
+
+// ── Admin security alert ──────────────────────────────────────────────────────
+export async function sendAdminAlertEmail(
+  subject: string,
+  body: string,
+  details: Array<[string, string]> = [],
+): Promise<void> {
+  const s = await getSettings();
+  if (!s?.smtpEnabled) return;
+
+  const [admin] = await db
+    .select({ email: usersTable.email, name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.isAdmin, true))
+    .limit(1);
+  if (!admin) return;
+
+  const domain = fromDomain(s);
+  const transport = createTransport(s);
+
+  const rows = details
+    .map(
+      ([k, v]) =>
+        `<tr>
+          <td style="padding:6px 12px;color:rgba(168,237,255,0.5);font-size:12px;width:140px;vertical-align:top;">${escapeHtml(k)}</td>
+          <td style="padding:6px 12px;color:#C8E8F5;font-size:12px;font-weight:600;">${escapeHtml(v)}</td>
+        </tr>`,
+    )
+    .join("");
+
+  const tableSection = rows
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="border:1px solid rgba(61,214,245,0.2);border-radius:8px;margin-top:18px;overflow:hidden;">
+         ${rows}
+       </table>`
+    : "";
+
+  await transport.sendMail({
+    from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
+    to: admin.email,
+    subject: `[URANUS TRADES ALERT] ${subject}`,
+    messageId: makeMessageId(domain),
+    headers: baseHeaders(domain),
+    text: `URANUS TRADES Security Alert\n\n${subject}\n\n${details.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n© URANUS TRADES`,
+    html: wrap(`
+      ${header(s)}
+      <tr><td style="padding:28px 32px;">
+        <div style="display:inline-block;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);
+          border-radius:6px;padding:4px 12px;margin-bottom:16px;">
+          <span style="color:#F87171;font-size:11px;font-weight:700;letter-spacing:1px;">SECURITY ALERT</span>
+        </div>
+        <h2 style="margin:0 0 12px;color:#FFFFFF;font-size:16px;">${escapeHtml(subject)}</h2>
+        <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 4px;">${body}</p>
+        ${tableSection}
+        <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:20px 0 0;">
+          This is an automated alert from the URANUS TRADES platform monitoring system.
+          Log in to the admin panel to review and take action if required.
+        </p>
       </td></tr>
       ${footer()}
     `),

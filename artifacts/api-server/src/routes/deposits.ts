@@ -6,6 +6,7 @@ import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, 
 import { ethers } from "ethers";
 import { logger } from "../lib/logger";
 import { sendDepositCreditedEmail } from "../lib/email";
+import { alertLargeDeposit } from "../lib/alerts";
 import { resolveKey, isEncrypted, encryptKey, ensureEncrypted } from "../lib/keyEncryption.js";
 
 const router = Router();
@@ -137,6 +138,9 @@ router.post("/deposits/check", requireAuth, async (req, res) => {
 
     // Send deposit credited email (fire-and-forget)
     sendDepositCreditedEmail(freshUser.email, freshUser.name ?? "", result.amount).catch(() => {});
+
+    // Alert admin for large deposits (fire-and-forget)
+    alertLargeDeposit(user.id, freshUser.name ?? "", freshUser.email, result.amount).catch(() => {});
 
     res.json({
       status: "credited",

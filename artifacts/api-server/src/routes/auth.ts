@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
 import { sendOtpEmail, sendWelcomeEmail, isOtpRegistrationEnabled } from "../lib/email";
+import { trackOtpFailure } from "../lib/alerts";
 
 const router = Router();
 
@@ -339,6 +340,10 @@ router.post("/auth/profile-setup", requireAuth, async (req, res) => {
         .orderBy(desc(otpCodesTable.createdAt))
         .limit(1);
       if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+        const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+                || req.socket?.remoteAddress
+                || "unknown";
+        trackOtpFailure(user.email, ip);
         res.status(400).json({ message: "Invalid or expired OTP" });
         return;
       }

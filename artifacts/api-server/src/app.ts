@@ -52,19 +52,19 @@ app.use(cors({
 }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-// Auth endpoints: 20 requests per 15 minutes per IP
+// Login: 10 requests per minute per IP
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
+  windowMs: 60 * 1000,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: "Too many requests, please try again later." },
+  message: { message: "Too many login attempts, please try again in a minute." },
   skip: (req) => req.method === "OPTIONS",
 });
 
-// OTP endpoint: stricter — 5 per 10 minutes per IP to prevent spam/enumeration
+// OTP endpoint: 5 per minute per IP — prevents OTP spam and enumeration
 const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
+  windowMs: 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
@@ -72,10 +72,10 @@ const otpLimiter = rateLimit({
   skip: (req) => req.method === "OPTIONS",
 });
 
-// General API limiter: 300 requests per minute per IP
+// General API: 30 requests per minute per IP
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 300,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, slow down." },

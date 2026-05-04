@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db, withdrawalsTable, usersTable, incomeTable, otpCodesTable, platformSettingsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { CreateWithdrawalBody } from "@workspace/api-zod";
 import { isOtpWithdrawalEnabled } from "../lib/email";
 import { getSettings, sendUsdtToAddress } from "../lib/blockchain";
 import { logger } from "../lib/logger";
 import { resolveKey } from "../lib/keyEncryption.js";
+import { alertUnusualWithdrawal, trackOtpFailure } from "../lib/alerts";
 
 const router = Router();
 
@@ -78,6 +79,10 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
       .orderBy(desc(otpCodesTable.createdAt))
       .limit(1);
     if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+              || req.socket?.remoteAddress
+              || "unknown";
+      trackOtpFailure(user.email, ip);
       res.status(400).json({ message: "Invalid or expired OTP" });
       return;
     }
@@ -149,6 +154,16 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     res.status(201).json(withdrawalToResponse(processing));
     return;
   }
+
+  // Check for unusual withdrawal pattern (fire-and-forget)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  db.select({ value: count() })
+    .from(withdrawalsTable)
+    .where(and(eq(withdrawalsTable.userId, user.id), gte(withdrawalsTable.createdAt, oneDayAgo)))
+    .then(([{ value: recentCount }]) => {
+      alertUnusualWithdrawal(user.id, user.name ?? "", amount, Number(recentCount)).catch(() => {});
+    })
+    .catch(() => {});
 
   res.status(201).json(withdrawalToResponse(withdrawal));
 });
