@@ -165,10 +165,10 @@ lib/
 - TLS verification (`rejectUnauthorized: true`) enabled for all non-localhost SMTP servers
 - All user-supplied data (name, plan label) escaped with `escapeHtml()` before HTML interpolation
 
-### Known Remaining Risk (not auto-migrated)
-- **Password hashing**: SHA-256 + static salt ("uranaz-salt") — weak, brute-forceable offline
-  Mitigation: requires a migration plan (bcrypt/argon2 + re-hash on next login)
-  — Not changed automatically to avoid breaking existing users
+### Password Hashing — Bcrypt Migration
+- **New registrations**: hashed with bcrypt (12 rounds) via `bcryptjs`
+- **Existing users**: still have the old SHA-256+salt hash in the DB; on their next successful login the server detects the old format (doesn't start with `$2`), verifies with SHA-256, then silently re-hashes with bcrypt and saves — transparent to the user
+- `legacyHash()` kept only for migration verification; `hashPassword()` is now async bcrypt-only
 
 ## Seed Data
 - Admin: admin@uranaz.com / admin123

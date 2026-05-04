@@ -2,14 +2,37 @@ import { Router } from "express";
 import { db, usersTable, otpCodesTable, walletAddressChangesTable } from "@workspace/db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { createHash } from "crypto";
+import bcrypt from "bcryptjs";
 import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
 import { sendOtpEmail, sendWelcomeEmail, isOtpRegistrationEnabled } from "../lib/email";
 
 const router = Router();
 
-function hashPassword(password: string): string {
+const BCRYPT_ROUNDS = 12;
+
+// Legacy SHA-256 hash — kept only for migration verification on login
+function legacyHash(password: string): string {
   return createHash("sha256").update(password + "uranaz-salt").digest("hex");
+}
+
+// New bcrypt hash — used for all new registrations
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+// Verify a password against either bcrypt or legacy SHA-256 hash.
+// Returns true if the password matches, false otherwise.
+// Also returns whether the stored hash is legacy so the caller can migrate it.
+async function verifyPassword(
+  password: string,
+  storedHash: string,
+): Promise<{ valid: boolean; isLegacy: boolean }> {
+  const isLegacy = !storedHash.startsWith("$2");
+  if (isLegacy) {
+    return { valid: storedHash === legacyHash(password), isLegacy: true };
+  }
+  return { valid: await bcrypt.compare(password, storedHash), isLegacy: false };
 }
 
 async function generateUniqueReferralCode(): Promise<string> {
@@ -187,7 +210,7 @@ router.post("/auth/register", async (req, res) => {
         email,
         phone,
         country: country?.trim() || null,
-        passwordHash: hashPassword(password),
+        passwordHash: await hashPassword(password),
         referralCode: referralCodeGenerated,
         sponsorId: sponsorId ?? null,
         isAdmin: isFirstUser,
@@ -226,14 +249,31 @@ router.post("/auth/login", async (req, res) => {
   }
   const { email, password } = parsed.data;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  if (!user) {
     res.status(401).json({ message: "Invalid email or password" });
     return;
   }
+
+  const { valid, isLegacy } = await verifyPassword(password, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ message: "Invalid email or password" });
+    return;
+  }
+
   if (!user.isActive) {
     res.status(403).json({ message: "Account is deactivated" });
     return;
   }
+
+  // Silently migrate legacy SHA-256 hash to bcrypt on successful login
+  if (isLegacy) {
+    const newHash = await hashPassword(password);
+    db.update(usersTable)
+      .set({ passwordHash: newHash })
+      .where(eq(usersTable.id, user.id))
+      .catch(() => {}); // fire-and-forget; login still succeeds even if this fails
+  }
+
   const token = signToken(user.id);
   res.json({ user: userToResponse(user), token });
 });
