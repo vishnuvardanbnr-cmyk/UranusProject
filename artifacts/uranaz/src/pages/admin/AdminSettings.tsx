@@ -641,7 +641,6 @@ export default function AdminSettings() {
                 { label: "Max Total Investment (USDT)",  testId: "input-max-total-invest",   name: "maxTotalInvestment" as const,  type: "number", extra: { step: "100", min: "100" } },
                 { label: "Min HYPERCOIN % (0–100)",      testId: "input-hypercoin-pct",      name: "hyperCoinMinPercent" as const,  type: "number", extra: { step: "1", min: "0", max: "100" } },
                 { label: "HYPERCOIN Price (USDT)",       testId: "input-hypercoin-price",    name: "hyperCoinPrice" as const,       type: "number", extra: { step: "0.0001", min: "0.0001" } },
-                { label: "Spot Referral Rate (%)",       testId: "input-spot-commission",    name: "spotReferralRate" as const,     type: "number", extra: { step: "0.01" } },
               ].map(f => (
                 <div key={f.name}>
                   <FieldLabel>{f.label}</FieldLabel>
