@@ -1501,62 +1501,97 @@ export default function AdminSettings() {
         </SectionCard>
         <SectionCard
           icon={Server}
-          title="Server Memory"
-          description="View current API process memory usage and restart the server to free memory. All user data and files are stored in the database — a restart only clears in-memory state."
+          title="Server Status"
+          description="Live stats from the VPS — RAM, CPU load, disk, and API process memory."
         >
           <div className="space-y-5">
-            {/* Memory stats */}
             {serverStatusLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-24 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
               </div>
             ) : serverStatus ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: "Heap Used",  value: `${serverStatus.heapUsed} MB`,  color: serverStatus.heapUsed > 400 ? "rgba(248,113,113,0.9)" : TEAL },
-                    { label: "Heap Total", value: `${serverStatus.heapTotal} MB`, color: "rgba(168,237,255,0.7)" },
-                    { label: "RSS",        value: `${serverStatus.rss} MB`,       color: "rgba(168,237,255,0.7)" },
-                    { label: "Uptime",     value: (() => {
-                      const s = serverStatus.uptimeSeconds;
-                      if (s < 60) return `${s}s`;
-                      if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
-                      return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
-                    })(), color: "rgba(52,211,153,0.9)" },
-                  ].map(stat => (
-                    <div key={stat.label} className="p-4 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.12)" }}>
-                      <div className="text-lg font-bold" style={{ color: stat.color, fontFamily: "'Orbitron',sans-serif" }}>{stat.value}</div>
-                      <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.45)" }}>{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Heap bar */}
+                {/* ── Stat tiles ── */}
                 {(() => {
-                  const MAX_MB = 3915;
-                  const pct = Math.min(100, Math.round(serverStatus.rss / MAX_MB * 100));
-                  return (
-                    <div>
-                      <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
-                        <span>Process memory (RSS) <span style={{ color: "rgba(168,237,255,0.3)" }}>vs {MAX_MB} MB reference</span></span>
-                        <span>{pct}%</span>
+                  const fmt = (s: number) => {
+                    if (s < 60) return `${s}s`;
+                    if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+                    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+                    return `${h}h ${m}m`;
+                  };
+                  const ramPct  = Math.round(serverStatus.ramUsedMB  / serverStatus.ramTotalMB  * 100);
+                  const diskPct = serverStatus.diskTotalMB ? Math.round(serverStatus.diskUsedMB / serverStatus.diskTotalMB * 100) : 0;
+                  const cpuPct  = Math.min(100, Math.round((serverStatus.loadAvg1m / serverStatus.cpuCores) * 100));
+
+                  const barColor = (pct: number) =>
+                    pct > 85 ? "linear-gradient(90deg,#f87171,#ef4444)"
+                    : pct > 60 ? "linear-gradient(90deg,#fbbf24,#d97706)"
+                    : "linear-gradient(90deg,#3DD6F5,#2AB3CF)";
+
+                  const StatBar = ({ label, value, sub, pct, note }: { label: string; value: string; sub?: string; pct: number; note?: string }) => (
+                    <div className="p-4 rounded-xl space-y-2.5" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.10)" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-base font-bold" style={{ color: TEAL, fontFamily: "'Orbitron',sans-serif" }}>{value}</div>
+                          <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.45)" }}>{label}</div>
+                        </div>
+                        <div className="text-sm font-bold shrink-0" style={{ color: pct > 85 ? "rgba(248,113,113,0.9)" : pct > 60 ? "rgba(251,191,36,0.9)" : "rgba(52,211,153,0.85)" }}>{pct}%</div>
                       </div>
-                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(61,214,245,0.08)" }}>
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${pct}%`,
-                            background: pct > 80
-                              ? "linear-gradient(90deg,#f87171,#ef4444)"
-                              : pct > 60
-                              ? "linear-gradient(90deg,#fbbf24,#d97706)"
-                              : "linear-gradient(90deg,#3DD6F5,#2AB3CF)",
-                          }}
+                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(61,214,245,0.08)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor(pct) }} />
+                      </div>
+                      {sub && <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{sub}</div>}
+                    </div>
+                  );
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <StatBar
+                          label="Server RAM"
+                          value={`${serverStatus.ramUsedMB} / ${serverStatus.ramTotalMB} MB`}
+                          sub={`${serverStatus.ramFreeMB} MB free`}
+                          pct={ramPct}
+                        />
+                        <StatBar
+                          label="CPU Load (1 min)"
+                          value={`${serverStatus.loadAvg1m} avg`}
+                          sub={`${serverStatus.cpuCores} cores · 5m: ${serverStatus.loadAvg5m} · 15m: ${serverStatus.loadAvg15m}`}
+                          pct={cpuPct}
+                        />
+                        <StatBar
+                          label="Disk Usage"
+                          value={serverStatus.diskTotalMB >= 1024
+                            ? `${(serverStatus.diskUsedMB/1024).toFixed(1)} / ${(serverStatus.diskTotalMB/1024).toFixed(1)} GB`
+                            : `${serverStatus.diskUsedMB} / ${serverStatus.diskTotalMB} MB`}
+                          sub={serverStatus.diskTotalMB >= 1024
+                            ? `${((serverStatus.diskTotalMB - serverStatus.diskUsedMB)/1024).toFixed(1)} GB free`
+                            : `${serverStatus.diskTotalMB - serverStatus.diskUsedMB} MB free`}
+                          pct={diskPct}
                         />
                       </div>
-                      <p className="mt-1.5 text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>
-                        Node.js grows the heap automatically — heap% vs heapTotal is not a meaningful limit.
-                      </p>
-                    </div>
+
+                      {/* API process row */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {[
+                          { label: "API Heap Used",  value: `${serverStatus.heapUsed} MB` },
+                          { label: "API Heap Total", value: `${serverStatus.heapTotal} MB` },
+                          { label: "API RSS",        value: `${serverStatus.rss} MB` },
+                          { label: "API Uptime",     value: fmt(serverStatus.processUptimeSeconds) },
+                        ].map(s => (
+                          <div key={s.label} className="p-3 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.03)", border: "1px solid rgba(61,214,245,0.08)" }}>
+                            <div className="text-sm font-bold" style={{ color: "rgba(168,237,255,0.75)", fontFamily: "'Orbitron',sans-serif" }}>{s.value}</div>
+                            <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.35)" }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* System uptime */}
+                      <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>
+                        <span>System uptime:</span>
+                        <span style={{ color: "rgba(52,211,153,0.8)" }}>{fmt(serverStatus.sysUptimeSeconds)}</span>
+                      </div>
+                    </>
                   );
                 })()}
               </>
@@ -1592,14 +1627,14 @@ export default function AdminSettings() {
                   style={{ background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
                 >
                   <Server size={13} />
-                  {restarting ? <><RefreshCw size={13} className="animate-spin" /> Restarting…</> : "Clear Memory & Restart Server"}
+                  {restarting ? <><RefreshCw size={13} className="animate-spin" /> Restarting…</> : "Restart API Server"}
                 </button>
               ) : (
                 <div className="w-full p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}>
                   <div className="flex items-start gap-2">
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.9)" }} />
                     <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.85)" }}>
-                      The API server process will restart — <strong>no database data or files will be affected</strong>. Active requests may briefly fail. PM2 will bring it back online in seconds. Continue?
+                      The API process will restart — <strong>no database data or files will be affected</strong>. Active requests may briefly fail. PM2 will bring it back online in seconds. Continue?
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -1623,10 +1658,6 @@ export default function AdminSettings() {
                 </div>
               )}
             </div>
-
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.35)" }}>
-              A restart clears the Node.js heap (in-memory caches, buffered data). All persistent data — user accounts, investments, balances, files — live in PostgreSQL and are never affected.
-            </p>
           </div>
         </SectionCard>
         </>

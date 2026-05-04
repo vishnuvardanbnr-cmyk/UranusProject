@@ -1165,13 +1165,52 @@ router.delete("/admin/ranks/:id", requireAdmin, async (req, res) => {
 
 // GET /api/admin/server-status
 router.get("/admin/server-status", requireAdmin, (_req, res) => {
+  const os = require("os");
+  const { execSync } = require("child_process");
+
   const mem = process.memoryUsage();
+
+  // Real server RAM
+  const ramTotalMB  = Math.round(os.totalmem() / 1024 / 1024);
+  const ramFreeMB   = Math.round(os.freemem()  / 1024 / 1024);
+  const ramUsedMB   = ramTotalMB - ramFreeMB;
+
+  // CPU
+  const cpuCores = os.cpus().length;
+  const loadAvg  = os.loadavg(); // [1m, 5m, 15m]
+
+  // Disk — parse `df -m /`
+  let diskUsedMB = 0, diskTotalMB = 0;
+  try {
+    const dfLine = execSync("df -m / | tail -1", { timeout: 3000 }).toString().trim();
+    const parts  = dfLine.split(/\s+/);
+    diskTotalMB  = parseInt(parts[1], 10);
+    diskUsedMB   = parseInt(parts[2], 10);
+  } catch { /* ignore */ }
+
+  // System uptime
+  const sysUptimeSeconds = Math.floor(os.uptime());
+
   res.json({
+    // Server RAM
+    ramTotalMB,
+    ramUsedMB,
+    ramFreeMB,
+    // API process memory
     heapUsed:  Math.round(mem.heapUsed  / 1024 / 1024),
     heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
     rss:       Math.round(mem.rss       / 1024 / 1024),
-    external:  Math.round(mem.external  / 1024 / 1024),
-    uptimeSeconds: Math.floor(process.uptime()),
+    // CPU
+    cpuCores,
+    loadAvg1m:  Math.round(loadAvg[0] * 100) / 100,
+    loadAvg5m:  Math.round(loadAvg[1] * 100) / 100,
+    loadAvg15m: Math.round(loadAvg[2] * 100) / 100,
+    // Disk
+    diskTotalMB,
+    diskUsedMB,
+    // Uptime
+    processUptimeSeconds: Math.floor(process.uptime()),
+    sysUptimeSeconds,
   });
 });
 
