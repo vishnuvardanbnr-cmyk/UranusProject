@@ -507,6 +507,7 @@ export const UpdateAdminUserBody = zod.object({
   country: zod.string().nullish(),
   walletAddress: zod.string().nullish(),
   isActive: zod.boolean().optional(),
+  isBlocked: zod.boolean().optional(),
   isAdmin: zod.boolean().optional(),
   withdrawalBlocked: zod.boolean().optional(),
   p2pBlocked: zod.boolean().optional(),

@@ -13,6 +13,7 @@ export interface AdminUpdateUserBody {
   country?: string | null;
   walletAddress?: string | null;
   isActive?: boolean;
+  isBlocked?: boolean;
   isAdmin?: boolean;
   withdrawalBlocked?: boolean;
   p2pBlocked?: boolean;

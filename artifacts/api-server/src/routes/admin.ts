@@ -39,6 +39,7 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
     currentRankId: user.currentRankId,
     isAdmin: user.isAdmin,
     isActive: user.isActive,
+    isBlocked: user.isBlocked,
     withdrawalBlocked: user.withdrawalBlocked,
     p2pBlocked: user.p2pBlocked,
     investmentBlocked: user.investmentBlocked,
@@ -153,6 +154,7 @@ router.put("/admin/users/:id", requireAdmin, async (req, res) => {
   if (d.country !== undefined) updates.country = d.country;
   if (d.walletAddress !== undefined) updates.walletAddress = d.walletAddress;
   if (d.isActive !== undefined) updates.isActive = d.isActive;
+  if (d.isBlocked !== undefined) updates.isBlocked = d.isBlocked;
   if (d.isAdmin !== undefined) updates.isAdmin = d.isAdmin;
   if (d.withdrawalBlocked !== undefined) updates.withdrawalBlocked = d.withdrawalBlocked;
   if (d.p2pBlocked !== undefined) updates.p2pBlocked = d.p2pBlocked;

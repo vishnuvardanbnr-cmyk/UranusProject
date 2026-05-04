@@ -61,6 +61,7 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
     currentRankId: user.currentRankId,
     isAdmin: user.isAdmin,
     isActive: user.isActive,
+    isBlocked: user.isBlocked,
     profileComplete: user.profileComplete,
     totalEarnings: parseFloat(user.totalEarnings),
     totalInvested: parseFloat(user.totalInvested),
@@ -243,7 +244,7 @@ router.post("/auth/register", async (req, res) => {
         referralCode: referralCodeGenerated,
         sponsorId: sponsorId ?? null,
         isAdmin: isFirstUser,
-        isActive: true,
+        isActive: false,
       }).returning();
 
       result = { user, isFirstUser };
@@ -290,8 +291,8 @@ router.post("/auth/login", async (req, res) => {
     return;
   }
 
-  if (!user.isActive) {
-    res.status(403).json({ message: "Account is deactivated" });
+  if (user.isBlocked) {
+    res.status(403).json({ message: "Your account has been blocked. Please contact support." });
     return;
   }
 

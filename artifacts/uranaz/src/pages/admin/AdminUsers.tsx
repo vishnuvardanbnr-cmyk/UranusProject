@@ -22,7 +22,7 @@ function formatDate(iso: string) {
 type AdminUser = {
   id: number; name: string; email: string; phone: string; country?: string | null;
   walletAddress?: string | null; referralCode: string;
-  isAdmin: boolean; isActive: boolean;
+  isAdmin: boolean; isActive: boolean; isBlocked: boolean;
   withdrawalBlocked: boolean; p2pBlocked: boolean; investmentBlocked: boolean;
   blockReason?: string | null;
   withdrawalBlockReason?: string | null;
@@ -142,18 +142,25 @@ export default function AdminUsers() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span
-                      className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={user.isActive ? {
-                        background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.25)", color: GREEN,
-                      } : {
-                        background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)", color: RED,
-                      }}
-                    >
-                      {user.isActive ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                      {user.isActive ? "Active" : "Inactive"}
-                    </span>
-                    {restricted && user.isActive && (
+                    {user.isBlocked ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)", color: RED }}>
+                        <Ban size={11} /> Blocked
+                      </span>
+                    ) : (
+                      <span
+                        className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={user.isActive ? {
+                          background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.25)", color: GREEN,
+                        } : {
+                          background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)", color: AMBER,
+                        }}
+                      >
+                        {user.isActive ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                        {user.isActive ? "Active" : "Inactive"}
+                      </span>
+                    )}
+                    {restricted && !user.isBlocked && (
                       <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
                         style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.25)", color: AMBER }}>
                         <AlertTriangle size={10} />
@@ -220,6 +227,7 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
   const [walletAddress, setWalletAddress] = useState(user.walletAddress ?? "");
 
   const [isActive, setIsActive] = useState(user.isActive);
+  const [isBlocked, setIsBlocked] = useState(user.isBlocked);
   const [isAdmin, setIsAdmin] = useState(user.isAdmin);
   const [withdrawalBlocked, setWithdrawalBlocked] = useState(user.withdrawalBlocked);
   const [p2pBlocked, setP2pBlocked] = useState(user.p2pBlocked);
@@ -248,6 +256,7 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     if ((country || null) !== (user.country || null)) body.country = country.trim() || null;
     if ((walletAddress || null) !== (user.walletAddress || null)) body.walletAddress = walletAddress.trim() || null;
     if (isActive !== user.isActive) body.isActive = isActive;
+    if (isBlocked !== user.isBlocked) body.isBlocked = isBlocked;
     if (isAdmin !== user.isAdmin) body.isAdmin = isAdmin;
     if (withdrawalBlocked !== user.withdrawalBlocked) body.withdrawalBlocked = withdrawalBlocked;
     if (p2pBlocked !== user.p2pBlocked) body.p2pBlocked = p2pBlocked;
@@ -373,10 +382,18 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
           {tab === "access" && (
             <>
               <Toggle
-                testId="toggle-active"
-                label="Account active"
-                description="When off, the user cannot log in or use the platform at all."
+                testId="toggle-blocked"
+                label="Block Account"
+                description="Blocked accounts cannot log in at all. Use this to suspend access entirely."
                 icon={<Ban size={14} />}
+                value={isBlocked}
+                onChange={setIsBlocked}
+              />
+              <Toggle
+                testId="toggle-active"
+                label="Active Member"
+                description="Marks this account as an active investing member. Does not affect login ability."
+                icon={<CheckCircle size={14} />}
                 value={isActive}
                 onChange={setIsActive}
                 positive
