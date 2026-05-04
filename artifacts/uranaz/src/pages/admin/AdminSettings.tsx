@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database,
-  AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, SlidersHorizontal, Coins,
+  AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, SlidersHorizontal, Coins, Server,
   Layers, BadgeDollarSign, Search, ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 
@@ -301,6 +301,13 @@ export default function AdminSettings() {
   const [regenerating, setRegenerating] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenResult, setRegenResult] = useState<{ regenerated: number; backed_up: number; message: string } | null>(null);
+
+  type ServerStatus = { heapUsed: number; heapTotal: number; rss: number; external: number; uptimeSeconds: number };
+  const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
+  const [serverStatusLoading, setServerStatusLoading] = useState(false);
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [restartDone, setRestartDone] = useState(false);
   const [showBackups, setShowBackups] = useState(false);
   const [backups, setBackups] = useState<any[]>([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
@@ -313,6 +320,41 @@ export default function AdminSettings() {
       .then(r => r.json())
       .then(d => setWalletStats(d))
       .catch(() => {});
+  };
+
+  const loadServerStatus = () => {
+    setServerStatusLoading(true);
+    fetch("/api/admin/server-status", { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json())
+      .then(d => setServerStatus(d))
+      .catch(() => {})
+      .finally(() => setServerStatusLoading(false));
+  };
+
+  const doServerRestart = async () => {
+    setRestarting(true);
+    setConfirmRestart(false);
+    try {
+      await fetch("/api/admin/server-restart", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      setRestartDone(true);
+      // Poll until server comes back, then reload status
+      const poll = setInterval(async () => {
+        try {
+          const r = await fetch("/api/admin/server-status", { headers: { Authorization: `Bearer ${getToken()}` } });
+          if (r.ok) {
+            const d = await r.json();
+            setServerStatus(d);
+            setRestarting(false);
+            clearInterval(poll);
+          }
+        } catch { /* still restarting */ }
+      }, 1500);
+    } catch {
+      setRestarting(false);
+    }
   };
 
   const doRegenerate = async () => {
@@ -424,6 +466,7 @@ export default function AdminSettings() {
       .catch(() => {})
       .finally(() => setWalletLoading(false));
     loadWalletStats();
+    loadServerStatus();
   }, []);
 
   const onWalletSubmit = async (data: { adminMasterWallet: string; gasWalletPrivateKey: string; bscRpcUrl: string; minDepositUsdt: number }) => {
@@ -1454,6 +1497,127 @@ export default function AdminSettings() {
                   </div>
               )}
             </div>
+          </div>
+        </SectionCard>
+        <SectionCard
+          icon={Server}
+          title="Server Memory"
+          description="View current API process memory usage and restart the server to free memory. All user data and files are stored in the database — a restart only clears in-memory state."
+        >
+          <div className="space-y-5">
+            {/* Memory stats */}
+            {serverStatusLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />)}
+              </div>
+            ) : serverStatus ? (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Heap Used",  value: `${serverStatus.heapUsed} MB`,  color: serverStatus.heapUsed > 400 ? "rgba(248,113,113,0.9)" : TEAL },
+                    { label: "Heap Total", value: `${serverStatus.heapTotal} MB`, color: "rgba(168,237,255,0.7)" },
+                    { label: "RSS",        value: `${serverStatus.rss} MB`,       color: "rgba(168,237,255,0.7)" },
+                    { label: "Uptime",     value: (() => {
+                      const s = serverStatus.uptimeSeconds;
+                      if (s < 60) return `${s}s`;
+                      if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+                      return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+                    })(), color: "rgba(52,211,153,0.9)" },
+                  ].map(stat => (
+                    <div key={stat.label} className="p-4 rounded-xl text-center" style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.12)" }}>
+                      <div className="text-lg font-bold" style={{ color: stat.color, fontFamily: "'Orbitron',sans-serif" }}>{stat.value}</div>
+                      <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.45)" }}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Heap bar */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
+                    <span>Heap usage</span>
+                    <span>{Math.round(serverStatus.heapUsed / serverStatus.heapTotal * 100)}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(61,214,245,0.08)" }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.round(serverStatus.heapUsed / serverStatus.heapTotal * 100))}%`,
+                        background: serverStatus.heapUsed / serverStatus.heapTotal > 0.8
+                          ? "linear-gradient(90deg,#f87171,#ef4444)"
+                          : serverStatus.heapUsed / serverStatus.heapTotal > 0.6
+                          ? "linear-gradient(90deg,#fbbf24,#d97706)"
+                          : "linear-gradient(90deg,#3DD6F5,#2AB3CF)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Could not load server status.</p>
+            )}
+
+            {restartDone && !restarting && (
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
+                <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+                <span className="text-xs" style={{ color: "rgba(52,211,153,0.9)" }}>Server restarted successfully — memory cleared.</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={loadServerStatus}
+                disabled={serverStatusLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
+                style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.22)", color: TEAL }}
+              >
+                <RefreshCw size={13} className={serverStatusLoading ? "animate-spin" : ""} />
+                Refresh Stats
+              </button>
+
+              {!confirmRestart ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmRestart(true)}
+                  disabled={restarting}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60"
+                  style={{ background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
+                >
+                  <Server size={13} />
+                  {restarting ? <><RefreshCw size={13} className="animate-spin" /> Restarting…</> : "Clear Memory & Restart Server"}
+                </button>
+              ) : (
+                <div className="w-full p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.9)" }} />
+                    <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.85)" }}>
+                      The API server process will restart — <strong>no database data or files will be affected</strong>. Active requests may briefly fail. PM2 will bring it back online in seconds. Continue?
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={doServerRestart}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
+                      style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+                    >
+                      <Server size={13} /> Yes, Restart Now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRestart(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                      style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.35)" }}>
+              A restart clears the Node.js heap (in-memory caches, buffered data). All persistent data — user accounts, investments, balances, files — live in PostgreSQL and are never affected.
+            </p>
           </div>
         </SectionCard>
         </>

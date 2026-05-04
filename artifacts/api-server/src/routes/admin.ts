@@ -1163,6 +1163,24 @@ router.delete("/admin/ranks/:id", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/admin/server-status
+router.get("/admin/server-status", requireAdmin, (_req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    heapUsed:  Math.round(mem.heapUsed  / 1024 / 1024),
+    heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+    rss:       Math.round(mem.rss       / 1024 / 1024),
+    external:  Math.round(mem.external  / 1024 / 1024),
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
+// POST /api/admin/server-restart — graceful restart via PM2 (process.exit triggers PM2 restart)
+router.post("/admin/server-restart", requireAdmin, (_req, res) => {
+  res.json({ ok: true, message: "Server is restarting…" });
+  setTimeout(() => process.exit(0), 400);
+});
+
 // POST /api/admin/run-daily-payout — manual trigger for testing
 router.post("/admin/run-daily-payout", requireAdmin, async (req, res) => {
   try {
