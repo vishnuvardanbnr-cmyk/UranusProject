@@ -7,6 +7,8 @@ import { signToken, requireAuth } from "../middlewares/auth";
 import { RegisterBody, LoginBody, SetupProfileBody } from "@workspace/api-zod";
 import { sendOtpEmail, sendWelcomeEmail, isOtpRegistrationEnabled } from "../lib/email";
 import { trackOtpFailure } from "../lib/alerts";
+import { generateDepositWallet } from "../lib/blockchain";
+import { encryptKey } from "../lib/keyEncryption.js";
 
 const router = Router();
 
@@ -188,10 +190,22 @@ router.post("/auth/register", async (req, res) => {
     await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
   }
 
-  // Generate the referral code for the new user OUTSIDE the transaction.
+  // Generate the referral code and deposit wallet OUTSIDE the transaction.
   // Doing it here keeps the locked critical section short and avoids holding
-  // the advisory lock while doing extra reads.
+  // the advisory lock while doing extra work.
   const referralCodeGenerated = await generateUniqueReferralCode();
+
+  // Pre-generate a unique deposit wallet so it's ready immediately after registration.
+  // encryptKey uses PRIVATE_KEY_SECRET so the raw private key never touches the DB in plaintext.
+  let newDepositAddress: string | null = null;
+  let newDepositPrivateKey: string | null = null;
+  try {
+    const { address, privateKey } = generateDepositWallet();
+    newDepositAddress = address;
+    newDepositPrivateKey = encryptKey(privateKey);
+  } catch (err) {
+    req.log?.warn?.({ err }, "Could not pre-generate deposit wallet at registration — will be created lazily on first deposit page visit");
+  }
 
   // Atomic registration:
   // - Acquire a transaction-scoped Postgres advisory lock keyed to a fixed
@@ -245,6 +259,9 @@ router.post("/auth/register", async (req, res) => {
         sponsorId: sponsorId ?? null,
         isAdmin: isFirstUser,
         isActive: false,
+        ...(newDepositAddress && newDepositPrivateKey
+          ? { depositAddress: newDepositAddress, depositPrivateKey: newDepositPrivateKey }
+          : {}),
       }).returning();
 
       result = { user, isFirstUser };

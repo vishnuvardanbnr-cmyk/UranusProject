@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, depositsTable, platformSettingsTable, depositWalletBackupsTable } from "@workspace/db";
-import { eq, desc, isNotNull, count, inArray } from "drizzle-orm";
+import { eq, desc, isNotNull, isNull, count, inArray } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings, generateDepositWallet } from "../lib/blockchain";
 import { ethers } from "ethers";
@@ -196,6 +196,26 @@ router.get("/admin/wallet-stats", requireAdmin, async (req, res) => {
     .from(depositWalletBackupsTable);
 
   res.json({ totalWithAddress, backupCount });
+});
+
+// POST /api/admin/wallet-settings/generate-missing  — generate deposit wallets for users who have none
+router.post("/admin/wallet-settings/generate-missing", requireAdmin, async (req, res) => {
+  const users = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(isNull(usersTable.depositAddress));
+
+  let generated = 0;
+  for (const user of users) {
+    const { address, privateKey } = generateDepositWallet();
+    await db.update(usersTable)
+      .set({ depositAddress: address, depositPrivateKey: encryptKey(privateKey) })
+      .where(eq(usersTable.id, user.id));
+    generated++;
+  }
+
+  logger.info({ generated }, "Admin generated missing deposit wallets");
+  res.json({ generated, message: `${generated} missing deposit wallets created.` });
 });
 
 // POST /api/admin/wallet-settings/regenerate-all  — regenerate all user deposit wallets
