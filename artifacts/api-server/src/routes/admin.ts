@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable, ranksTable } from "@workspace/db";
 import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -1116,6 +1116,51 @@ router.get("/admin/reports/p2p", requireAdmin, async (req, res) => {
 
   const { rows: pageRows, total } = paginate(rows, page, limit);
   res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// ──────────── RANKS CRUD ────────────
+
+const RankBody = z.object({
+  rankNumber: z.number().int().min(1),
+  name: z.string().min(1),
+  criteria: z.string().min(1),
+  reward: z.string().min(1),
+  requiresRankId: z.number().int().nullable().optional(),
+  requiresCount: z.number().int().nullable().optional(),
+  requiresLevels: z.number().int().nullable().optional(),
+});
+
+// GET /api/admin/ranks
+router.get("/admin/ranks", requireAdmin, async (_req, res) => {
+  const ranks = await db.select().from(ranksTable).orderBy(ranksTable.rankNumber);
+  res.json(ranks);
+});
+
+// POST /api/admin/ranks
+router.post("/admin/ranks", requireAdmin, async (req, res) => {
+  const parsed = RankBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const [rank] = await db.insert(ranksTable).values(parsed.data).returning();
+  res.status(201).json(rank);
+});
+
+// PUT /api/admin/ranks/:id
+router.put("/admin/ranks/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params["id"] ?? "");
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid id" }); return; }
+  const parsed = RankBody.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const [rank] = await db.update(ranksTable).set(parsed.data).where(eq(ranksTable.id, id)).returning();
+  if (!rank) { res.status(404).json({ message: "Not found" }); return; }
+  res.json(rank);
+});
+
+// DELETE /api/admin/ranks/:id
+router.delete("/admin/ranks/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params["id"] ?? "");
+  if (isNaN(id)) { res.status(400).json({ message: "Invalid id" }); return; }
+  await db.delete(ranksTable).where(eq(ranksTable.id, id));
+  res.json({ ok: true });
 });
 
 // POST /api/admin/run-daily-payout — manual trigger for testing

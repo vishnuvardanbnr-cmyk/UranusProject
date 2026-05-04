@@ -45,6 +45,7 @@ import AdminNotices from "@/pages/admin/AdminNotices";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminLegal from "@/pages/admin/AdminLegal";
 import AdminHcDeposits from "@/pages/admin/AdminHcDeposits";
+import AdminRanks from "@/pages/admin/AdminRanks";
 import Support from "@/pages/Support";
 import Deposit from "@/pages/Deposit";
 import Notifications from "@/pages/Notifications";
@@ -215,6 +216,9 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         </Route>
         <Route path="/admin/hc-deposits">
           <RequireAdmin user={user}><AdminLayout><AdminHcDeposits /></AdminLayout></RequireAdmin>
+        </Route>
+        <Route path="/admin/ranks">
+          <RequireAdmin user={user}><AdminLayout><AdminRanks /></AdminLayout></RequireAdmin>
         </Route>
 
         <Route component={NotFound} />
