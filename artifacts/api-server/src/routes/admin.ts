@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable, ranksTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable, ranksTable, userRewardsTable } from "@workspace/db";
 import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -1236,6 +1236,164 @@ router.post("/admin/run-daily-payout", requireAdmin, async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message || "Payout failed" });
   }
+});
+
+// ── Offer Eligible List ─────────────────────────────────────────────────────
+// GET /api/admin/offer-eligible
+// Returns each active offer with the list of users who meet ALL criteria.
+router.get("/admin/offer-eligible", requireAdmin, async (_req, res) => {
+  const [offers, users, rewards] = await Promise.all([
+    db.select().from(offersTable).orderBy(offersTable.createdAt),
+    db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      phone: usersTable.phone,
+      referralCode: usersTable.referralCode,
+      sponsorId: usersTable.sponsorId,
+      totalInvested: usersTable.totalInvested,
+    }).from(usersTable),
+    db.select().from(userRewardsTable).where(eq(userRewardsTable.type, "offer")),
+  ]);
+
+  // Build sponsor → direct referrals map
+  const directRefsMap = new Map<number, typeof users>();
+  for (const u of users) {
+    if (u.sponsorId) {
+      if (!directRefsMap.has(u.sponsorId)) directRefsMap.set(u.sponsorId, []);
+      directRefsMap.get(u.sponsorId)!.push(u);
+    }
+  }
+
+  // Build reward lookup: "userId:referenceId" => reward record
+  const rewardSet = new Set(rewards.map(r => `${r.userId}:${r.referenceId}`));
+  const rewardMap = new Map(rewards.map(r => [`${r.userId}:${r.referenceId}`, r]));
+
+  function teamBusiness(userId: number): number {
+    const direct = directRefsMap.get(userId) ?? [];
+    return direct.reduce((sum, u) => sum + parseFloat(u.totalInvested ?? "0"), 0);
+  }
+
+  const activeOffers = offers.filter(o => o.active);
+
+  const result = activeOffers.map(offer => {
+    const criteria = (offer.criteria as any[]) ?? [];
+    const eligible = users.filter(user => {
+      return criteria.every(c => {
+        if (c.type === "self_invest") {
+          return parseFloat(user.totalInvested ?? "0") >= c.target;
+        }
+        if (c.type === "team_business") {
+          return teamBusiness(user.id) >= c.target;
+        }
+        if (c.type === "leg") {
+          const legs = (directRefsMap.get(user.id) ?? [])
+            .sort((a, b) => parseFloat(b.totalInvested ?? "0") - parseFloat(a.totalInvested ?? "0"));
+          const leg = legs[c.legIndex - 1];
+          return leg ? parseFloat(leg.totalInvested ?? "0") >= c.target : false;
+        }
+        return false;
+      });
+    });
+
+    return {
+      offer: { id: offer.id, title: offer.title, emoji: offer.emoji, reward: offer.reward, endDate: offer.endDate },
+      eligible: eligible.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        referralCode: u.referralCode,
+        totalInvested: parseFloat(u.totalInvested ?? "0"),
+        teamBusiness: teamBusiness(u.id),
+        rewarded: rewardSet.has(`${u.id}:${offer.id}`),
+        rewardedAt: rewardMap.get(`${u.id}:${offer.id}`)?.rewardedAt ?? null,
+        rewardNote: rewardMap.get(`${u.id}:${offer.id}`)?.note ?? null,
+      })),
+    };
+  });
+
+  res.json(result);
+});
+
+// ── Rank Achievers List ─────────────────────────────────────────────────────
+// GET /api/admin/rank-achievers
+// Returns each rank with users who have achieved it (currentRankId === rank.id).
+router.get("/admin/rank-achievers", requireAdmin, async (_req, res) => {
+  const [ranks, users, rewards] = await Promise.all([
+    db.select().from(ranksTable).orderBy(ranksTable.rankNumber),
+    db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      phone: usersTable.phone,
+      referralCode: usersTable.referralCode,
+      currentRankId: usersTable.currentRankId,
+      totalInvested: usersTable.totalInvested,
+    }).from(usersTable).where(sql`${usersTable.currentRankId} is not null`),
+    db.select().from(userRewardsTable).where(eq(userRewardsTable.type, "rank")),
+  ]);
+
+  const rewardSet = new Set(rewards.map(r => `${r.userId}:${r.referenceId}`));
+  const rewardMap = new Map(rewards.map(r => [`${r.userId}:${r.referenceId}`, r]));
+
+  const result = ranks.map(rank => {
+    const achievers = users.filter(u => u.currentRankId === rank.id);
+    return {
+      rank: { id: rank.id, rankNumber: rank.rankNumber, name: rank.name, reward: rank.reward },
+      achievers: achievers.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        referralCode: u.referralCode,
+        totalInvested: parseFloat(u.totalInvested ?? "0"),
+        rewarded: rewardSet.has(`${u.id}:${rank.id}`),
+        rewardedAt: rewardMap.get(`${u.id}:${rank.id}`)?.rewardedAt ?? null,
+        rewardNote: rewardMap.get(`${u.id}:${rank.id}`)?.note ?? null,
+      })),
+    };
+  });
+
+  res.json(result);
+});
+
+// ── Mark / Unmark Rewarded ──────────────────────────────────────────────────
+// POST /api/admin/mark-rewarded
+router.post("/admin/mark-rewarded", requireAdmin, async (req, res) => {
+  const parsed = z.object({
+    userId: z.number().int(),
+    type: z.enum(["offer", "rank"]),
+    referenceId: z.number().int(),
+    note: z.string().optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const { userId, type, referenceId, note } = parsed.data;
+  await db.insert(userRewardsTable)
+    .values({ userId, type, referenceId, note: note ?? null })
+    .onConflictDoUpdate({
+      target: [userRewardsTable.userId, userRewardsTable.type, userRewardsTable.referenceId],
+      set: { rewardedAt: new Date(), note: note ?? null },
+    });
+  res.json({ success: true });
+});
+
+// DELETE /api/admin/mark-rewarded
+router.delete("/admin/mark-rewarded", requireAdmin, async (req, res) => {
+  const parsed = z.object({
+    userId: z.number().int(),
+    type: z.enum(["offer", "rank"]),
+    referenceId: z.number().int(),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+  const { userId, type, referenceId } = parsed.data;
+  await db.delete(userRewardsTable)
+    .where(and(
+      eq(userRewardsTable.userId, userId),
+      eq(userRewardsTable.type, type),
+      eq(userRewardsTable.referenceId, referenceId),
+    ));
+  res.json({ success: true });
 });
 
 export default router;

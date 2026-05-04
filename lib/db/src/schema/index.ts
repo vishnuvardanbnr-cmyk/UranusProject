@@ -14,3 +14,4 @@ export * from "./notice_views";
 export * from "./wallet_address_changes";
 export * from "./hc_deposit_requests";
 export * from "./p2p_transfers";
+export * from "./user_rewards";

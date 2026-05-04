@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, TrendingUp, Wallet, FileText,
-  Settings, MessageCircle, Award, Bell, Shield, Menu, X, ArrowLeft, Scale, Coins, Star,
+  Settings, MessageCircle, Award, Bell, Shield, Menu, X, ArrowLeft, Scale, Coins, Star, Gift,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/legal",        label: "Legal Content",     sub: "Terms & Privacy Policy",      icon: Scale },
   { href: "/admin/hc-deposits",  label: "HC Deposits",       sub: "Verify & credit HyperCoin",   icon: Coins },
   { href: "/admin/ranks",        label: "Rank Management",   sub: "Create & edit rank tiers",    icon: Star },
+  { href: "/admin/rewards",      label: "Rewards Hub",       sub: "Eligible users & reward tracking", icon: Gift },
 ] as const;
 
 function isActive(location: string, href: string) {

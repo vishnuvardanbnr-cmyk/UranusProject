@@ -47,6 +47,7 @@ import AdminReports from "@/pages/admin/AdminReports";
 import AdminLegal from "@/pages/admin/AdminLegal";
 import AdminHcDeposits from "@/pages/admin/AdminHcDeposits";
 import AdminRanks from "@/pages/admin/AdminRanks";
+import AdminRewards from "@/pages/admin/AdminRewards";
 import Support from "@/pages/Support";
 import Deposit from "@/pages/Deposit";
 import Notifications from "@/pages/Notifications";
@@ -223,6 +224,9 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         </Route>
         <Route path="/admin/ranks">
           <RequireAdmin user={user}><AdminLayout><AdminRanks /></AdminLayout></RequireAdmin>
+        </Route>
+        <Route path="/admin/rewards">
+          <RequireAdmin user={user}><AdminLayout><AdminRewards /></AdminLayout></RequireAdmin>
         </Route>
 
         <Route component={NotFound} />
