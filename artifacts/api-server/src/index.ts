@@ -22,10 +22,11 @@ if (Number.isNaN(port) || port <= 0) {
 const server = createServer(app);
 setupWebSocket(server);
 
-// ── Daily payout cron: Mon–Fri at 03:00 AM server time ──
-// Expression: minute hour * * day-of-week (1=Mon, 5=Fri)
-cron.schedule("0 3 * * 1-5", async () => {
-  logger.info("Cron triggered: running daily payout (Mon–Fri 03:00)");
+// ── Daily payout cron: Mon–Fri at 03:00 AM IST (= 21:30 UTC Sun–Thu) ──
+// IST = UTC+5:30 → 03:00 IST = 21:30 UTC previous day
+// Sun–Thu UTC covers Mon–Fri IST
+cron.schedule("30 21 * * 0-4", async () => {
+  logger.info("Cron triggered: running daily payout (Mon–Fri 03:00 IST / 21:30 UTC)");
   try {
     const stats = await processDailyPayout();
     logger.info(stats, "Cron daily payout finished");
@@ -34,7 +35,7 @@ cron.schedule("0 3 * * 1-5", async () => {
   }
 });
 
-logger.info("Daily payout cron scheduled — Mon–Fri 03:00 AM");
+logger.info("Daily payout cron scheduled — Mon–Fri 03:00 AM IST (21:30 UTC Sun–Thu)");
 
 server.listen(port, (err?: Error) => {
   if (err) {
