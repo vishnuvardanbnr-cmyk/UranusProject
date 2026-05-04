@@ -6,6 +6,7 @@ async function getIncomeSettings() {
   const [s] = await db.select().from(platformSettingsTable).limit(1);
   if (!s) return null;
   return {
+    withdrawalCoolingHours: s.withdrawalCoolingHours ?? 24,
     levelRates: {
       1: parseFloat(s.levelCommL1),
       2: parseFloat(s.levelCommL2),
@@ -58,6 +59,7 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
   logger.info("Daily payout started");
 
   const cfg = await getIncomeSettings();
+  const coolingHours = cfg?.withdrawalCoolingHours ?? 24;
   const levelRates   = cfg?.levelRates   ?? DEFAULT_LEVEL_RATES;
   const levelUnlocks = cfg?.levelUnlocks ?? DEFAULT_LEVEL_UNLOCKS;
   const levelDays    = cfg?.levelDays    ?? DEFAULT_LEVEL_DAYS;
@@ -74,7 +76,6 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
   for (const inv of activeInvestments) {
     try {
       // ── Cooling period: skip investments created less than N hours ago ──
-      const coolingHours = settings?.withdrawalCoolingHours ?? 24;
       const hoursElapsed = (now.getTime() - new Date(inv.createdAt).getTime()) / 3_600_000;
       if (hoursElapsed < coolingHours) {
         logger.info({ investmentId: inv.id, hoursElapsed: hoursElapsed.toFixed(1), coolingHours }, "Investment in cooling period — skipping");
@@ -86,6 +87,11 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
       const newEarned    = parseFloat(inv.earnedSoFar) + dailyReturn;
       const newRemaining = Math.max(0, inv.remainingDays - 1);
       const isCompleted  = newRemaining === 0;
+
+      // daysElapsed counts how many distributions have been run INCLUDING this one.
+      // Using newRemaining (after decrement) means distribution #1 = day 1, #2 = day 2, etc.
+      // so level commission day limits are checked correctly per manual or automatic run.
+      const daysElapsed = inv.durationDays - newRemaining;
 
       // Update investment
       await db.update(investmentsTable)
@@ -118,59 +124,56 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         .where(eq(usersTable.id, inv.userId));
 
       // Level commissions — walk up the sponsor chain (up to 8 levels)
-      if (investor) {
-        // How many days has this investment been running?
-        const daysElapsed = inv.durationDays - inv.remainingDays;
+      let currentUserId: number | null = investor.sponsorId;
+      let level = 1;
 
-        let currentUserId: number | null = investor.sponsorId;
-        let level = 1;
+      while (currentUserId && level <= 8) {
+        const [upline] = await db.select().from(usersTable).where(eq(usersTable.id, currentUserId)).limit(1);
+        if (!upline) break;
 
-        while (currentUserId && level <= 8) {
-          const [upline] = await db.select().from(usersTable).where(eq(usersTable.id, currentUserId)).limit(1);
-          if (!upline) break;
-
-          // Skip commission for inactive upline — but continue walking up the chain
-          if (!upline.isActive) {
-            currentUserId = upline.sponsorId;
-            level++;
-            continue;
-          }
-
-          const unlockThreshold = levelUnlocks[level] ?? 0;
-          const uplineEarnings  = parseFloat(upline.totalEarnings);
-          const maxDays         = levelDays[level] ?? 0; // 0 = unlimited
-
-          // Skip if this level's commission period has expired
-          if (maxDays > 0 && daysElapsed > maxDays) {
-            currentUserId = upline.sponsorId;
-            level++;
-            continue;
-          }
-
-          if (uplineEarnings >= unlockThreshold) {
-            const rate       = levelRates[level] ?? 0;
-            const commission = dailyReturn * rate;
-
-            if (commission > 0) {
-              await db.insert(incomeTable).values({
-                userId: upline.id,
-                type: "level_commission",
-                amount: commission.toString(),
-                description: `Level ${level} commission from ${investor.name || investor.email}`,
-                fromUserId: inv.userId,
-                fromUserName: investor.name || investor.email,
-                level,
-              });
-
-              await db.update(usersTable)
-                .set({ totalEarnings: (parseFloat(upline.totalEarnings) + commission).toString() })
-                .where(eq(usersTable.id, upline.id));
-            }
-          }
-
+        // Skip commission for inactive upline — but continue walking up the chain
+        if (!upline.isActive) {
           currentUserId = upline.sponsorId;
           level++;
+          continue;
         }
+
+        const unlockThreshold = levelUnlocks[level] ?? 0;
+        const uplineEarnings  = parseFloat(upline.totalEarnings);
+        const maxDays         = levelDays[level] ?? 0; // 0 = unlimited
+
+        // Skip if this level's commission period has expired.
+        // daysElapsed starts at 1 on the first distribution, so maxDays=5 means
+        // commission is paid for exactly 5 distributions (days 1–5).
+        if (maxDays > 0 && daysElapsed > maxDays) {
+          currentUserId = upline.sponsorId;
+          level++;
+          continue;
+        }
+
+        if (uplineEarnings >= unlockThreshold) {
+          const rate       = levelRates[level] ?? 0;
+          const commission = dailyReturn * rate;
+
+          if (commission > 0) {
+            await db.insert(incomeTable).values({
+              userId: upline.id,
+              type: "level_commission",
+              amount: commission.toString(),
+              description: `Level ${level} commission from ${investor.name || investor.email}`,
+              fromUserId: inv.userId,
+              fromUserName: investor.name || investor.email,
+              level,
+            });
+
+            await db.update(usersTable)
+              .set({ totalEarnings: (parseFloat(upline.totalEarnings) + commission).toString() })
+              .where(eq(usersTable.id, upline.id));
+          }
+        }
+
+        currentUserId = upline.sponsorId;
+        level++;
       }
 
       stats.processed++;
