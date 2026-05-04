@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database,
   AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, SlidersHorizontal, Coins,
-  Layers, BadgeDollarSign,
+  Layers, BadgeDollarSign, Search, ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
