@@ -8,8 +8,9 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Mail, ArrowLeft, ShieldCheck, ChevronsUpDown, Check } from "lucide-react";
 import { COUNTRIES, COUNTRY_BY_ISO2 } from "@/lib/countries";
 
 function buildSchema(requireReferral: boolean) {
@@ -80,6 +81,7 @@ export default function Register({ onLogin }: Props) {
   const [sending, setSending] = useState(false);
   const [formData, setFormData] = useState<RegisterValues | null>(null);
   const [regInfo, setRegInfo] = useState<RegistrationInfo | null>(null);
+  const [countryOpen, setCountryOpen] = useState(false);
 
   useEffect(() => {
     fetchRegistrationInfo()
@@ -257,46 +259,89 @@ export default function Register({ onLogin }: Props) {
                   </FormItem>
                 )} />
 
-                {/* Country */}
+                {/* Country — searchable combobox */}
                 <FormField control={form.control} name="countryIso2" render={({ field }) => (
                   <FormItem>
                     <FormLabel style={LABEL_STYLE}>Country</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger
-                          data-testid="select-country"
-                          className="w-full h-9 rounded-md px-3"
-                          style={INPUT_STYLE}
-                        >
-                          <SelectValue placeholder="Select your country" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent
-                        className="max-h-72"
+                    <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <button
+                            type="button"
+                            data-testid="select-country"
+                            className="w-full h-9 rounded-md px-3 flex items-center justify-between text-sm"
+                            style={field.value
+                              ? INPUT_STYLE
+                              : { ...INPUT_STYLE, color: "rgba(168,237,255,0.4)" }}
+                          >
+                            {field.value
+                              ? (() => {
+                                  const c = COUNTRY_BY_ISO2[field.value];
+                                  return c ? `${c.name} (${c.dialCode})` : field.value;
+                                })()
+                              : "Search country…"}
+                            <ChevronsUpDown size={14} style={{ color: "rgba(61,214,245,0.5)", flexShrink: 0 }} />
+                          </button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="p-0 w-[var(--radix-popover-trigger-width)]"
                         style={{
                           background: "rgba(5,18,32,0.97)",
                           border: "1px solid rgba(61,214,245,0.25)",
                           color: "rgba(168,237,255,0.9)",
                           backdropFilter: "blur(24px)",
                         }}
+                        align="start"
+                        sideOffset={4}
                       >
-                        {COUNTRIES.map((c) => (
-                          <SelectItem
-                            key={c.iso2}
-                            value={c.iso2}
-                            data-testid={`option-country-${c.iso2}`}
-                            className="cursor-pointer"
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              <span>{c.name}</span>
-                              <span style={{ color: "rgba(168,237,255,0.45)", fontSize: "0.75rem" }}>
-                                ({c.dialCode})
-                              </span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <Command
+                          style={{ background: "transparent", color: "rgba(168,237,255,0.9)" }}
+                          filter={(value, search) => {
+                            const c = COUNTRY_BY_ISO2[value];
+                            if (!c) return 0;
+                            const q = search.toLowerCase();
+                            if (c.name.toLowerCase().startsWith(q)) return 2;
+                            if (c.name.toLowerCase().includes(q) || c.dialCode.includes(q)) return 1;
+                            return 0;
+                          }}
+                        >
+                          <CommandInput
+                            placeholder="Type to search…"
+                            className="text-sm"
+                            style={{ color: "rgba(168,237,255,0.9)" }}
+                          />
+                          <CommandList className="max-h-56">
+                            <CommandEmpty style={{ color: "rgba(168,237,255,0.45)" }}>
+                              No country found.
+                            </CommandEmpty>
+                            {COUNTRIES.map((c) => (
+                              <CommandItem
+                                key={c.iso2}
+                                value={c.iso2}
+                                data-testid={`option-country-${c.iso2}`}
+                                onSelect={(val) => {
+                                  field.onChange(val);
+                                  setCountryOpen(false);
+                                }}
+                                className="cursor-pointer flex items-center justify-between gap-2"
+                                style={{ color: "rgba(168,237,255,0.85)" }}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span>{c.name}</span>
+                                  <span style={{ color: "rgba(168,237,255,0.4)", fontSize: "0.75rem" }}>
+                                    {c.dialCode}
+                                  </span>
+                                </span>
+                                {field.value === c.iso2 && (
+                                  <Check size={13} style={{ color: "#3DD6F5", flexShrink: 0 }} />
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )} />
