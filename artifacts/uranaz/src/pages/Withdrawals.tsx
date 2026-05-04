@@ -202,15 +202,19 @@ export default function Withdrawals({ user }: { user: any }) {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="walletAddress" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel style={{ color: "rgba(168,237,255,0.65)", fontSize: "0.8rem" }}>USDT Wallet Address (BEP-20)</FormLabel>
-                    <FormControl>
-                      <Input data-testid="input-withdraw-wallet" placeholder="0x..." {...field} style={INPUT_STYLE} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.65)" }}>USDT Wallet Address (BEP-20)</label>
+                  <div
+                    data-testid="input-withdraw-wallet"
+                    className="w-full rounded-xl px-3 py-2.5 text-sm font-mono truncate select-all"
+                    style={{ background: "rgba(3,12,26,0.5)", border: "1px solid rgba(61,214,245,0.10)", color: "rgba(168,237,255,0.6)", cursor: "default" }}
+                  >
+                    {user?.walletAddress || <span style={{ color: "rgba(168,237,255,0.3)" }}>No wallet address set — update in Profile</span>}
+                  </div>
+                  <p className="text-[11px]" style={{ color: "rgba(168,237,255,0.3)" }}>
+                    To change your address, go to Profile settings.
+                  </p>
+                </div>
                 <button
                   data-testid="button-submit-withdrawal"
                   type="submit"
