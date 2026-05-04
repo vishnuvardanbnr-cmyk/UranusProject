@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, hcDepositRequestsTable, usersTable, platformSettingsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { sendHcDepositApprovedEmail, sendHcDepositRejectedEmail } from "../lib/email";
 
 const router = Router();
 
@@ -101,6 +102,14 @@ router.put("/admin/hc-deposits/:id/approve", requireAdmin, async (req, res) => {
     .set({ status: "approved", amount: String(hcAmount), processedAt: new Date() })
     .where(eq(hcDepositRequestsTable.id, id));
 
+  sendHcDepositApprovedEmail(
+    targetUser.email,
+    targetUser.name ?? "Member",
+    hcAmount,
+    parseFloat(usdValue),
+    hcPrice,
+  ).catch(() => {});
+
   res.json({ success: true, hcAmount, usdValue: parseFloat(usdValue), hcPrice });
 });
 
@@ -128,6 +137,20 @@ router.put("/admin/hc-deposits/:id/reject", requireAdmin, async (req, res) => {
   await db.update(hcDepositRequestsTable)
     .set({ status: "rejected", note: note ?? null, processedAt: new Date() })
     .where(eq(hcDepositRequestsTable.id, id));
+
+  const [rejectedUser] = await db
+    .select({ email: usersTable.email, name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, record.userId))
+    .limit(1);
+
+  if (rejectedUser) {
+    sendHcDepositRejectedEmail(
+      rejectedUser.email,
+      rejectedUser.name ?? "Member",
+      note ?? null,
+    ).catch(() => {});
+  }
 
   res.json({ success: true });
 });

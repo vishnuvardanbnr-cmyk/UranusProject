@@ -286,6 +286,113 @@ export async function sendAdminAlertEmail(
   });
 }
 
+// ── HyperCoin deposit approved ────────────────────────────────────────────────
+export async function sendHcDepositApprovedEmail(
+  to: string,
+  name: string,
+  hcAmount: number,
+  usdValue: number,
+  hcPrice: number,
+) {
+  const s = await getSettings();
+  if (!s?.smtpEnabled) return;
+
+  const domain = fromDomain(s);
+  const transport = createTransport(s);
+  const safeName = escapeHtml(name);
+
+  await transport.sendMail({
+    from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
+    to,
+    subject: "URANUS TRADES — HyperCoin Deposit Approved",
+    messageId: makeMessageId(domain),
+    headers: baseHeaders(domain),
+    text: `URANUS TRADES — HyperCoin Deposit Approved\n\nHi ${name},\n\nYour HyperCoin deposit has been reviewed and approved by our team.\n\nAmount Credited: ${hcAmount.toFixed(4)} HC\nUSD Value: $${usdValue.toFixed(4)}\nHC Price: $${hcPrice.toFixed(4)}\n\nYour HyperCoin balance has been updated. Log in to your dashboard to view it.\n\n© URANUS TRADES`,
+    html: wrap(`
+      ${header(s)}
+      <tr><td style="padding:32px;">
+        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${safeName},</p>
+        <p style="color:rgba(168,237,255,0.6);font-size:14px;margin:0 0 24px;">
+          Great news! Your HyperCoin deposit has been <strong style="color:#3DD6F5;">approved</strong> and credited to your account.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="background:rgba(61,214,245,0.08);border:1px solid rgba(61,214,245,0.3);border-radius:10px;padding:24px 24px 20px;">
+            <div style="font-size:12px;color:rgba(168,237,255,0.45);margin-bottom:6px;letter-spacing:1px;">HYPERCOIN CREDITED</div>
+            <div style="font-size:40px;font-weight:900;color:#3DD6F5;letter-spacing:1px;">+${hcAmount.toFixed(4)} HC</div>
+            <div style="margin-top:14px;display:flex;justify-content:center;gap:32px;">
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:rgba(168,237,255,0.4);margin-bottom:3px;">USD Value</div>
+                <div style="font-size:15px;font-weight:700;color:rgba(168,237,255,0.85);">$${usdValue.toFixed(4)}</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:rgba(168,237,255,0.4);margin-bottom:3px;">HC Price</div>
+                <div style="font-size:15px;font-weight:700;color:rgba(168,237,255,0.85);">$${hcPrice.toFixed(4)}</div>
+              </div>
+            </div>
+          </td></tr>
+        </table>
+        <p style="color:rgba(168,237,255,0.45);font-size:12px;margin:20px 0 0;text-align:center;">
+          Log in to your dashboard to view your updated HyperCoin balance.
+        </p>
+      </td></tr>
+      ${footer()}
+    `),
+  });
+}
+
+// ── HyperCoin deposit rejected ────────────────────────────────────────────────
+export async function sendHcDepositRejectedEmail(
+  to: string,
+  name: string,
+  note?: string | null,
+) {
+  const s = await getSettings();
+  if (!s?.smtpEnabled) return;
+
+  const domain = fromDomain(s);
+  const transport = createTransport(s);
+  const safeName = escapeHtml(name);
+  const safeNote = note ? escapeHtml(note) : null;
+
+  await transport.sendMail({
+    from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
+    to,
+    subject: "URANUS TRADES — HyperCoin Deposit Not Approved",
+    messageId: makeMessageId(domain),
+    headers: baseHeaders(domain),
+    text: `URANUS TRADES — HyperCoin Deposit Not Approved\n\nHi ${name},\n\nWe were unable to approve your recent HyperCoin deposit request.${note ? `\n\nReason: ${note}` : ""}\n\nIf you believe this is a mistake or need assistance, please contact our support team.\n\n© URANUS TRADES`,
+    html: wrap(`
+      ${header(s)}
+      <tr><td style="padding:32px;">
+        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${safeName},</p>
+        <p style="color:rgba(168,237,255,0.6);font-size:14px;margin:0 0 24px;">
+          We were unable to approve your recent HyperCoin deposit request.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:20px 24px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:${safeNote ? "14px" : "0"};">
+              <div style="width:8px;height:8px;border-radius:50%;background:#F87171;flex-shrink:0;"></div>
+              <span style="color:#F87171;font-size:13px;font-weight:700;letter-spacing:0.5px;">DEPOSIT NOT APPROVED</span>
+            </div>
+            ${safeNote ? `
+            <div style="border-top:1px solid rgba(248,113,113,0.15);padding-top:12px;">
+              <p style="color:rgba(168,237,255,0.45);font-size:11px;margin:0 0 4px;letter-spacing:0.5px;">REASON</p>
+              <p style="color:rgba(168,237,255,0.7);font-size:13px;margin:0;">${safeNote}</p>
+            </div>` : ""}
+          </td></tr>
+        </table>
+        <p style="color:rgba(168,237,255,0.5);font-size:13px;margin:20px 0 8px;">
+          If you believe this is a mistake or need further assistance, please contact our support team with your deposit screenshot.
+        </p>
+        <p style="color:rgba(168,237,255,0.45);font-size:12px;margin:0;text-align:center;">
+          You can submit a new deposit request after resolving any issues.
+        </p>
+      </td></tr>
+      ${footer()}
+    `),
+  });
+}
+
 export async function isOtpRegistrationEnabled(): Promise<boolean> {
   const s = await getSettings();
   return !!(s?.smtpEnabled && s?.otpRegistrationEnabled);
