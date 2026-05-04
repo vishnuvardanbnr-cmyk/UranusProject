@@ -1531,25 +1531,34 @@ export default function AdminSettings() {
                   ))}
                 </div>
                 {/* Heap bar */}
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
-                    <span>Heap usage</span>
-                    <span>{Math.round(serverStatus.heapUsed / serverStatus.heapTotal * 100)}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(61,214,245,0.08)" }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, Math.round(serverStatus.heapUsed / serverStatus.heapTotal * 100))}%`,
-                        background: serverStatus.heapUsed / serverStatus.heapTotal > 0.8
-                          ? "linear-gradient(90deg,#f87171,#ef4444)"
-                          : serverStatus.heapUsed / serverStatus.heapTotal > 0.6
-                          ? "linear-gradient(90deg,#fbbf24,#d97706)"
-                          : "linear-gradient(90deg,#3DD6F5,#2AB3CF)",
-                      }}
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const MAX_MB = 512;
+                  const pct = Math.min(100, Math.round(serverStatus.rss / MAX_MB * 100));
+                  return (
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.5)" }}>
+                        <span>Process memory (RSS) <span style={{ color: "rgba(168,237,255,0.3)" }}>vs {MAX_MB} MB reference</span></span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(61,214,245,0.08)" }}>
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${pct}%`,
+                            background: pct > 80
+                              ? "linear-gradient(90deg,#f87171,#ef4444)"
+                              : pct > 60
+                              ? "linear-gradient(90deg,#fbbf24,#d97706)"
+                              : "linear-gradient(90deg,#3DD6F5,#2AB3CF)",
+                          }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs" style={{ color: "rgba(168,237,255,0.3)" }}>
+                        Node.js grows the heap automatically — heap% vs heapTotal is not a meaningful limit.
+                      </p>
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <p className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Could not load server status.</p>
