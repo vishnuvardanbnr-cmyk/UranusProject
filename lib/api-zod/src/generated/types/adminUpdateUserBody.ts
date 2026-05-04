@@ -25,4 +25,5 @@ export interface AdminUpdateUserBody {
   currentLevel?: number;
   walletBalance?: number;
   hyperCoinBalance?: number;
+  totalEarnings?: number;
 }

@@ -166,6 +166,7 @@ router.put("/admin/users/:id", requireAdmin, async (req, res) => {
   if (d.currentLevel !== undefined) updates.currentLevel = d.currentLevel;
   if (d.walletBalance !== undefined) updates.walletBalance = d.walletBalance.toString();
   if (d.hyperCoinBalance !== undefined) updates.hyperCoinBalance = d.hyperCoinBalance.toString();
+  if (d.totalEarnings !== undefined) updates.totalEarnings = d.totalEarnings.toString();
 
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ message: "No fields to update" });

@@ -516,6 +516,7 @@ export const UpdateAdminUserBody = zod.object({
   currentLevel: zod.number().optional(),
   walletBalance: zod.number().optional(),
   hyperCoinBalance: zod.number().optional(),
+  totalEarnings: zod.number().optional(),
 });
 
 export const UpdateAdminUserResponse = zod.object({

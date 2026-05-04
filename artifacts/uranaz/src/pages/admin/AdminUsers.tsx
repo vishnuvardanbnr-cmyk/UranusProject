@@ -238,6 +238,7 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
   const [investmentBlockReason, setInvestmentBlockReason] = useState(user.investmentBlockReason ?? "");
 
   const [walletBalance, setWalletBalance] = useState(user.walletBalance.toString());
+  const [earningsBalance, setEarningsBalance] = useState(user.totalEarnings.toString());
   const [hyperCoinBalance, setHyperCoinBalance] = useState(user.hyperCoinBalance.toString());
   const [currentLevel, setCurrentLevel] = useState(user.currentLevel.toString());
 
@@ -269,6 +270,8 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     if (!Number.isNaN(lvl) && lvl !== user.currentLevel) body.currentLevel = lvl;
     const wb = parseFloat(walletBalance);
     if (!Number.isNaN(wb) && Math.abs(wb - user.walletBalance) > 1e-6) body.walletBalance = wb;
+    const eb = parseFloat(earningsBalance);
+    if (!Number.isNaN(eb) && Math.abs(eb - user.totalEarnings) > 1e-6) body.totalEarnings = eb;
     const hb = parseFloat(hyperCoinBalance);
     if (!Number.isNaN(hb) && Math.abs(hb - user.hyperCoinBalance) > 1e-6) body.hyperCoinBalance = hb;
 
@@ -487,16 +490,28 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
                   Manual balance edits bypass deposits, withdrawals, and earnings logic. Use only to correct genuine accounting errors.
                 </div>
               </div>
-              <Field label="Wallet balance (USDT)">
-                <Input
-                  data-testid="input-wallet-balance"
-                  type="number"
-                  step="0.01"
-                  value={walletBalance}
-                  onChange={e => setWalletBalance(e.target.value)}
-                  style={INPUT_STYLE}
-                />
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Deposit Balance (USDT)">
+                  <Input
+                    data-testid="input-wallet-balance"
+                    type="number"
+                    step="0.01"
+                    value={walletBalance}
+                    onChange={e => setWalletBalance(e.target.value)}
+                    style={INPUT_STYLE}
+                  />
+                </Field>
+                <Field label="Earnings Balance (USDT)">
+                  <Input
+                    data-testid="input-earnings-balance"
+                    type="number"
+                    step="0.01"
+                    value={earningsBalance}
+                    onChange={e => setEarningsBalance(e.target.value)}
+                    style={INPUT_STYLE}
+                  />
+                </Field>
+              </div>
               <Field label="HyperCoin balance">
                 <Input
                   data-testid="input-hyper-balance"
@@ -518,10 +533,7 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
                   style={INPUT_STYLE}
                 />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <ReadOnly label="Total invested" value={`$${user.totalInvested.toFixed(2)}`} />
-                <ReadOnly label="Total earnings" value={`$${user.totalEarnings.toFixed(2)}`} />
-              </div>
+              <ReadOnly label="Total invested" value={`$${user.totalInvested.toFixed(2)}`} />
             </>
           )}
         </div>
