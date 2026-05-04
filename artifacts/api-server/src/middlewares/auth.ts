@@ -48,8 +48,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user || !user.isActive) {
-    res.status(401).json({ message: "User not found or inactive" });
+  if (!user) {
+    res.status(401).json({ message: "User not found" });
+    return;
+  }
+  if (user.isBlocked) {
+    res.status(401).json({ message: "Your account has been blocked. Please contact support." });
     return;
   }
   (req as any).user = user;
