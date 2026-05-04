@@ -75,7 +75,7 @@ export default function AdminUsers() {
           <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Total</div>
         </div>
         <div className="rounded-xl p-3 text-center" style={GLASS}>
-          <div className="text-lg font-bold" style={{ color: GREEN }}>{userList.filter(u => u.isActive).length}</div>
+          <div className="text-lg font-bold" style={{ color: GREEN }}>{userList.filter(u => u.totalInvested > 0).length}</div>
           <div className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>Active</div>
         </div>
         <div className="rounded-xl p-3 text-center" style={GLASS}>
@@ -141,14 +141,16 @@ export default function AdminUsers() {
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <span
                       className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={user.isActive ? {
+                      style={!user.isActive ? {
+                        background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)", color: RED,
+                      } : user.totalInvested > 0 ? {
                         background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.25)", color: GREEN,
                       } : {
-                        background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)", color: RED,
+                        background: "rgba(168,237,255,0.06)", border: "1px solid rgba(168,237,255,0.15)", color: "rgba(168,237,255,0.45)",
                       }}
                     >
-                      {user.isActive ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                      {user.isActive ? "Active" : "Blocked"}
+                      {!user.isActive ? <XCircle size={11} /> : user.totalInvested > 0 ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                      {!user.isActive ? "Blocked" : user.totalInvested > 0 ? "Active" : "Inactive"}
                     </span>
                     {restricted && user.isActive && (
                       <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
