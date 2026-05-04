@@ -148,7 +148,7 @@ export default function AdminUsers() {
                       }}
                     >
                       {user.isActive ? <CheckCircle size={11} /> : <XCircle size={11} />}
-                      {user.isActive ? "Active" : "Blocked"}
+                      {user.isActive ? "Active" : "Inactive"}
                     </span>
                     {restricted && user.isActive && (
                       <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
