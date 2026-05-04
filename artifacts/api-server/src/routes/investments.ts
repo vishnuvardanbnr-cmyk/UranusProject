@@ -157,11 +157,14 @@ router.post("/investments", requireAuth, async (req, res) => {
         earnedSoFar: "0",
       }).returning();
 
+      // Auto-activate user on their first investment
+      const isFirstInvestment = parseFloat(lockedUser.totalInvested) === 0;
       await tx.update(usersTable)
         .set({
           totalInvested: (parseFloat(lockedUser.totalInvested) + amount).toString(),
           walletBalance: (latestUsdt - usdtAmount).toString(),
           hyperCoinBalance: (latestHyper - hyperCoinAmount).toString(),
+          ...(isFirstInvestment ? { isActive: true } : {}),
         })
         .where(eq(usersTable.id, user.id));
 

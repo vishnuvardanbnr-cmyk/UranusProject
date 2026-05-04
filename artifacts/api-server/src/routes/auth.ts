@@ -214,6 +214,9 @@ router.post("/auth/register", async (req, res) => {
         referralCode: referralCodeGenerated,
         sponsorId: sponsorId ?? null,
         isAdmin: isFirstUser,
+        // New users start as inactive; they become active on their first investment
+        // or when manually enabled by admin
+        isActive: isFirstUser ? true : false,
       }).returning();
 
       result = { user, isFirstUser };
