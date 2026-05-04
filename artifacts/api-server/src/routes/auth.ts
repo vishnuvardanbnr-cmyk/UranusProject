@@ -102,6 +102,20 @@ router.post("/auth/send-otp", async (req, res) => {
     return;
   }
 
+  // For registration OTPs: block immediately if email is already taken.
+  // This avoids sending a useless email and leaks no additional information
+  // beyond what the registration endpoint itself already returns.
+  if (purpose === "registration") {
+    const [existing] = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+    if (existing) {
+      res.status(409).json({ message: "This email is already registered. Please sign in instead." });
+      return;
+    }
+  }
+
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
