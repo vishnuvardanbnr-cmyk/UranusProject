@@ -475,6 +475,32 @@ export default function AdminSettings() {
   const smtpEnabled = smtpForm.watch("smtpEnabled");
   const activeTabMeta = TABS.find(t => t.key === activeTab) ?? TABS[0];
 
+  // Manual ROI payout
+  const [payoutRunning, setPayoutRunning] = useState(false);
+  const [payoutResult, setPayoutResult] = useState<{ processed: number; skipped: number; errors: number } | null>(null);
+  const [payoutError, setPayoutError] = useState("");
+
+  async function runManualPayout() {
+    setPayoutRunning(true);
+    setPayoutResult(null);
+    setPayoutError("");
+    try {
+      const res = await fetch("/api/admin/run-daily-payout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Payout failed");
+      setPayoutResult({ processed: data.processed, skipped: data.skipped, errors: data.errors });
+      toast({ title: "ROI payout completed!", description: `${data.processed} investments processed` });
+    } catch (err: any) {
+      setPayoutError(err?.message || "Unknown error");
+      toast({ title: "Payout failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setPayoutRunning(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="px-4 md:px-6 py-6 max-w-5xl mx-auto space-y-4">
@@ -1138,6 +1164,75 @@ export default function AdminSettings() {
 
       {/* ============ MAINTENANCE ============ */}
       {activeTab === "maintenance" && (
+        <>
+        <SectionCard
+          icon={TrendingUp}
+          title="ROI Distribution"
+          description="Manually trigger the daily ROI payout for all active investments. The system also runs this automatically Mon–Fri at 03:00 AM server time."
+        >
+          <div className="space-y-4">
+            {/* Schedule info */}
+            <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.14)" }}>
+              <RefreshCw size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
+              <div>
+                <div className="text-xs font-semibold mb-0.5" style={{ color: TEAL }}>Auto-schedule active</div>
+                <div className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.5)" }}>
+                  Daily return + level commissions run automatically <strong style={{ color: "rgba(168,237,255,0.75)" }}>Mon–Fri at 03:00 AM</strong> server time via the API process. Use the button below to run it manually at any time.
+                </div>
+              </div>
+            </div>
+
+            {/* Manual trigger */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                type="button"
+                onClick={runManualPayout}
+                disabled={payoutRunning}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-60"
+                style={{
+                  background: payoutRunning ? "rgba(52,211,153,0.08)" : "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(16,185,129,0.1))",
+                  border: "1px solid rgba(52,211,153,0.35)",
+                  color: "rgba(52,211,153,0.95)",
+                }}
+              >
+                {payoutRunning
+                  ? <><RefreshCw size={14} className="animate-spin" /> Running…</>
+                  : <><TrendingUp size={14} /> Run ROI Payout Now</>}
+              </button>
+            </div>
+
+            {/* Result */}
+            {payoutResult && (
+              <div className="p-4 rounded-xl space-y-2" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+                  <span className="text-xs font-semibold" style={{ color: "rgba(52,211,153,0.9)" }}>Payout completed</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: "Processed", value: payoutResult.processed, color: "rgba(52,211,153,0.9)" },
+                    { label: "Skipped",   value: payoutResult.skipped,   color: "rgba(168,237,255,0.6)" },
+                    { label: "Errors",    value: payoutResult.errors,     color: payoutResult.errors > 0 ? "rgba(248,113,113,0.9)" : "rgba(168,237,255,0.4)" },
+                  ].map(s => (
+                    <div key={s.label} className="text-center p-2 rounded-lg" style={{ background: "rgba(0,10,20,0.4)" }}>
+                      <div className="text-lg font-bold" style={{ color: s.color, fontFamily: "'Orbitron',sans-serif" }}>{s.value}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {payoutError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.3)" }}>
+                <AlertTriangle size={14} className="shrink-0" style={{ color: "rgba(248,113,113,0.9)" }} />
+                <span className="text-xs" style={{ color: "rgba(248,113,113,0.9)" }}>{payoutError}</span>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
         <SectionCard
           icon={RefreshCw}
           title="Wallet Maintenance"
@@ -1327,6 +1422,7 @@ export default function AdminSettings() {
             </div>
           </div>
         </SectionCard>
+        </>
       )}
     </div>
   );
