@@ -185,10 +185,12 @@ function InvestmentDetailModal({ inv, hyperEnabled, coolingHours, onClose }: { i
 function MaxInvestmentModal({
   currentTotal,
   remaining,
+  maxTotal,
   onClose,
 }: {
   currentTotal: number;
   remaining: number;
+  maxTotal: number;
   onClose: () => void;
 }) {
   return (
@@ -224,7 +226,7 @@ function MaxInvestmentModal({
           </h2>
           <p className="text-sm mb-5" style={{ color: "rgba(168,237,255,0.5)" }}>
             The maximum total investment per account is{" "}
-            <span style={{ color: "#ff6464", fontWeight: 700 }}>$2,000</span>.
+            <span style={{ color: "#ff6464", fontWeight: 700 }}>${maxTotal.toLocaleString()}</span>.
           </p>
 
           <div
@@ -237,7 +239,7 @@ function MaxInvestmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span style={{ color: "rgba(168,237,255,0.45)" }}>Maximum Allowed</span>
-              <span style={{ color: "rgba(200,240,255,0.85)", fontWeight: 600 }}>$2,000.00</span>
+              <span style={{ color: "rgba(200,240,255,0.85)", fontWeight: 600 }}>${maxTotal.toLocaleString()}</span>
             </div>
             <div className="h-px" style={{ background: "rgba(255,100,100,0.12)" }} />
             <div className="flex justify-between text-sm">
@@ -271,23 +273,29 @@ const GLASS = {
   border: "1px solid rgba(61,214,245,0.12)",
 } as const;
 
+const DEFAULT_MAX_TOTAL = 2000;
+
 const DEFAULT_PLANS = [
-  { tier: "tier1", range: "$100 – $400",     rate: 0.005, days: 360, label: "0.5% Daily", min: 100,  max: 400  },
-  { tier: "tier2", range: "$500 – $900",     rate: 0.0055, days: 328, label: "0.55% Daily", min: 500,  max: 900,  popular: true },
-  { tier: "tier3", range: "$1,000 – $1,500", rate: 0.006, days: 300, label: "0.6% Daily", min: 1000, max: 1500 },
+  { tier: "tier1", range: "$100 – $400",                    rate: 0.005,  days: 360, label: "0.5% Daily",  min: 100,  max: 400            },
+  { tier: "tier2", range: "$500 – $900",                    rate: 0.0055, days: 328, label: "0.55% Daily", min: 500,  max: 900, popular: true },
+  { tier: "tier3", range: `$1,000 – $${DEFAULT_MAX_TOTAL}`, rate: 0.006,  days: 300, label: "0.6% Daily",  min: 1000, max: DEFAULT_MAX_TOTAL },
 ];
 
-function buildPlans(apiPlans: any) {
-  if (!apiPlans) return DEFAULT_PLANS;
+function buildPlans(apiPlans: any, maxTotal: number) {
+  const t3max = maxTotal ?? DEFAULT_MAX_TOTAL;
+  if (!apiPlans) return [
+    ...DEFAULT_PLANS.slice(0, 2),
+    { ...DEFAULT_PLANS[2], range: `$1,000 – $${t3max.toLocaleString()}`, max: t3max },
+  ];
   return [
-    { tier: "tier1", range: "$100 – $400",     rate: apiPlans.tier1.dailyRate, days: apiPlans.tier1.days, label: `${(apiPlans.tier1.dailyRate * 100).toFixed(2)}% Daily`, min: 100,  max: 400  },
-    { tier: "tier2", range: "$500 – $900",     rate: apiPlans.tier2.dailyRate, days: apiPlans.tier2.days, label: `${(apiPlans.tier2.dailyRate * 100).toFixed(2)}% Daily`, min: 500,  max: 900, popular: true },
-    { tier: "tier3", range: "$1,000 – $1,500", rate: apiPlans.tier3.dailyRate, days: apiPlans.tier3.days, label: `${(apiPlans.tier3.dailyRate * 100).toFixed(2)}% Daily`, min: 1000, max: 1500 },
+    { tier: "tier1", range: "$100 – $400",                                     rate: apiPlans.tier1.dailyRate, days: apiPlans.tier1.days, label: `${(apiPlans.tier1.dailyRate * 100).toFixed(2)}% Daily`, min: 100,  max: 400    },
+    { tier: "tier2", range: "$500 – $900",                                     rate: apiPlans.tier2.dailyRate, days: apiPlans.tier2.days, label: `${(apiPlans.tier2.dailyRate * 100).toFixed(2)}% Daily`, min: 500,  max: 900, popular: true },
+    { tier: "tier3", range: `$1,000 – $${t3max.toLocaleString()}`,             rate: apiPlans.tier3.dailyRate, days: apiPlans.tier3.days, label: `${(apiPlans.tier3.dailyRate * 100).toFixed(2)}% Daily`, min: 1000, max: t3max },
   ];
 }
 
 const schema = z.object({
-  amount: z.coerce.number().min(100).max(1500),
+  amount: z.coerce.number().min(100),
   hyperCoinAmount: z.coerce.number().min(0),
   usdtAmount: z.coerce.number().min(0),
 });
@@ -295,8 +303,9 @@ const schema = z.object({
 export default function Invest({ user }: { user: any }) {
   const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
   const [selectedTier, setSelectedTier] = useState<string>("tier1");
-  const [limitModal, setLimitModal] = useState<{ currentTotal: number; remaining: number } | null>(null);
+  const [limitModal, setLimitModal] = useState<{ currentTotal: number; remaining: number; maxTotal: number } | null>(null);
   const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
+  const [maxTotalInvestment, setMaxTotalInvestment] = useState<number>(DEFAULT_MAX_TOTAL);
   const [plans, setPlans] = useState(DEFAULT_PLANS);
   const [coolingHours, setCoolingHours] = useState<number>(24);
   const createInvestment = useCreateInvestment();
@@ -304,7 +313,7 @@ export default function Invest({ user }: { user: any }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch live admin-configured settings (rates, days, HC min %, cooling hours)
+  // Fetch live admin-configured settings (rates, days, HC min %, cooling hours, max total)
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
@@ -312,8 +321,10 @@ export default function Invest({ user }: { user: any }) {
         if (typeof d.hyperCoinMinPercent === "number") {
           setHyperCoinMinPercent(d.hyperCoinMinPercent);
         }
+        const maxT = typeof d.maxTotalInvestment === "number" ? d.maxTotalInvestment : DEFAULT_MAX_TOTAL;
+        setMaxTotalInvestment(maxT);
         if (d.plans) {
-          setPlans(buildPlans(d.plans));
+          setPlans(buildPlans(d.plans, maxT));
         }
         if (typeof d.coolingHours === "number") {
           setCoolingHours(d.coolingHours);
@@ -367,6 +378,7 @@ export default function Invest({ user }: { user: any }) {
         setLimitModal({
           currentTotal: data.currentTotal ?? 0,
           remaining: data.remaining ?? 0,
+          maxTotal: data.maxTotal ?? maxTotalInvestment,
         });
         return;
       }
@@ -421,7 +433,7 @@ export default function Invest({ user }: { user: any }) {
                 <FormControl>
                   <Input
                     data-testid="input-amount"
-                    type="number" step="100" min={plan.min} max={plan.max}
+                    type="number" step="100" min={plan.min} max={maxTotalInvestment}
                     {...field}
                     onChange={e => handleAmountChange(Number(e.target.value))}
                     style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
@@ -602,6 +614,7 @@ export default function Invest({ user }: { user: any }) {
         <MaxInvestmentModal
           currentTotal={limitModal.currentTotal}
           remaining={limitModal.remaining}
+          maxTotal={limitModal.maxTotal}
           onClose={() => setLimitModal(null)}
         />
       )}

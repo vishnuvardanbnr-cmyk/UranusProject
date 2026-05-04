@@ -15,9 +15,10 @@ async function getPlanTier(amount: number) {
   const d1 = s ? s.tier1Days : 300;
   const d2 = s ? s.tier2Days : 260;
   const d3 = s ? s.tier3Days : 225;
-  if (amount >= 100 && amount <= 400)   return { tier: "tier1", dailyRate: r1, durationDays: d1 };
-  if (amount >= 500 && amount <= 900)   return { tier: "tier2", dailyRate: r2, durationDays: d2 };
-  if (amount >= 1000 && amount <= 1500) return { tier: "tier3", dailyRate: r3, durationDays: d3 };
+  const maxTotal = s ? parseFloat(s.maxTotalInvestment) : 2000;
+  if (amount >= 100 && amount <= 400)       return { tier: "tier1", dailyRate: r1, durationDays: d1 };
+  if (amount >= 500 && amount <= 900)       return { tier: "tier2", dailyRate: r2, durationDays: d2 };
+  if (amount >= 1000 && amount <= maxTotal) return { tier: "tier3", dailyRate: r3, durationDays: d3 };
   return null;
 }
 
@@ -76,7 +77,9 @@ router.post("/investments", requireAuth, async (req, res) => {
 
   const plan = await getPlanTier(amount);
   if (!plan) {
-    res.status(400).json({ message: "Investment amount must be between 100 and 1500 USDT" });
+    const [s2] = await db.select().from(platformSettingsTable).limit(1);
+    const maxT = s2 ? parseFloat(s2.maxTotalInvestment) : 2000;
+    res.status(400).json({ message: `Investment amount must be $100–$400, $500–$900, or $1,000–$${maxT.toLocaleString()} USDT` });
     return;
   }
 

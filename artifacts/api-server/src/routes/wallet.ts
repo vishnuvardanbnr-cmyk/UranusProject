@@ -18,10 +18,11 @@ router.get("/settings/public", async (_req, res) => {
     hyperCoinPrice: parseFloat(settings?.hyperCoinPrice ?? "1.0000"),
     launchOfferActive: settings?.launchOfferActive ?? true,
     launchOfferEndDate: settings?.launchOfferEndDate ? settings.launchOfferEndDate.toISOString() : null,
+    maxTotalInvestment: parseFloat(settings?.maxTotalInvestment ?? "2000"),
     plans: {
       tier1: { dailyRate: parseFloat(settings?.tier1DailyRate ?? "0.006"), days: settings?.tier1Days ?? 300, min: 100, max: 400 },
       tier2: { dailyRate: parseFloat(settings?.tier2DailyRate ?? "0.007"), days: settings?.tier2Days ?? 260, min: 500, max: 900 },
-      tier3: { dailyRate: parseFloat(settings?.tier3DailyRate ?? "0.008"), days: settings?.tier3Days ?? 225, min: 1000, max: 1500 },
+      tier3: { dailyRate: parseFloat(settings?.tier3DailyRate ?? "0.008"), days: settings?.tier3Days ?? 225, min: 1000, max: parseFloat(settings?.maxTotalInvestment ?? "2000") },
     },
     hcDepositUsername: settings?.hcDepositUsername ?? "",
     coolingHours: settings?.withdrawalCoolingHours ?? 24,
