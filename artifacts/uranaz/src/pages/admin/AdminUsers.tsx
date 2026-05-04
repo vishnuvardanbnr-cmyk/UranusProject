@@ -25,6 +25,9 @@ type AdminUser = {
   isAdmin: boolean; isActive: boolean;
   withdrawalBlocked: boolean; p2pBlocked: boolean; investmentBlocked: boolean;
   blockReason?: string | null;
+  withdrawalBlockReason?: string | null;
+  p2pBlockReason?: string | null;
+  investmentBlockReason?: string | null;
   walletBalance: number; hyperCoinBalance: number;
   totalInvested: number; totalEarnings: number;
   currentLevel: number; createdAt: string;
@@ -222,6 +225,9 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
   const [p2pBlocked, setP2pBlocked] = useState(user.p2pBlocked);
   const [investmentBlocked, setInvestmentBlocked] = useState(user.investmentBlocked);
   const [blockReason, setBlockReason] = useState(user.blockReason ?? "");
+  const [withdrawalBlockReason, setWithdrawalBlockReason] = useState(user.withdrawalBlockReason ?? "");
+  const [p2pBlockReason, setP2pBlockReason] = useState(user.p2pBlockReason ?? "");
+  const [investmentBlockReason, setInvestmentBlockReason] = useState(user.investmentBlockReason ?? "");
 
   const [walletBalance, setWalletBalance] = useState(user.walletBalance.toString());
   const [hyperCoinBalance, setHyperCoinBalance] = useState(user.hyperCoinBalance.toString());
@@ -247,6 +253,9 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     if (p2pBlocked !== user.p2pBlocked) body.p2pBlocked = p2pBlocked;
     if (investmentBlocked !== user.investmentBlocked) body.investmentBlocked = investmentBlocked;
     if ((blockReason || null) !== (user.blockReason || null)) body.blockReason = blockReason.trim() || null;
+    if ((withdrawalBlockReason || null) !== (user.withdrawalBlockReason || null)) body.withdrawalBlockReason = withdrawalBlockReason.trim() || null;
+    if ((p2pBlockReason || null) !== (user.p2pBlockReason || null)) body.p2pBlockReason = p2pBlockReason.trim() || null;
+    if ((investmentBlockReason || null) !== (user.investmentBlockReason || null)) body.investmentBlockReason = investmentBlockReason.trim() || null;
     const lvl = parseInt(currentLevel, 10);
     if (!Number.isNaN(lvl) && lvl !== user.currentLevel) body.currentLevel = lvl;
     const wb = parseFloat(walletBalance);
@@ -372,30 +381,75 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
                 onChange={setIsActive}
                 positive
               />
-              <Toggle
-                testId="toggle-wd-blocked"
-                label="Block withdrawals"
-                description="User can browse but cannot submit any new withdrawal request."
-                icon={<ArrowDownToLine size={14} />}
-                value={withdrawalBlocked}
-                onChange={setWithdrawalBlocked}
-              />
-              <Toggle
-                testId="toggle-p2p-blocked"
-                label="Block P2P transfers"
-                description="User cannot send USDT or HYPERCOIN to other users."
-                icon={<ArrowLeftRight size={14} />}
-                value={p2pBlocked}
-                onChange={setP2pBlocked}
-              />
-              <Toggle
-                testId="toggle-invest-blocked"
-                label="Block new investments"
-                description="User cannot start new investment plans. Existing plans keep paying."
-                icon={<TrendingUp size={14} />}
-                value={investmentBlocked}
-                onChange={setInvestmentBlocked}
-              />
+              <div>
+                <Toggle
+                  testId="toggle-wd-blocked"
+                  label="Block withdrawals"
+                  description="User can browse but cannot submit any new withdrawal request."
+                  icon={<ArrowDownToLine size={14} />}
+                  value={withdrawalBlocked}
+                  onChange={setWithdrawalBlocked}
+                />
+                {withdrawalBlocked && (
+                  <div className="mt-2 ml-1">
+                    <p className="text-[10px] mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Reason shown to user (optional)</p>
+                    <input
+                      data-testid="input-withdrawal-block-reason"
+                      value={withdrawalBlockReason}
+                      onChange={e => setWithdrawalBlockReason(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none"
+                      style={INPUT_STYLE}
+                      placeholder="e.g. Pending KYC verification"
+                    />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Toggle
+                  testId="toggle-p2p-blocked"
+                  label="Block P2P transfers"
+                  description="User cannot send USDT or HYPERCOIN to other users."
+                  icon={<ArrowLeftRight size={14} />}
+                  value={p2pBlocked}
+                  onChange={setP2pBlocked}
+                />
+                {p2pBlocked && (
+                  <div className="mt-2 ml-1">
+                    <p className="text-[10px] mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Reason shown to user (optional)</p>
+                    <input
+                      data-testid="input-p2p-block-reason"
+                      value={p2pBlockReason}
+                      onChange={e => setP2pBlockReason(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none"
+                      style={INPUT_STYLE}
+                      placeholder="e.g. Suspicious activity detected"
+                    />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Toggle
+                  testId="toggle-invest-blocked"
+                  label="Block new investments"
+                  description="User cannot start new investment plans. Existing plans keep paying."
+                  icon={<TrendingUp size={14} />}
+                  value={investmentBlocked}
+                  onChange={setInvestmentBlocked}
+                />
+                {investmentBlocked && (
+                  <div className="mt-2 ml-1">
+                    <p className="text-[10px] mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Reason shown to user (optional)</p>
+                    <input
+                      data-testid="input-investment-block-reason"
+                      value={investmentBlockReason}
+                      onChange={e => setInvestmentBlockReason(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-xs focus:outline-none"
+                      style={INPUT_STYLE}
+                      placeholder="e.g. Account under review"
+                    />
+                  </div>
+                )}
+              </div>
               <Toggle
                 testId="toggle-admin"
                 label="Admin access"
@@ -405,17 +459,6 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
                 onChange={setIsAdmin}
                 warning
               />
-              <Field label="Block reason (shown to user)" hint="Optional. Visible in error message when they hit a blocked action.">
-                <textarea
-                  data-testid="input-block-reason"
-                  value={blockReason}
-                  onChange={e => setBlockReason(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none resize-none"
-                  style={INPUT_STYLE}
-                  placeholder="e.g. Pending KYC verification"
-                />
-              </Field>
             </>
           )}
 

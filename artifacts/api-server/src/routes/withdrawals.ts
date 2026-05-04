@@ -51,9 +51,10 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
   }
 
   if (user.withdrawalBlocked) {
+    const reason = user.withdrawalBlockReason || user.blockReason;
     res.status(403).json({
-      message: user.blockReason
-        ? `Withdrawals are blocked: ${user.blockReason}`
+      message: reason
+        ? `Withdrawals are blocked: ${reason}`
         : "Withdrawals have been blocked on your account. Please contact support.",
     });
     return;

@@ -18,6 +18,9 @@ export interface AdminUpdateUserBody {
   p2pBlocked?: boolean;
   investmentBlocked?: boolean;
   blockReason?: string | null;
+  withdrawalBlockReason?: string | null;
+  p2pBlockReason?: string | null;
+  investmentBlockReason?: string | null;
   currentLevel?: number;
   walletBalance?: number;
   hyperCoinBalance?: number;

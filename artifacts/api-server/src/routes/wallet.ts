@@ -261,9 +261,10 @@ router.post("/wallet/p2p/transfer", requireAuth, async (req, res) => {
   }
 
   if (sender.p2pBlocked) {
+    const reason = sender.p2pBlockReason || sender.blockReason;
     res.status(403).json({
-      message: sender.blockReason
-        ? `P2P transfers are blocked: ${sender.blockReason}`
+      message: reason
+        ? `P2P transfers are blocked: ${reason}`
         : "P2P transfers have been blocked on your account. Please contact support.",
     });
     return;
