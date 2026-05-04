@@ -51,7 +51,8 @@ router.get("/team", requireAuth, async (req, res) => {
         level,
         totalInvested: parseFloat(m.totalInvested),
         joinedAt: m.createdAt.toISOString(),
-        isActive: m.isActive,
+        // A member is "active" only if they have made at least one investment
+        isActive: parseFloat(m.totalInvested) > 0,
         directReferrals: directReferrals.length,
       });
     }
@@ -84,7 +85,8 @@ router.get("/team/stats", requireAuth, async (req, res) => {
 
   for (const [, members] of teamMap.entries()) {
     totalMembers += members.length;
-    activeMembers += members.filter(m => m.user.isActive).length;
+    // Count only members who have invested as active members
+    activeMembers += members.filter(m => parseFloat(m.user.totalInvested) > 0).length;
     for (const { user: m } of members) {
       totalTeamBusiness += parseFloat(m.totalInvested);
     }

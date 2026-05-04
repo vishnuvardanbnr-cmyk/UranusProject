@@ -63,7 +63,8 @@ router.get("/admin/stats", requireAdmin, async (req, res) => {
   today.setHours(0, 0, 0, 0);
 
   const totalUsers = allUsers.length;
-  const activeUsers = allUsers.filter(u => u.isActive).length;
+  // Active users = users who have invested (not just registered)
+  const activeUsers = allUsers.filter(u => parseFloat(u.totalInvested) > 0).length;
   const totalInvested = allInvestments.reduce((s, i) => s + parseFloat(i.amount), 0);
   const totalWithdrawn = allWithdrawals.filter(w => w.status === "approved").reduce((s, w) => s + parseFloat(w.amount), 0);
   const pendingWithdrawals = allWithdrawals.filter(w => w.status === "pending").reduce((s, w) => s + parseFloat(w.amount), 0);
