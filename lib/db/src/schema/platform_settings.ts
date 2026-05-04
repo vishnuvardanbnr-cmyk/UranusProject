@@ -69,6 +69,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   autoRoiEnabled: boolean("auto_roi_enabled").notNull().default(true),
   // HyperCoin deposit recipient username (admin-configured)
   hcDepositUsername: text("hc_deposit_username").notNull().default(""),
+  // Withdrawal cooling period (hours before ROI/commission starts)
+  withdrawalCoolingHours: integer("withdrawal_cooling_hours").notNull().default(24),
   // Level commission active days (0 = unlimited)
   levelDaysL1: integer("level_days_l1").notNull().default(0),
   levelDaysL2: integer("level_days_l2").notNull().default(0),

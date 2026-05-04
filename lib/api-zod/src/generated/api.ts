@@ -698,6 +698,7 @@ export const UpdateAdminSettingsBody = zod.object({
   autoRoiEnabled: zod.boolean().optional(),
   launchOfferEndDate: zod.string().optional(),
   hcDepositUsername: zod.string().optional(),
+  withdrawalCoolingHours: zod.number().optional(),
 });
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -713,4 +714,5 @@ export const UpdateAdminSettingsResponse = zod.object({
   autoRoiEnabled: zod.boolean().optional(),
   launchOfferEndDate: zod.string().optional(),
   hcDepositUsername: zod.string().optional(),
+  withdrawalCoolingHours: zod.number().optional(),
 });

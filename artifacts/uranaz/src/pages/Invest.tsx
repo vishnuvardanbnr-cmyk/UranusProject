@@ -10,11 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown, AlertTriangle, Snowflake } from "lucide-react";
 
-const COOLING_HOURS = 24;
-
-function getCoolingInfo(createdAt: string) {
+function getCoolingInfo(createdAt: string, coolingHours: number) {
   const msElapsed = Date.now() - new Date(createdAt).getTime();
-  const msTotal   = COOLING_HOURS * 3_600_000;
+  const msTotal   = coolingHours * 3_600_000;
   const msLeft    = msTotal - msElapsed;
   if (msLeft <= 0) return null;
   const h = Math.floor(msLeft / 3_600_000);
@@ -25,7 +23,7 @@ function getCoolingInfo(createdAt: string) {
 const TEAL = "#3DD6F5";
 
 /* ── Investment Detail Modal ── */
-function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyperEnabled: boolean; onClose: () => void }) {
+function InvestmentDetailModal({ inv, hyperEnabled, coolingHours, onClose }: { inv: any; hyperEnabled: boolean; coolingHours: number; onClose: () => void }) {
   const progress = Math.max(2, ((inv.durationDays - inv.remainingDays) / inv.durationDays) * 100);
   const planLabels: Record<string, string> = {
     tier1: "Starter — 0.6%/day · 300 days",
@@ -35,7 +33,7 @@ function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyper
   const totalExpected = inv.amount * inv.dailyRate * inv.durationDays;
   const daysElapsed = inv.durationDays - inv.remainingDays;
 
-  const cooling = getCoolingInfo(inv.createdAt);
+  const cooling = getCoolingInfo(inv.createdAt, coolingHours);
 
   const rows = [
     { icon: Hash,        label: "Investment ID",    value: `#${String(inv.id).padStart(6, "0")}` },
@@ -300,12 +298,13 @@ export default function Invest({ user }: { user: any }) {
   const [limitModal, setLimitModal] = useState<{ currentTotal: number; remaining: number } | null>(null);
   const [hyperCoinMinPercent, setHyperCoinMinPercent] = useState<number>(50);
   const [plans, setPlans] = useState(DEFAULT_PLANS);
+  const [coolingHours, setCoolingHours] = useState<number>(24);
   const createInvestment = useCreateInvestment();
   const { data: investments } = useListInvestments();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch live admin-configured settings (rates, days, HC min %)
+  // Fetch live admin-configured settings (rates, days, HC min %, cooling hours)
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
@@ -315,6 +314,9 @@ export default function Invest({ user }: { user: any }) {
         }
         if (d.plans) {
           setPlans(buildPlans(d.plans));
+        }
+        if (typeof d.coolingHours === "number") {
+          setCoolingHours(d.coolingHours);
         }
       })
       .catch(() => {});
@@ -505,7 +507,7 @@ export default function Invest({ user }: { user: any }) {
           </div>
           <div className="space-y-3">
             {paginatedInvestments.map(inv => {
-                const cooling = getCoolingInfo(inv.createdAt);
+                const cooling = getCoolingInfo(inv.createdAt, coolingHours);
                 return (
                   <div
                     key={inv.id}
@@ -591,6 +593,7 @@ export default function Invest({ user }: { user: any }) {
         <InvestmentDetailModal
           inv={selectedInvestment}
           hyperEnabled={hyperEnabled}
+          coolingHours={coolingHours}
           onClose={() => setSelectedInvestment(null)}
         />
       )}

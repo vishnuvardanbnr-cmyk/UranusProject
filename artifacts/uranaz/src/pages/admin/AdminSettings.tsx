@@ -55,6 +55,7 @@ type SettingsForm = {
   autoRoiEnabled: boolean;
   launchOfferEndDate: string;
   hcDepositUsername: string;
+  withdrawalCoolingHours: number;
 };
 
 type IncomeForm = {
@@ -710,6 +711,22 @@ export default function AdminSettings() {
                   style={INPUT_STYLE}
                 />
                 <FieldHint>Users will be shown this username to send HyperCoin to during HC deposits.</FieldHint>
+              </div>
+            </div>
+
+            <SubHeader hint="How many hours must pass after an investment is created before ROI payouts and commissions begin.">Investment Cooling Period</SubHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <FieldLabel>Cooling Period (hours)</FieldLabel>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  {...register("withdrawalCoolingHours", { valueAsNumber: true })}
+                  className={INPUT_CLS}
+                  style={INPUT_STYLE}
+                />
+                <FieldHint>Default is 24. Set to 0 to disable the cooling period entirely.</FieldHint>
               </div>
             </div>
 

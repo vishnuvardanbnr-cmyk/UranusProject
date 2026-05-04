@@ -335,6 +335,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
       autoRoiEnabled: created.autoRoiEnabled,
       launchOfferEndDate: created.launchOfferEndDate ? created.launchOfferEndDate.toISOString().slice(0, 16) : "",
       hcDepositUsername: created.hcDepositUsername,
+      withdrawalCoolingHours: created.withdrawalCoolingHours,
     });
     return;
   }
@@ -351,6 +352,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     autoRoiEnabled: settings.autoRoiEnabled,
     launchOfferEndDate: settings.launchOfferEndDate ? settings.launchOfferEndDate.toISOString().slice(0, 16) : "",
     hcDepositUsername: settings.hcDepositUsername,
+    withdrawalCoolingHours: settings.withdrawalCoolingHours,
   });
 });
 
@@ -379,6 +381,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     }
     if (parsed.data.hcDepositUsername !== undefined) updates.hcDepositUsername = parsed.data.hcDepositUsername;
     if (parsed.data.autoRoiEnabled !== undefined) updates.autoRoiEnabled = parsed.data.autoRoiEnabled;
+    if (parsed.data.withdrawalCoolingHours !== undefined) updates.withdrawalCoolingHours = parsed.data.withdrawalCoolingHours;
     [updated] = await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id)).returning();
   } else {
     [updated] = await db.insert(platformSettingsTable).values({}).returning();
@@ -396,6 +399,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     autoRoiEnabled: updated.autoRoiEnabled,
     launchOfferEndDate: updated.launchOfferEndDate ? updated.launchOfferEndDate.toISOString().slice(0, 16) : "",
     hcDepositUsername: updated.hcDepositUsername,
+    withdrawalCoolingHours: updated.withdrawalCoolingHours,
   });
 });
 
