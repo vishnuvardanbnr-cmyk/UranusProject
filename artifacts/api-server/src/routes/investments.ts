@@ -176,19 +176,40 @@ router.post("/investments", requireAuth, async (req, res) => {
   if (user.sponsorId) {
     const spotRate = settings ? parseFloat(settings.spotReferralRate) : 0.05;
     const spotCommission = amount * spotRate;
-    await db.insert(incomeTable).values({
-      userId: user.sponsorId,
-      type: "spot_referral",
-      amount: spotCommission.toString(),
-      description: `Spot referral commission from ${user.name}`,
-      fromUserId: user.id,
-      fromUserName: user.name,
-    });
     const [sponsor] = await db.select().from(usersTable).where(eq(usersTable.id, user.sponsorId)).limit(1);
-    if (sponsor) {
+
+    // If sponsor is inactive, redirect the commission to the admin account
+    let recipientId: number | null = null;
+    let recipientUser: typeof usersTable.$inferSelect | undefined;
+
+    if (sponsor && sponsor.isActive) {
+      recipientId = sponsor.id;
+      recipientUser = sponsor;
+    } else {
+      // Find first admin user to receive the redirected commission
+      const [admin] = await db.select().from(usersTable)
+        .where(eq(usersTable.isAdmin, true))
+        .limit(1);
+      if (admin) {
+        recipientId = admin.id;
+        recipientUser = admin;
+      }
+    }
+
+    if (recipientId && recipientUser) {
+      await db.insert(incomeTable).values({
+        userId: recipientId,
+        type: "spot_referral",
+        amount: spotCommission.toString(),
+        description: sponsor && !sponsor.isActive
+          ? `Spot referral commission from ${user.name} (redirected — original sponsor inactive)`
+          : `Spot referral commission from ${user.name}`,
+        fromUserId: user.id,
+        fromUserName: user.name,
+      });
       await db.update(usersTable)
-        .set({ totalEarnings: (parseFloat(sponsor.totalEarnings) + spotCommission).toString() })
-        .where(eq(usersTable.id, user.sponsorId));
+        .set({ totalEarnings: (parseFloat(recipientUser.totalEarnings) + spotCommission).toString() })
+        .where(eq(usersTable.id, recipientId));
     }
   }
 
