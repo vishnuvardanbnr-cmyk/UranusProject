@@ -80,13 +80,14 @@ function wrap(body: string) {
 }
 
 // ── OTP ──────────────────────────────────────────────────────────────────────
-export async function sendOtpEmail(to: string, code: string, purpose: "registration" | "withdrawal" | "wallet_update") {
+export async function sendOtpEmail(to: string, code: string, purpose: "registration" | "withdrawal" | "wallet_update" | "password_reset") {
   const s = await getSettings();
   if (!s?.smtpEnabled) return;
 
-  const label = purpose === "registration" ? "Registration"
-              : purpose === "withdrawal"   ? "Withdrawal"
-              : "Wallet Address Update";
+  const label = purpose === "registration"  ? "Registration"
+              : purpose === "withdrawal"    ? "Withdrawal"
+              : purpose === "wallet_update" ? "Wallet Address Update"
+              : "Password Reset";
 
   const domain = fromDomain(s);
   const transport = createTransport(s);
