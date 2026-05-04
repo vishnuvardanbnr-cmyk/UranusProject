@@ -95,6 +95,14 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         })
         .where(eq(investmentsTable.id, inv.id));
 
+      // Fetch investor — skip earnings entirely if account is inactive
+      const [investor] = await db.select().from(usersTable).where(eq(usersTable.id, inv.userId)).limit(1);
+      if (!investor || !investor.isActive) {
+        logger.info({ investmentId: inv.id, userId: inv.userId }, "Investor account inactive — skipping daily return");
+        stats.skipped++;
+        continue;
+      }
+
       // Credit daily return to investor
       await db.insert(incomeTable).values({
         userId: inv.userId,
@@ -104,12 +112,9 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
       });
 
       // Update investor totalEarnings
-      const [investor] = await db.select().from(usersTable).where(eq(usersTable.id, inv.userId)).limit(1);
-      if (investor) {
-        await db.update(usersTable)
-          .set({ totalEarnings: (parseFloat(investor.totalEarnings) + dailyReturn).toString() })
-          .where(eq(usersTable.id, inv.userId));
-      }
+      await db.update(usersTable)
+        .set({ totalEarnings: (parseFloat(investor.totalEarnings) + dailyReturn).toString() })
+        .where(eq(usersTable.id, inv.userId));
 
       // Level commissions — walk up the sponsor chain (up to 8 levels)
       if (investor) {
@@ -122,6 +127,13 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         while (currentUserId && level <= 8) {
           const [upline] = await db.select().from(usersTable).where(eq(usersTable.id, currentUserId)).limit(1);
           if (!upline) break;
+
+          // Skip commission for inactive upline — but continue walking up the chain
+          if (!upline.isActive) {
+            currentUserId = upline.sponsorId;
+            level++;
+            continue;
+          }
 
           const unlockThreshold = levelUnlocks[level] ?? 0;
           const uplineEarnings  = parseFloat(upline.totalEarnings);
