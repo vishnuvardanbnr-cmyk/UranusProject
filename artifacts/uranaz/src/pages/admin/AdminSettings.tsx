@@ -511,6 +511,20 @@ export default function AdminSettings() {
     );
   }
 
+  // Backup viewer derived state (computed here to avoid IIFE crashes in JSX)
+  const _bq = backupSearch.toLowerCase().trim();
+  const _bFiltered = _bq
+    ? backups.filter(b =>
+        (b.userName ?? "").toLowerCase().includes(_bq) ||
+        (b.userEmail ?? "").toLowerCase().includes(_bq) ||
+        (b.oldAddress ?? "").toLowerCase().includes(_bq) ||
+        String(b.userId) === _bq,
+      )
+    : backups;
+  const _bTotalPages = Math.max(1, Math.ceil(_bFiltered.length / BACKUP_PAGE_SIZE));
+  const _bSafePage = Math.min(backupPage, _bTotalPages);
+  const _bPageRows = _bFiltered.slice((_bSafePage - 1) * BACKUP_PAGE_SIZE, _bSafePage * BACKUP_PAGE_SIZE);
+
   return (
     <div className="px-4 md:px-6 py-6 max-w-5xl mx-auto pb-24 md:pb-10">
       {/* Page Header */}
@@ -1328,20 +1342,7 @@ export default function AdminSettings() {
                 )}
               </button>
 
-              {showBackups && (() => {
-                const q = backupSearch.toLowerCase().trim();
-                const filtered = q
-                  ? backups.filter(b =>
-                      (b.userName ?? "").toLowerCase().includes(q) ||
-                      (b.userEmail ?? "").toLowerCase().includes(q) ||
-                      (b.oldAddress ?? "").toLowerCase().includes(q) ||
-                      String(b.userId) === q,
-                    )
-                  : backups;
-                const totalPages = Math.max(1, Math.ceil(filtered.length / BACKUP_PAGE_SIZE));
-                const safePage = Math.min(backupPage, totalPages);
-                const pageRows = filtered.slice((safePage - 1) * BACKUP_PAGE_SIZE, safePage * BACKUP_PAGE_SIZE);
-                return (
+              {showBackups && (
                   <div className="mt-4 space-y-3">
                     {/* Search */}
                     <div className="relative">
@@ -1363,12 +1364,12 @@ export default function AdminSettings() {
                     {/* List */}
                     {backupsLoading ? (
                       <div className="h-16 rounded-xl animate-pulse" style={{ background: "rgba(61,214,245,0.04)" }} />
-                    ) : pageRows.length === 0 ? (
+                    ) : _bPageRows.length === 0 ? (
                       <p className="text-xs text-center py-4" style={{ color: "rgba(168,237,255,0.4)" }}>
                         {backupSearch ? "No backups match your search" : "No backups yet"}
                       </p>
                     ) : (
-                      pageRows.map(b => (
+                      _bPageRows.map(b => (
                         <div
                           key={b.id}
                           className="p-3 rounded-xl space-y-1.5"
@@ -1389,14 +1390,14 @@ export default function AdminSettings() {
                     )}
 
                     {/* Pagination */}
-                    {totalPages > 1 && (
+                    {_bTotalPages > 1 && (
                       <div className="flex items-center justify-between pt-1">
                         <span className="text-[11px]" style={{ color: "rgba(168,237,255,0.4)" }}>
-                          {filtered.length} result{filtered.length !== 1 ? "s" : ""} — page {safePage} / {totalPages}
+                          {_bFiltered.length} result{_bFiltered.length !== 1 ? "s" : ""} — page {_bSafePage} / {_bTotalPages}
                         </span>
                         <div className="flex gap-1.5">
                           <button
-                            disabled={safePage <= 1}
+                            disabled={_bSafePage <= 1}
                             onClick={() => setBackupPage(p => Math.max(1, p - 1))}
                             className="p-1.5 rounded-md disabled:opacity-30 transition-all"
                             style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: "#3DD6F5" }}
@@ -1404,8 +1405,8 @@ export default function AdminSettings() {
                             <ChevronLeft size={13} />
                           </button>
                           <button
-                            disabled={safePage >= totalPages}
-                            onClick={() => setBackupPage(p => Math.min(totalPages, p + 1))}
+                            disabled={_bSafePage >= _bTotalPages}
+                            onClick={() => setBackupPage(p => Math.min(_bTotalPages, p + 1))}
                             className="p-1.5 rounded-md disabled:opacity-30 transition-all"
                             style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: "#3DD6F5" }}
                           >
@@ -1415,8 +1416,7 @@ export default function AdminSettings() {
                       </div>
                     )}
                   </div>
-                );
-              })()}
+              )}
             </div>
           </div>
         </SectionCard>
