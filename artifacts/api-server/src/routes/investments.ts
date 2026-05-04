@@ -130,29 +130,48 @@ router.post("/investments", requireAuth, async (req, res) => {
   const startDate = new Date();
   const endDate = new Date(startDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
 
-  const [investment] = await db.insert(investmentsTable).values({
-    userId: user.id,
-    amount: amount.toString(),
-    planTier: plan.tier,
-    dailyRate: plan.dailyRate.toString(),
-    durationDays: plan.durationDays,
-    remainingDays: plan.durationDays,
-    startDate,
-    endDate,
-    hyperCoinAmount: hyperCoinAmount.toString(),
-    usdtAmount: usdtAmount.toString(),
-    status: "active",
-    earnedSoFar: "0",
-  }).returning();
+  // Wrap investment creation + balance deduction in a transaction to prevent race conditions
+  let investment: typeof investmentsTable.$inferSelect;
+  try {
+    [investment] = await db.transaction(async (tx) => {
+      // Re-fetch user inside transaction to get latest balances
+      const [lockedUser] = await tx.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
+      if (!lockedUser) throw Object.assign(new Error("User not found"), { status: 404 });
+      const latestUsdt = parseFloat(lockedUser.walletBalance ?? "0");
+      const latestHyper = parseFloat(lockedUser.hyperCoinBalance ?? "0");
+      if (usdtAmount > latestUsdt) throw Object.assign(new Error(`Insufficient USDT balance. Available: $${latestUsdt.toFixed(2)}`), { status: 400 });
+      if (hyperCoinAmount > latestHyper) throw Object.assign(new Error(`Insufficient HYPERCOIN balance. Available: $${latestHyper.toFixed(2)}`), { status: 400 });
 
-  // Deduct USDT and HYPERCOIN from user balances
-  await db.update(usersTable)
-    .set({
-      totalInvested: (parseFloat(freshUser.totalInvested) + amount).toString(),
-      walletBalance: (currentUsdt - usdtAmount).toString(),
-      hyperCoinBalance: (currentHyper - hyperCoinAmount).toString(),
-    })
-    .where(eq(usersTable.id, user.id));
+      const inv = await tx.insert(investmentsTable).values({
+        userId: user.id,
+        amount: amount.toString(),
+        planTier: plan.tier,
+        dailyRate: plan.dailyRate.toString(),
+        durationDays: plan.durationDays,
+        remainingDays: plan.durationDays,
+        startDate,
+        endDate,
+        hyperCoinAmount: hyperCoinAmount.toString(),
+        usdtAmount: usdtAmount.toString(),
+        status: "active",
+        earnedSoFar: "0",
+      }).returning();
+
+      await tx.update(usersTable)
+        .set({
+          totalInvested: (parseFloat(lockedUser.totalInvested) + amount).toString(),
+          walletBalance: (latestUsdt - usdtAmount).toString(),
+          hyperCoinBalance: (latestHyper - hyperCoinAmount).toString(),
+        })
+        .where(eq(usersTable.id, user.id));
+
+      return inv;
+    });
+  } catch (err: any) {
+    const status = err?.status ?? 500;
+    res.status(status).json({ message: err?.message ?? "Investment creation failed" });
+    return;
+  }
 
   if (user.sponsorId) {
     const spotRate = settings ? parseFloat(settings.spotReferralRate) : 0.05;

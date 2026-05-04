@@ -7,6 +7,15 @@ async function getSettings() {
   return s ?? null;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function createTransport(s: NonNullable<Awaited<ReturnType<typeof getSettings>>>) {
   const isLocal = s.smtpHost === "localhost" || s.smtpHost === "127.0.0.1";
   return nodemailer.createTransport({
@@ -14,7 +23,8 @@ function createTransport(s: NonNullable<Awaited<ReturnType<typeof getSettings>>>
     port: s.smtpPort,
     secure: s.smtpPort === 465,
     auth: isLocal ? undefined : { user: s.smtpUser, pass: s.smtpPassword },
-    tls: { rejectUnauthorized: false },
+    // Only disable TLS verification for local/dev SMTP servers
+    tls: { rejectUnauthorized: !isLocal },
   });
 }
 
@@ -112,6 +122,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
   const domain = fromDomain(s);
   const transport = createTransport(s);
 
+  const safeName = escapeHtml(name);
   await transport.sendMail({
     from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
     to,
@@ -122,8 +133,9 @@ export async function sendWelcomeEmail(to: string, name: string) {
     html: wrap(`
       ${header(s)}
       <tr><td style="padding:32px;">
-        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${name},</p>
+        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${safeName},</p>
         <p style="color:rgba(168,237,255,0.6);font-size:14px;margin:0 0 24px;">Welcome to <strong style="color:#3DD6F5;">URANUS TRADES</strong>! Your account has been created successfully.</p>
+
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="background:rgba(61,214,245,0.08);border:1px solid rgba(61,214,245,0.3);border-radius:10px;padding:24px;">
             <p style="color:rgba(168,237,255,0.7);font-size:13px;margin:0 0 12px;">Here is what you can do next:</p>
@@ -146,6 +158,7 @@ export async function sendDepositCreditedEmail(to: string, name: string, amount:
 
   const domain = fromDomain(s);
   const transport = createTransport(s);
+  const safeName = escapeHtml(name);
 
   await transport.sendMail({
     from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
@@ -157,7 +170,7 @@ export async function sendDepositCreditedEmail(to: string, name: string, amount:
     html: wrap(`
       ${header(s)}
       <tr><td style="padding:32px;">
-        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${name},</p>
+        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${safeName},</p>
         <p style="color:rgba(168,237,255,0.6);font-size:14px;margin:0 0 24px;">Your deposit has been confirmed and credited to your wallet!</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td align="center" style="background:rgba(61,214,245,0.08);border:1px solid rgba(61,214,245,0.3);border-radius:10px;padding:24px;">
@@ -180,6 +193,8 @@ export async function sendDepositConfirmationEmail(to: string, name: string, amo
 
   const domain = fromDomain(s);
   const transport = createTransport(s);
+  const safeName = escapeHtml(name);
+  const safePlan = escapeHtml(plan);
 
   await transport.sendMail({
     from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
@@ -191,12 +206,12 @@ export async function sendDepositConfirmationEmail(to: string, name: string, amo
     html: wrap(`
       ${header(s)}
       <tr><td style="padding:32px;">
-        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${name},</p>
+        <p style="color:rgba(168,237,255,0.8);font-size:15px;margin:0 0 8px;">Hi ${safeName},</p>
         <p style="color:rgba(168,237,255,0.6);font-size:14px;margin:0 0 24px;">Your investment is now active and earning daily returns!</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="background:rgba(61,214,245,0.08);border:1px solid rgba(61,214,245,0.3);border-radius:10px;padding:24px;">
             <div style="font-size:32px;font-weight:900;color:#3DD6F5;">+$${amount.toFixed(2)}</div>
-            <div style="color:rgba(168,237,255,0.5);font-size:13px;margin-top:6px;">${plan}</div>
+            <div style="color:rgba(168,237,255,0.5);font-size:13px;margin-top:6px;">${safePlan}</div>
           </td></tr>
         </table>
         <p style="color:rgba(168,237,255,0.45);font-size:12px;margin:20px 0 0;text-align:center;">Visit your dashboard to track your daily earnings.</p>

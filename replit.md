@@ -139,6 +139,37 @@ lib/
 - Optional OTP on registration and withdrawal
 - OTP codes expire in 10 minutes, single-use
 
+## Security Architecture
+
+### Authentication Tokens
+- HMAC-SHA256 signed, stored in localStorage as `uranaz_token`
+- **30-day expiry** enforced server-side (`ts` claim checked in verifyToken)
+- SESSION_SECRET **required** at startup — server throws if not set (no hardcoded fallback)
+
+### Rate Limiting (express-rate-limit)
+- OTP send (`POST /api/auth/send-otp`): **5 requests / 10 minutes** per IP
+- Login + Register: **20 requests / 15 minutes** per IP
+- All other API: **300 requests / minute** per IP
+- `trust proxy: 1` set so nginx's X-Forwarded-For is used for real client IP
+
+### CORS
+- Restricted to `https://uranustrades.net`, `https://www.uranustrades.net`, and localhost
+- All other origins rejected
+
+### DB Transactions (Race Condition Protection)
+- P2P transfers: wrapped in full DB transaction (check + deduct + credit + audit log)
+- Investment creation: wrapped in DB transaction (balance re-fetched inside tx, deducted atomically)
+- Registration: uses Postgres advisory lock + transaction for first-user/admin race
+
+### Email Security
+- TLS verification (`rejectUnauthorized: true`) enabled for all non-localhost SMTP servers
+- All user-supplied data (name, plan label) escaped with `escapeHtml()` before HTML interpolation
+
+### Known Remaining Risk (not auto-migrated)
+- **Password hashing**: SHA-256 + static salt ("uranaz-salt") — weak, brute-forceable offline
+  Mitigation: requires a migration plan (bcrypt/argon2 + re-hash on next login)
+  — Not changed automatically to avoid breaking existing users
+
 ## Seed Data
 - Admin: admin@uranaz.com / admin123
 - Demo user: john@example.com / demo123
