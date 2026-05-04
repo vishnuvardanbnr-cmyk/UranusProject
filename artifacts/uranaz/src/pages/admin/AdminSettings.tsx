@@ -1532,7 +1532,7 @@ export default function AdminSettings() {
                 </div>
                 {/* Heap bar */}
                 {(() => {
-                  const MAX_MB = 512;
+                  const MAX_MB = 3915;
                   const pct = Math.min(100, Math.round(serverStatus.rss / MAX_MB * 100));
                   return (
                     <div>
