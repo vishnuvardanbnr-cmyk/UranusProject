@@ -21,8 +21,6 @@ const schema = z.object({
   walletAddress: z.string()
     .min(1, "Wallet address is required")
     .regex(BEP20_REGEX, "Must be a valid BEP20 address (0x + 40 hex characters)"),
-  country: z.string().min(2, "Country required"),
-  idNumber: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -42,8 +40,6 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
     resolver: zodResolver(schema),
     defaultValues: {
       walletAddress: user?.walletAddress || "",
-      country: user?.country || "",
-      idNumber: user?.idNumber || "",
     },
   });
 
@@ -240,20 +236,6 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
                     <ShieldCheck size={11} /> Changing this address may require email OTP verification
                   </p>
                 )}
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="country" render={({ field }) => (
-              <FormItem>
-                <FormLabel style={LABEL_STYLE}>Country</FormLabel>
-                <FormControl><Input data-testid="input-country" placeholder="e.g. Singapore" {...field} style={INPUT_STYLE} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="idNumber" render={({ field }) => (
-              <FormItem>
-                <FormLabel style={LABEL_STYLE}>ID / Passport Number</FormLabel>
-                <FormControl><Input data-testid="input-id" placeholder="Optional" {...field} style={INPUT_STYLE} /></FormControl>
-                <FormMessage />
               </FormItem>
             )} />
             <button
