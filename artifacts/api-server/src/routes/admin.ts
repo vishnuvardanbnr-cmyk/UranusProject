@@ -332,6 +332,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
       spotReferralRate: parseFloat(created.spotReferralRate),
       launchOfferActive: created.launchOfferActive,
       withdrawalEnabled: created.withdrawalEnabled,
+      autoRoiEnabled: created.autoRoiEnabled,
       launchOfferEndDate: created.launchOfferEndDate ? created.launchOfferEndDate.toISOString().slice(0, 16) : "",
       hcDepositUsername: created.hcDepositUsername,
     });
@@ -347,6 +348,7 @@ router.get("/admin/settings", requireAdmin, async (req, res) => {
     spotReferralRate: parseFloat(settings.spotReferralRate),
     launchOfferActive: settings.launchOfferActive,
     withdrawalEnabled: settings.withdrawalEnabled,
+    autoRoiEnabled: settings.autoRoiEnabled,
     launchOfferEndDate: settings.launchOfferEndDate ? settings.launchOfferEndDate.toISOString().slice(0, 16) : "",
     hcDepositUsername: settings.hcDepositUsername,
   });
@@ -376,6 +378,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
       updates.launchOfferEndDate = parsed.data.launchOfferEndDate ? new Date(parsed.data.launchOfferEndDate) : null;
     }
     if (parsed.data.hcDepositUsername !== undefined) updates.hcDepositUsername = parsed.data.hcDepositUsername;
+    if (parsed.data.autoRoiEnabled !== undefined) updates.autoRoiEnabled = parsed.data.autoRoiEnabled;
     [updated] = await db.update(platformSettingsTable).set(updates).where(eq(platformSettingsTable.id, existing.id)).returning();
   } else {
     [updated] = await db.insert(platformSettingsTable).values({}).returning();
@@ -390,6 +393,7 @@ router.put("/admin/settings", requireAdmin, async (req, res) => {
     spotReferralRate: parseFloat(updated.spotReferralRate),
     launchOfferActive: updated.launchOfferActive,
     withdrawalEnabled: updated.withdrawalEnabled,
+    autoRoiEnabled: updated.autoRoiEnabled,
     launchOfferEndDate: updated.launchOfferEndDate ? updated.launchOfferEndDate.toISOString().slice(0, 16) : "",
     hcDepositUsername: updated.hcDepositUsername,
   });

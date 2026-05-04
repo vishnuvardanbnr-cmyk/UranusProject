@@ -52,6 +52,7 @@ type SettingsForm = {
   spotReferralRate: number;
   launchOfferActive: boolean;
   withdrawalEnabled: boolean;
+  autoRoiEnabled: boolean;
   launchOfferEndDate: string;
   hcDepositUsername: string;
 };
@@ -725,15 +726,29 @@ export default function AdminSettings() {
           description="Manually trigger the daily ROI payout for all active investments. The system also runs this automatically Mon–Fri at 03:00 AM IST."
         >
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(61,214,245,0.05)", border: "1px solid rgba(61,214,245,0.14)" }}>
-              <RefreshCw size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
-              <div>
-                <div className="text-xs font-semibold mb-0.5" style={{ color: TEAL }}>Auto-schedule active</div>
-                <div className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.5)" }}>
-                  Daily return + level commissions run automatically <strong style={{ color: "rgba(168,237,255,0.75)" }}>Mon–Fri at 03:00 AM IST</strong> via the API process. Use the button below to run it manually at any time.
+            <label
+              htmlFor="toggle-autoRoiEnabled"
+              className="flex items-center justify-between gap-4 p-4 rounded-xl cursor-pointer transition-colors"
+              style={{ background: "rgba(0,15,30,0.55)", border: "1px solid rgba(61,214,245,0.14)" }}
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <RefreshCw size={14} className="shrink-0 mt-0.5" style={{ color: TEAL }} />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold mb-0.5" style={{ color: "rgba(168,237,255,0.85)" }}>Auto ROI Schedule</div>
+                  <div className="text-xs leading-relaxed" style={{ color: "rgba(168,237,255,0.5)" }}>
+                    When enabled, daily return + level commissions run automatically <strong style={{ color: "rgba(168,237,255,0.75)" }}>Mon–Fri at 03:00 AM IST</strong>. Disable to pause auto-runs without affecting manual payouts.
+                  </div>
                 </div>
               </div>
-            </div>
+              <input
+                id="toggle-autoRoiEnabled"
+                type="checkbox"
+                data-testid="toggle-autoRoiEnabled"
+                {...register("autoRoiEnabled")}
+                className="w-4 h-4 shrink-0"
+                style={{ accentColor: TEAL }}
+              />
+            </label>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <button

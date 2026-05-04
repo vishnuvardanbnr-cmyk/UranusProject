@@ -679,6 +679,7 @@ export const GetAdminSettingsResponse = zod.object({
   spotReferralRate: zod.number(),
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
+  autoRoiEnabled: zod.boolean(),
 });
 
 /**
@@ -694,6 +695,7 @@ export const UpdateAdminSettingsBody = zod.object({
   spotReferralRate: zod.number(),
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
+  autoRoiEnabled: zod.boolean().optional(),
   launchOfferEndDate: zod.string().optional(),
   hcDepositUsername: zod.string().optional(),
 });
@@ -708,6 +710,7 @@ export const UpdateAdminSettingsResponse = zod.object({
   spotReferralRate: zod.number(),
   launchOfferActive: zod.boolean(),
   withdrawalEnabled: zod.boolean(),
+  autoRoiEnabled: zod.boolean().optional(),
   launchOfferEndDate: zod.string().optional(),
   hcDepositUsername: zod.string().optional(),
 });

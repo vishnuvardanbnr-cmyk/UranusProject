@@ -4,6 +4,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { setupWebSocket } from "./lib/wsManager";
 import { processDailyPayout } from "./lib/dailyPayout";
+import { db, platformSettingsTable } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -26,6 +27,15 @@ setupWebSocket(server);
 // IST = UTC+5:30 → 03:00 IST = 21:30 UTC previous day
 // Sun–Thu UTC covers Mon–Fri IST
 cron.schedule("30 21 * * 0-4", async () => {
+  try {
+    const [settings] = await db.select().from(platformSettingsTable).limit(1);
+    if (settings && !settings.autoRoiEnabled) {
+      logger.info("Cron skipped: auto ROI is disabled by admin");
+      return;
+    }
+  } catch (err) {
+    logger.warn({ err }, "Cron: could not read settings, proceeding with payout");
+  }
   logger.info("Cron triggered: running daily payout (Mon–Fri 03:00 IST / 21:30 UTC)");
   try {
     const stats = await processDailyPayout();
