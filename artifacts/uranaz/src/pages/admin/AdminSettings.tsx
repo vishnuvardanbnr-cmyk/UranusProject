@@ -672,10 +672,9 @@ export default function AdminSettings() {
             </div>
 
             <SubHeader>Platform Toggles</SubHeader>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
                 { key: "maintenanceMode" as const,   label: "Maintenance Mode",    desc: "Disable all user logins temporarily" },
-                { key: "launchOfferActive" as const, label: "Launch Offer Active", desc: "Show Singapore trip offer to users" },
                 { key: "withdrawalEnabled" as const, label: "Withdrawals Enabled", desc: "Allow users to submit withdrawal requests" },
               ].map(item => (
                 <label
@@ -698,20 +697,6 @@ export default function AdminSettings() {
                   </div>
                 </label>
               ))}
-            </div>
-
-            <SubHeader>Launch Offer Countdown</SubHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-              <div>
-                <FieldLabel>End Date &amp; Time</FieldLabel>
-                <input
-                  type="datetime-local"
-                  {...register("launchOfferEndDate")}
-                  className={INPUT_CLS}
-                  style={INPUT_STYLE}
-                />
-                <FieldHint>Shown as a countdown on users&apos; dashboards. Leave blank for no deadline.</FieldHint>
-              </div>
             </div>
 
             <div className="pt-2 flex justify-end">
