@@ -2,10 +2,11 @@ import { Router } from "express";
 import { db, usersTable, depositsTable, platformSettingsTable, depositWalletBackupsTable } from "@workspace/db";
 import { eq, desc, isNotNull, count, inArray } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
-import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings } from "../lib/blockchain";
+import { ensureDepositWallet, sweepUsdtToMaster, getUsdtBalance, USDT_DECIMALS, getSettings, generateDepositWallet } from "../lib/blockchain";
 import { ethers } from "ethers";
 import { logger } from "../lib/logger";
 import { sendDepositCreditedEmail } from "../lib/email";
+import { resolveKey, isEncrypted, encryptKey, ensureEncrypted } from "../lib/keyEncryption.js";
 
 const router = Router();
 
@@ -52,6 +53,27 @@ router.post("/deposits/check", requireAuth, async (req, res) => {
     return;
   }
 
+  // Resolve the deposit private key (decrypt if encrypted, or use plaintext legacy key)
+  const depositPlaintextKey = resolveKey(freshUser.depositPrivateKey);
+  if (!depositPlaintextKey) {
+    res.status(500).json({ message: "Deposit wallet key could not be resolved" });
+    return;
+  }
+  // Lazy-migrate: if key is still plaintext, encrypt and save it back
+  if (!isEncrypted(freshUser.depositPrivateKey)) {
+    db.update(usersTable)
+      .set({ depositPrivateKey: encryptKey(depositPlaintextKey) })
+      .where(eq(usersTable.id, user.id))
+      .catch(() => {});
+  }
+
+  // Resolve gas wallet private key
+  const gasPlaintextKey = resolveKey(settings.gasWalletPrivateKey);
+  if (!gasPlaintextKey) {
+    res.status(400).json({ message: "Gas wallet not configured. Contact support." });
+    return;
+  }
+
   const rpcUrl = settings.bscRpcUrl || "https://bsc-dataseed.binance.org/";
 
   // Check USDT balance
@@ -88,8 +110,8 @@ router.post("/deposits/check", requireAuth, async (req, res) => {
   // Sweep USDT to master wallet
   try {
     const result = await sweepUsdtToMaster(
-      freshUser.depositPrivateKey!,
-      settings.gasWalletPrivateKey,
+      depositPlaintextKey,
+      gasPlaintextKey,
       settings.adminMasterWallet,
       rpcUrl,
     );
@@ -151,7 +173,8 @@ router.get("/admin/wallet-settings", requireAdmin, async (req, res) => {
   if (!settings) [settings] = await db.insert(platformSettingsTable).values({}).returning();
   res.json({
     adminMasterWallet: settings.adminMasterWallet,
-    gasWalletPrivateKey: settings.gasWalletPrivateKey,
+    // Never return the raw private key — return a boolean so the UI can show "key configured" status
+    gasWalletKeySet: !!(settings.gasWalletPrivateKey),
     bscRpcUrl: settings.bscRpcUrl,
     minDepositUsdt: parseFloat(settings.minDepositUsdt ?? "1"),
   });
@@ -184,22 +207,22 @@ router.post("/admin/wallet-settings/regenerate-all", requireAdmin, async (req, r
   for (const user of users) {
     if (!user.depositAddress || !user.depositPrivateKey) continue;
 
-    // 1. Back up the old wallet
+    // 1. Back up the old wallet — always store the backup encrypted at rest
     await db.insert(depositWalletBackupsTable).values({
       userId: user.id,
       oldAddress: user.depositAddress,
-      oldPrivateKey: user.depositPrivateKey,
+      oldPrivateKey: ensureEncrypted(user.depositPrivateKey),
       replacedReason: "admin_regenerate",
     });
     backed_up++;
 
-    // 2. Generate a fresh independent wallet (not HD derived)
-    const { generateDepositWallet } = await import("../lib/blockchain");
+    // 2. Generate a fresh independent wallet (not HD derived) and encrypt immediately
     const { address, privateKey } = generateDepositWallet();
+    const encryptedKey = encryptKey(privateKey);
 
-    // 3. Assign new wallet
+    // 3. Assign new wallet with encrypted key
     await db.update(usersTable)
-      .set({ depositAddress: address, depositPrivateKey: privateKey })
+      .set({ depositAddress: address, depositPrivateKey: encryptedKey })
       .where(eq(usersTable.id, user.id));
     regenerated++;
   }
@@ -226,7 +249,8 @@ router.get("/admin/wallet-backups", requireAdmin, async (req, res) => {
     userId: b.userId,
     userName: uMap.get(b.userId) ?? `User #${b.userId}`,
     oldAddress: b.oldAddress,
-    oldPrivateKey: b.oldPrivateKey,
+    // Decrypt for the admin — they need the plaintext key to manually sweep stranded funds
+    oldPrivateKey: resolveKey(b.oldPrivateKey) ?? "",
     replacedAt: b.replacedAt.toISOString(),
     replacedReason: b.replacedReason,
   })));
@@ -239,7 +263,10 @@ router.put("/admin/wallet-settings", requireAdmin, async (req, res) => {
   let updated;
   const vals: any = {};
   if (adminMasterWallet !== undefined) vals.adminMasterWallet = adminMasterWallet;
-  if (gasWalletPrivateKey !== undefined) vals.gasWalletPrivateKey = gasWalletPrivateKey;
+  // Only update gas wallet key if a new non-empty value is provided; encrypt it before storing
+  if (gasWalletPrivateKey && gasWalletPrivateKey.trim()) {
+    vals.gasWalletPrivateKey = ensureEncrypted(gasWalletPrivateKey.trim());
+  }
   if (bscRpcUrl !== undefined) vals.bscRpcUrl = bscRpcUrl;
   if (minDepositUsdt !== undefined) vals.minDepositUsdt = String(minDepositUsdt);
 
@@ -250,7 +277,7 @@ router.put("/admin/wallet-settings", requireAdmin, async (req, res) => {
   }
   res.json({
     adminMasterWallet: updated.adminMasterWallet,
-    gasWalletPrivateKey: updated.gasWalletPrivateKey,
+    gasWalletKeySet: !!(updated.gasWalletPrivateKey),
     bscRpcUrl: updated.bscRpcUrl,
     minDepositUsdt: parseFloat(updated.minDepositUsdt),
   });

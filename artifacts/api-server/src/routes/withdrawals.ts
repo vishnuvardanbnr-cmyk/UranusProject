@@ -6,6 +6,7 @@ import { CreateWithdrawalBody } from "@workspace/api-zod";
 import { isOtpWithdrawalEnabled } from "../lib/email";
 import { getSettings, sendUsdtToAddress } from "../lib/blockchain";
 import { logger } from "../lib/logger";
+import { resolveKey } from "../lib/keyEncryption.js";
 
 const router = Router();
 
@@ -106,7 +107,9 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
 
   // Check withdrawal mode — auto-process if configured
   const settings = await getSettings();
-  if (settings && settings.withdrawalMode === "auto" && settings.withdrawWalletPrivateKey && settings.gasWalletPrivateKey) {
+  const withdrawPlaintextKey = settings ? resolveKey(settings.withdrawWalletPrivateKey) : null;
+  const gasPlaintextKey = settings ? resolveKey(settings.gasWalletPrivateKey) : null;
+  if (settings && settings.withdrawalMode === "auto" && withdrawPlaintextKey && gasPlaintextKey) {
     // Mark as processing so the user sees immediate feedback
     await db.update(withdrawalsTable)
       .set({ status: "processing" })
@@ -118,8 +121,8 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
         const result = await sendUsdtToAddress(
           walletAddress,
           amount,
-          settings.withdrawWalletPrivateKey,
-          settings.gasWalletPrivateKey,
+          withdrawPlaintextKey,
+          gasPlaintextKey,
           settings.bscRpcUrl || "https://bsc-dataseed.binance.org/",
         );
         if (result.success) {

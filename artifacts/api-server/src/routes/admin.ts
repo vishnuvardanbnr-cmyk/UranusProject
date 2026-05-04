@@ -6,6 +6,7 @@ import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody
 import { withdrawalToResponse } from "./withdrawals";
 import { investmentToResponse } from "./investments";
 import { z } from "zod";
+import { resolveKey, ensureEncrypted } from "../lib/keyEncryption.js";
 
 const SmtpSettingsBody = z.object({
   smtpEnabled: z.boolean(),
@@ -248,7 +249,9 @@ router.post("/admin/withdrawals/:id/approve", requireAdmin, async (req, res) => 
 
   // Try to send on-chain if withdraw wallet is configured
   const settings = await db.select().from(platformSettingsTable).limit(1).then(r => r[0] ?? null);
-  if (settings && settings.withdrawWalletPrivateKey && settings.gasWalletPrivateKey) {
+  const withdrawPlaintextKey = settings ? resolveKey(settings.withdrawWalletPrivateKey) : null;
+  const gasPlaintextKey = settings ? resolveKey(settings.gasWalletPrivateKey) : null;
+  if (settings && withdrawPlaintextKey && gasPlaintextKey) {
     // Mark processing immediately
     await db.update(withdrawalsTable)
       .set({ status: "processing" })
@@ -262,8 +265,8 @@ router.post("/admin/withdrawals/:id/approve", requireAdmin, async (req, res) => 
         const result = await sendUsdtToAddress(
           withdrawal.walletAddress,
           parseFloat(withdrawal.amount),
-          settings.withdrawWalletPrivateKey,
-          settings.gasWalletPrivateKey,
+          withdrawPlaintextKey,
+          gasPlaintextKey,
           settings.bscRpcUrl || "https://bsc-dataseed.binance.org/",
         );
         if (result.success) {
@@ -418,7 +421,8 @@ router.get("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   }
   res.json({
     withdrawalMode: settings.withdrawalMode,
-    withdrawWalletPrivateKey: settings.withdrawWalletPrivateKey,
+    // Never return the raw private key — return a boolean so the UI can show "key configured" status
+    withdrawKeySet: !!(settings.withdrawWalletPrivateKey),
   });
 });
 
@@ -426,25 +430,30 @@ router.get("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
 router.put("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   const body = z.object({
     withdrawalMode: z.enum(["auto", "manual"]),
-    withdrawWalletPrivateKey: z.string(),
+    withdrawWalletPrivateKey: z.string().optional(),
   }).safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ message: "Invalid input" });
     return;
   }
   const [existing] = await db.select().from(platformSettingsTable).limit(1);
+  const vals: Record<string, unknown> = { withdrawalMode: body.data.withdrawalMode };
+  // Only update the key if a new non-empty value is provided; encrypt before storing
+  if (body.data.withdrawWalletPrivateKey && body.data.withdrawWalletPrivateKey.trim()) {
+    vals.withdrawWalletPrivateKey = ensureEncrypted(body.data.withdrawWalletPrivateKey.trim());
+  }
   let updated;
   if (existing) {
     [updated] = await db.update(platformSettingsTable)
-      .set({ withdrawalMode: body.data.withdrawalMode, withdrawWalletPrivateKey: body.data.withdrawWalletPrivateKey })
+      .set(vals)
       .where(eq(platformSettingsTable.id, existing.id))
       .returning();
   } else {
     [updated] = await db.insert(platformSettingsTable)
-      .values({ withdrawalMode: body.data.withdrawalMode, withdrawWalletPrivateKey: body.data.withdrawWalletPrivateKey })
+      .values(vals)
       .returning();
   }
-  res.json({ withdrawalMode: updated.withdrawalMode, withdrawWalletPrivateKey: updated.withdrawWalletPrivateKey });
+  res.json({ withdrawalMode: updated.withdrawalMode, withdrawKeySet: !!(updated.withdrawWalletPrivateKey) });
 });
 
 // GET /api/admin/smtp-settings

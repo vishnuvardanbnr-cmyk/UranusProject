@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { db, platformSettingsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { encryptKey } from "./keyEncryption.js";
 
 export const USDT_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
 export const USDT_DECIMALS = 18;
@@ -239,7 +240,7 @@ export async function ensureDepositWallet(userId: number): Promise<{ address: st
 
   const { address, privateKey } = generateDepositWallet();
   await db.update(usersTable)
-    .set({ depositAddress: address, depositPrivateKey: privateKey })
+    .set({ depositAddress: address, depositPrivateKey: encryptKey(privateKey) })
     .where(eq(usersTable.id, userId));
 
   return { address };

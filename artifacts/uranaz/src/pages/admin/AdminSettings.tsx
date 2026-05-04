@@ -392,6 +392,7 @@ export default function AdminSettings() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletSaving, setWalletSaving] = useState(false);
   const [showGasKey, setShowGasKey] = useState(false);
+  const [gasWalletKeySet, setGasWalletKeySet] = useState(false);
   const walletForm = useForm<{
     adminMasterWallet: string;
     gasWalletPrivateKey: string;
@@ -410,7 +411,15 @@ export default function AdminSettings() {
     setWalletLoading(true);
     fetch("/api/admin/wallet-settings", { headers: { Authorization: `Bearer ${getToken()}` } })
       .then(r => r.json())
-      .then(d => walletForm.reset(d))
+      .then(d => {
+        setGasWalletKeySet(!!d.gasWalletKeySet);
+        walletForm.reset({
+          adminMasterWallet: d.adminMasterWallet ?? "",
+          gasWalletPrivateKey: "",
+          bscRpcUrl: d.bscRpcUrl ?? "https://bsc-dataseed.binance.org/",
+          minDepositUsdt: d.minDepositUsdt ?? 1,
+        });
+      })
       .catch(() => {})
       .finally(() => setWalletLoading(false));
     loadWalletStats();
@@ -419,14 +428,22 @@ export default function AdminSettings() {
   const onWalletSubmit = async (data: { adminMasterWallet: string; gasWalletPrivateKey: string; bscRpcUrl: string; minDepositUsdt: number }) => {
     setWalletSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        adminMasterWallet: data.adminMasterWallet,
+        bscRpcUrl: data.bscRpcUrl,
+        minDepositUsdt: data.minDepositUsdt,
+      };
+      // Only send the key if the admin entered a new one — blank means "keep existing"
+      if (data.gasWalletPrivateKey.trim()) body.gasWalletPrivateKey = data.gasWalletPrivateKey.trim();
       const res = await fetch("/api/admin/wallet-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
-      walletForm.reset(updated);
+      setGasWalletKeySet(!!updated.gasWalletKeySet);
+      walletForm.reset({ ...data, gasWalletPrivateKey: "" });
       toast({ title: "Wallet settings saved!" });
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
@@ -439,6 +456,7 @@ export default function AdminSettings() {
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [withdrawalSaving, setWithdrawalSaving] = useState(false);
   const [showWithdrawKey, setShowWithdrawKey] = useState(false);
+  const [withdrawKeySet, setWithdrawKeySet] = useState(false);
   const withdrawalForm = useForm<{ withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }>({
     defaultValues: { withdrawalMode: "manual", withdrawWalletPrivateKey: "" },
   });
@@ -447,7 +465,10 @@ export default function AdminSettings() {
     setWithdrawalLoading(true);
     fetch("/api/admin/withdrawal-settings", { headers: { Authorization: `Bearer ${getToken()}` } })
       .then(r => r.json())
-      .then(d => withdrawalForm.reset(d))
+      .then(d => {
+        setWithdrawKeySet(!!d.withdrawKeySet);
+        withdrawalForm.reset({ withdrawalMode: d.withdrawalMode ?? "manual", withdrawWalletPrivateKey: "" });
+      })
       .catch(() => {})
       .finally(() => setWithdrawalLoading(false));
   }, []);
@@ -455,14 +476,18 @@ export default function AdminSettings() {
   const onWithdrawalSubmit = async (data: { withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }) => {
     setWithdrawalSaving(true);
     try {
+      const body: Record<string, unknown> = { withdrawalMode: data.withdrawalMode };
+      // Only send the key if the admin entered a new one — blank means "keep existing"
+      if (data.withdrawWalletPrivateKey.trim()) body.withdrawWalletPrivateKey = data.withdrawWalletPrivateKey.trim();
       const res = await fetch("/api/admin/withdrawal-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
-      withdrawalForm.reset(updated);
+      setWithdrawKeySet(!!updated.withdrawKeySet);
+      withdrawalForm.reset({ withdrawalMode: data.withdrawalMode, withdrawWalletPrivateKey: "" });
       toast({ title: "Withdrawal settings saved!" });
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
@@ -777,7 +802,7 @@ export default function AdminSettings() {
               <div className="flex gap-3 p-3.5 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
                 <ShieldAlert size={16} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.85)" }} />
                 <div className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.8)" }}>
-                  <strong>Security Notice:</strong> Private keys are stored encrypted in the database. The gas wallet should hold only enough BNB to cover sweep fees. Do not use a wallet with large BNB holdings.
+                  <strong>Security Notice:</strong> Private keys are encrypted with AES-256-GCM before storage. The gas wallet should hold only enough BNB to cover sweep fees — do not fund it heavily.
                 </div>
               </div>
 
@@ -796,10 +821,16 @@ export default function AdminSettings() {
               <SubHeader hint="This wallet's BNB is used to fund deposit addresses before sweeping USDT.">Gas Wallet — pays BNB fees for sweeping</SubHeader>
               <div>
                 <FieldLabel>Gas Wallet Private Key</FieldLabel>
+                {gasWalletKeySet && (
+                  <div className="flex items-center gap-1.5 mb-2 text-xs" style={{ color: "rgba(74,222,128,0.85)" }}>
+                    <CheckCircle2 size={12} />
+                    Key is configured — leave blank to keep existing
+                  </div>
+                )}
                 <div className="relative">
                   <input
                     type={showGasKey ? "text" : "password"}
-                    placeholder="0x... (private key with BNB for gas)"
+                    placeholder={gasWalletKeySet ? "Leave blank to keep existing key" : "0x... (private key with BNB for gas)"}
                     {...walletForm.register("gasWalletPrivateKey")}
                     className={INPUT_CLS + " pr-10 font-mono"}
                     style={INPUT_STYLE}
@@ -863,7 +894,7 @@ export default function AdminSettings() {
               <div className="flex gap-3 p-3.5 rounded-xl" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.20)" }}>
                 <ShieldAlert size={16} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.85)" }} />
                 <div className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.8)" }}>
-                  <strong>Security Notice:</strong> The withdrawal wallet private key is stored in the database. This wallet should hold USDT for payouts. BNB top-ups come from the gas wallet above when balance is low.
+                  <strong>Security Notice:</strong> The withdrawal wallet private key is encrypted with AES-256-GCM before storage — it is never returned in API responses. This wallet should hold USDT for payouts. BNB top-ups come from the gas wallet when balance is low.
                 </div>
               </div>
 
@@ -906,10 +937,16 @@ export default function AdminSettings() {
               <SubHeader hint="If its BNB runs low, the gas wallet tops it up automatically.">Withdrawal Wallet — sends USDT to users</SubHeader>
               <div>
                 <FieldLabel>Withdrawal Wallet Private Key</FieldLabel>
+                {withdrawKeySet && (
+                  <div className="flex items-center gap-1.5 mb-2 text-xs" style={{ color: "rgba(74,222,128,0.85)" }}>
+                    <CheckCircle2 size={12} />
+                    Key is configured — leave blank to keep existing
+                  </div>
+                )}
                 <div className="relative">
                   <input
                     type={showWithdrawKey ? "text" : "password"}
-                    placeholder="0x... (private key of wallet holding USDT for payouts)"
+                    placeholder={withdrawKeySet ? "Leave blank to keep existing key" : "0x... (private key of wallet holding USDT for payouts)"}
                     {...withdrawalForm.register("withdrawWalletPrivateKey")}
                     className={INPUT_CLS + " pr-10 font-mono"}
                     style={INPUT_STYLE}
