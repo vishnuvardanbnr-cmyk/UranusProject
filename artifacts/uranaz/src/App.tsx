@@ -20,6 +20,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import ForgotPassword from "@/pages/ForgotPassword";
 import ProfileSetup from "@/pages/ProfileSetup";
 import Dashboard from "@/pages/Dashboard";
 import Invest from "@/pages/Invest";
@@ -83,9 +84,9 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
   }, [location]);
 
   const isLoggedIn = !!user;
-  const isPublic = ["/", "/login", "/register", "/terms", "/privacy"].includes(location) ||
+  const isPublic = ["/", "/login", "/register", "/forgot-password", "/terms", "/privacy"].includes(location) ||
     location.startsWith("/terms") || location.startsWith("/privacy");
-  const isAuth = ["/login", "/register"].includes(location);
+  const isAuth = ["/login", "/register", "/forgot-password"].includes(location);
 
   return (
     <DeviceGate user={user} path={location}>
@@ -102,6 +103,9 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         </Route>
         <Route path="/register">
           {isLoggedIn ? <Redirect to="/dashboard" /> : <Register onLogin={setUser} />}
+        </Route>
+        <Route path="/forgot-password">
+          {isLoggedIn ? <Redirect to="/dashboard" /> : <ForgotPassword />}
         </Route>
 
         {/* Profile Setup */}

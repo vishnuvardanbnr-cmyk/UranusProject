@@ -130,6 +130,15 @@ export default function Login({ onLogin }: Props) {
               >
                 {login.isPending ? "Signing in..." : "Sign In"}
               </button>
+              <div className="text-right mt-1">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs hover:underline"
+                  style={{ color: "rgba(61,214,245,0.65)" }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </form>
           </Form>
 

@@ -97,7 +97,7 @@ router.get("/auth/registration-info", async (_req, res) => {
 // POST /api/auth/send-otp
 router.post("/auth/send-otp", async (req, res) => {
   const { email, purpose } = req.body;
-  if (!email || !["registration", "withdrawal", "wallet_update"].includes(purpose)) {
+  if (!email || !["registration", "withdrawal", "wallet_update", "password_reset"].includes(purpose)) {
     res.status(400).json({ message: "Invalid input" });
     return;
   }
@@ -112,6 +112,20 @@ router.post("/auth/send-otp", async (req, res) => {
       .limit(1);
     if (existing) {
       res.status(409).json({ message: "This email is already registered. Please sign in instead." });
+      return;
+    }
+  }
+
+  // For password reset OTPs: only send if email exists.
+  // If the email is not registered we silently return success to prevent
+  // leaking whether an account exists (email enumeration protection).
+  if (purpose === "password_reset") {
+    const [user] = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+    if (!user) {
+      res.json({ message: "OTP sent" });
       return;
     }
   }
@@ -294,6 +308,46 @@ router.post("/auth/login", async (req, res) => {
 
   const token = signToken(user.id);
   res.json({ user: userToResponse(user), token });
+});
+
+// POST /api/auth/reset-password
+router.post("/auth/reset-password", async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  if (!email || !otp || !newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    res.status(400).json({ message: "Email, OTP, and a new password (min 6 characters) are required." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (!user) {
+    res.status(400).json({ message: "Invalid or expired OTP." });
+    return;
+  }
+
+  const now = new Date();
+  const [otpRecord] = await db.select().from(otpCodesTable)
+    .where(and(
+      eq(otpCodesTable.email, email),
+      eq(otpCodesTable.purpose, "password_reset"),
+      eq(otpCodesTable.used, false),
+    ))
+    .orderBy(desc(otpCodesTable.createdAt))
+    .limit(1);
+
+  if (!otpRecord || otpRecord.code !== otp || otpRecord.expiresAt < now) {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+            || req.socket?.remoteAddress
+            || "unknown";
+    trackOtpFailure(email, ip);
+    res.status(400).json({ message: "Invalid or expired OTP." });
+    return;
+  }
+
+  await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
+  const newHash = await hashPassword(newPassword);
+  await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, user.id));
+
+  res.json({ message: "Password reset successfully. You can now sign in." });
 });
 
 // POST /api/auth/logout
