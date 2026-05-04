@@ -8,7 +8,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown, AlertTriangle } from "lucide-react";
+import { TrendingUp, X, Calendar, DollarSign, Percent, Timer, Hash, TrendingDown, AlertTriangle, Snowflake } from "lucide-react";
+
+const COOLING_HOURS = 24;
+
+function getCoolingInfo(createdAt: string) {
+  const msElapsed = Date.now() - new Date(createdAt).getTime();
+  const msTotal   = COOLING_HOURS * 3_600_000;
+  const msLeft    = msTotal - msElapsed;
+  if (msLeft <= 0) return null;
+  const h = Math.floor(msLeft / 3_600_000);
+  const m = Math.floor((msLeft % 3_600_000) / 60_000);
+  return { h, m, endsAt: new Date(new Date(createdAt).getTime() + msTotal) };
+}
 
 const TEAL = "#3DD6F5";
 
@@ -22,6 +34,8 @@ function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyper
   };
   const totalExpected = inv.amount * inv.dailyRate * inv.durationDays;
   const daysElapsed = inv.durationDays - inv.remainingDays;
+
+  const cooling = getCoolingInfo(inv.createdAt);
 
   const rows = [
     { icon: Hash,        label: "Investment ID",    value: `#${String(inv.id).padStart(6, "0")}` },
@@ -99,6 +113,27 @@ function InvestmentDetailModal({ inv, hyperEnabled, onClose }: { inv: any; hyper
           </div>
           <div className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.4)" }}>+{(inv.dailyRate * 100).toFixed(1)}% per day</div>
         </div>
+
+        {/* Cooling period banner */}
+        {cooling && (
+          <div
+            className="mx-5 mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl"
+            style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}
+          >
+            <Snowflake size={14} className="shrink-0 mt-0.5" style={{ color: "rgba(251,191,36,0.9)" }} />
+            <div>
+              <div className="text-xs font-bold mb-0.5" style={{ color: "rgba(251,191,36,0.9)" }}>
+                24h Cooling Period — {cooling.h}h {cooling.m}m remaining
+              </div>
+              <div className="text-xs leading-relaxed" style={{ color: "rgba(251,191,36,0.65)" }}>
+                ROI and level commissions will not be distributed during this period. First payout after{" "}
+                <strong style={{ color: "rgba(251,191,36,0.85)" }}>
+                  {cooling.endsAt.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
+                </strong>.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="px-5 mb-4">
@@ -469,45 +504,77 @@ export default function Invest({ user }: { user: any }) {
             </span>
           </div>
           <div className="space-y-3">
-            {paginatedInvestments.map(inv => (
-              <div
-                key={inv.id}
-                data-testid={`card-investment-${inv.id}`}
-                className="rounded-xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
-                style={{ ...GLASS, userSelect: "none" }}
-                onClick={() => setSelectedInvestment(inv)}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
-                    ${inv.amount.toFixed(2)}
-                  </div>
-                  <span
-                    className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                    style={{
-                      background: "rgba(61,214,245,0.10)",
-                      border: "1px solid rgba(61,214,245,0.2)",
-                      color: TEAL,
-                    }}
-                  >
-                    +{(inv.dailyRate * 100).toFixed(1)}%/day
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
-                  <div style={{ color: "rgba(168,237,255,0.4)" }}>
-                    Earned: <span style={{ color: "rgba(168,237,255,0.8)", fontWeight: 600 }}>${inv.earnedSoFar.toFixed(2)}</span>
-                  </div>
-                  <div className="text-right" style={{ color: "rgba(168,237,255,0.4)" }}>{inv.remainingDays} days left</div>
-                  {hyperEnabled && <div style={{ color: "rgba(168,100,255,0.6)" }}>HC: ${inv.hyperCoinAmount.toFixed(2)}</div>}
-                  {hyperEnabled && <div className="text-right" style={{ color: "rgba(61,214,245,0.6)" }}>USDT: ${inv.usdtAmount.toFixed(2)}</div>}
-                </div>
-                <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.08)" }}>
+            {paginatedInvestments.map(inv => {
+                const cooling = getCoolingInfo(inv.createdAt);
+                return (
                   <div
-                    className="h-1.5 rounded-full uranus-progress"
-                    style={{ width: `${Math.max(2, ((inv.durationDays - inv.remainingDays) / inv.durationDays) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+                    key={inv.id}
+                    data-testid={`card-investment-${inv.id}`}
+                    className="rounded-xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                    style={{ ...GLASS, userSelect: "none" }}
+                    onClick={() => setSelectedInvestment(inv)}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>
+                        ${inv.amount.toFixed(2)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {cooling && (
+                          <span
+                            className="flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold"
+                            style={{
+                              background: "rgba(251,191,36,0.12)",
+                              border: "1px solid rgba(251,191,36,0.35)",
+                              color: "rgba(251,191,36,0.9)",
+                            }}
+                          >
+                            <Snowflake size={10} />
+                            Cooling {cooling.h}h {cooling.m}m
+                          </span>
+                        )}
+                        <span
+                          className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+                          style={{
+                            background: "rgba(61,214,245,0.10)",
+                            border: "1px solid rgba(61,214,245,0.2)",
+                            color: TEAL,
+                          }}
+                        >
+                          +{(inv.dailyRate * 100).toFixed(1)}%/day
+                        </span>
+                      </div>
+                    </div>
+
+                    {cooling && (
+                      <div
+                        className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg text-xs"
+                        style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.2)" }}
+                      >
+                        <Snowflake size={11} style={{ color: "rgba(251,191,36,0.8)", flexShrink: 0 }} />
+                        <span style={{ color: "rgba(251,191,36,0.8)" }}>
+                          24h cooling period — ROI &amp; commissions start after{" "}
+                          <strong>{cooling.endsAt.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}</strong>
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
+                      <div style={{ color: "rgba(168,237,255,0.4)" }}>
+                        Earned: <span style={{ color: "rgba(168,237,255,0.8)", fontWeight: 600 }}>${inv.earnedSoFar.toFixed(2)}</span>
+                      </div>
+                      <div className="text-right" style={{ color: "rgba(168,237,255,0.4)" }}>{inv.remainingDays} days left</div>
+                      {hyperEnabled && <div style={{ color: "rgba(168,100,255,0.6)" }}>HC: ${inv.hyperCoinAmount.toFixed(2)}</div>}
+                      {hyperEnabled && <div className="text-right" style={{ color: "rgba(61,214,245,0.6)" }}>USDT: ${inv.usdtAmount.toFixed(2)}</div>}
+                    </div>
+                    <div className="w-full rounded-full h-1.5" style={{ background: "rgba(61,214,245,0.08)" }}>
+                      <div
+                        className="h-1.5 rounded-full uranus-progress"
+                        style={{ width: `${Math.max(2, ((inv.durationDays - inv.remainingDays) / inv.durationDays) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
           </div>
           <Pagination
             page={investPage}

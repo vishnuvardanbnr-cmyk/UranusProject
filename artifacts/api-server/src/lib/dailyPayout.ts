@@ -69,8 +69,18 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
 
   logger.info({ count: activeInvestments.length }, "Active investments found");
 
+  const now = new Date();
+
   for (const inv of activeInvestments) {
     try {
+      // ── 24-hour cooling period: skip investments created less than 24h ago ──
+      const hoursElapsed = (now.getTime() - new Date(inv.createdAt).getTime()) / 3_600_000;
+      if (hoursElapsed < 24) {
+        logger.info({ investmentId: inv.id, hoursElapsed: hoursElapsed.toFixed(1) }, "Investment in 24h cooling period — skipping");
+        stats.skipped++;
+        continue;
+      }
+
       const dailyReturn  = parseFloat(inv.amount) * parseFloat(inv.dailyRate);
       const newEarned    = parseFloat(inv.earnedSoFar) + dailyReturn;
       const newRemaining = Math.max(0, inv.remainingDays - 1);
