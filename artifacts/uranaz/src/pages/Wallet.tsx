@@ -513,11 +513,10 @@ function P2PModal({ usdtBalance, hyperBalance, hyperEnabled, onClose, onSuccess 
 
   const handleVerify = async () => {
     setVerified(null); setVerifyError("");
-    const id = parseInt(userId, 10);
-    if (!id || isNaN(id)) { setVerifyError("Enter a valid numeric user ID"); return; }
+    if (!userId.trim()) { setVerifyError("Enter a referral code or user ID"); return; }
     setVerifying(true);
     try {
-      const res = await fetch(`/api/wallet/p2p/lookup?userId=${id}`, {
+      const res = await fetch(`/api/wallet/p2p/lookup?query=${encodeURIComponent(userId.trim())}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("uranaz_token") || ""}` },
       });
       const data = await res.json();
@@ -628,15 +627,13 @@ function P2PModal({ usdtBalance, hyperBalance, hyperEnabled, onClose, onSuccess 
 
               {/* User ID lookup */}
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Recipient User ID</label>
+                <label className="block text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>Recipient Referral Code or User ID</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
                     value={userId}
-                    onChange={e => { setUserId(e.target.value.replace(/\D/g, "")); setVerified(null); setVerifyError(""); }}
-                    placeholder="Enter user ID..."
+                    onChange={e => { setUserId(e.target.value); setVerified(null); setVerifyError(""); }}
+                    placeholder="Enter referral code or user ID..."
                     className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none"
                     style={{
                       background: "rgba(0,20,40,0.6)",

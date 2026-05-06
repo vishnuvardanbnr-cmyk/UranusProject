@@ -217,28 +217,35 @@ router.post("/wallet/internal-transfer", requireAuth, async (req, res) => {
   });
 });
 
-// GET /api/wallet/p2p/lookup?userId=X — verify recipient exists
+// GET /api/wallet/p2p/lookup?query=X — verify recipient by referral code or numeric user ID
 router.get("/wallet/p2p/lookup", requireAuth, async (req, res) => {
   const sender = (req as any).user;
-  const userId = parseInt(req.query.userId as string, 10);
+  const query = (req.query.query as string ?? req.query.userId as string ?? "").trim();
 
-  if (!userId || isNaN(userId)) {
-    res.status(400).json({ message: "Invalid user ID" });
-    return;
-  }
-  if (userId === sender.id) {
-    res.status(400).json({ message: "You cannot transfer to yourself" });
+  if (!query) {
+    res.status(400).json({ message: "Enter a referral code or user ID" });
     return;
   }
 
-  const [recipient] = await db.select({
-    id: usersTable.id,
-    name: usersTable.name,
-    email: usersTable.email,
-  }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  let recipient: { id: number; name: string | null; email: string } | undefined;
+
+  const numericId = parseInt(query, 10);
+  if (!isNaN(numericId) && String(numericId) === query) {
+    const [row] = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+      .from(usersTable).where(eq(usersTable.id, numericId)).limit(1);
+    recipient = row;
+  } else {
+    const [row] = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+      .from(usersTable).where(eq(usersTable.referralCode, query.toUpperCase())).limit(1);
+    recipient = row;
+  }
 
   if (!recipient) {
-    res.status(404).json({ message: "User not found" });
+    res.status(404).json({ message: "User not found. Check the referral code or ID." });
+    return;
+  }
+  if (recipient.id === sender.id) {
+    res.status(400).json({ message: "You cannot transfer to yourself" });
     return;
   }
 
