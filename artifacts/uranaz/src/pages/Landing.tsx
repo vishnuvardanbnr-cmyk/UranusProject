@@ -294,7 +294,7 @@ export default function Landing() {
         >
           <div className="max-w-md mx-auto">
             <Step n={1} title="Create Your Account" desc="Sign up in minutes. Verify your email and complete a quick profile setup." />
-            <Step n={2} title="Deposit & Invest" desc="Fund your wallet with USDT (min. $100) — a minimum 50% in HyperCoin is required per plan." />
+            <Step n={2} title="Deposit & Invest" desc="Fund your wallet with USDT (min. $100) and choose your investment plan." />
             <Step n={3} title="Earn Daily Returns" desc="Sit back and collect 0.6%–0.8% every business day. Refer friends to unlock additional commission levels." />
           </div>
 
