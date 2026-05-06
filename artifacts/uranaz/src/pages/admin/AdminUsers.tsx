@@ -237,10 +237,14 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
   const [p2pBlockReason, setP2pBlockReason] = useState(user.p2pBlockReason ?? "");
   const [investmentBlockReason, setInvestmentBlockReason] = useState(user.investmentBlockReason ?? "");
 
-  const [walletBalance, setWalletBalance] = useState(user.walletBalance.toString());
-  const [earningsBalance, setEarningsBalance] = useState(user.totalEarnings.toString());
-  const [hyperCoinBalance, setHyperCoinBalance] = useState(user.hyperCoinBalance.toString());
   const [currentLevel, setCurrentLevel] = useState(user.currentLevel.toString());
+  const [liveUser, setLiveUser] = useState(user);
+
+  const [addBalModal, setAddBalModal] = useState(false);
+  const [addBalCurrency, setAddBalCurrency] = useState<"usdt" | "hypercoin">("usdt");
+  const [addBalAmount, setAddBalAmount] = useState("");
+  const [addBalNote, setAddBalNote] = useState("");
+  const [addBalLoading, setAddBalLoading] = useState(false);
 
   // Lock background scroll
   useEffect(() => {
@@ -248,6 +252,8 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  function getToken() { return localStorage.getItem("uranaz_token") || ""; }
 
   async function handleSave() {
     const body: Record<string, unknown> = {};
@@ -268,12 +274,6 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
     if ((investmentBlockReason || null) !== (user.investmentBlockReason || null)) body.investmentBlockReason = investmentBlockReason.trim() || null;
     const lvl = parseInt(currentLevel, 10);
     if (!Number.isNaN(lvl) && lvl !== user.currentLevel) body.currentLevel = lvl;
-    const wb = parseFloat(walletBalance);
-    if (!Number.isNaN(wb) && Math.abs(wb - user.walletBalance) > 1e-6) body.walletBalance = wb;
-    const eb = parseFloat(earningsBalance);
-    if (!Number.isNaN(eb) && Math.abs(eb - user.totalEarnings) > 1e-6) body.totalEarnings = eb;
-    const hb = parseFloat(hyperCoinBalance);
-    if (!Number.isNaN(hb) && Math.abs(hb - user.hyperCoinBalance) > 1e-6) body.hyperCoinBalance = hb;
 
     if (Object.keys(body).length === 0) {
       toast({ title: "No changes to save" });
@@ -290,6 +290,31 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
         description: err?.response?.data?.message ?? err?.message ?? "Try again",
         variant: "destructive",
       });
+    }
+  }
+
+  async function handleAddBalance() {
+    const amt = parseFloat(addBalAmount);
+    if (!amt || amt <= 0) { toast({ title: "Enter a valid positive amount", variant: "destructive" }); return; }
+    setAddBalLoading(true);
+    try {
+      const r = await fetch(`/api/admin/users/${user.id}/add-balance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ currency: addBalCurrency, amount: amt, note: addBalNote.trim() || undefined }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed"); }
+      const updated = await r.json();
+      setLiveUser(updated as AdminUser);
+      toast({ title: "Balance added", description: `+${amt} ${addBalCurrency === "usdt" ? "USDT" : "HC"} credited` });
+      setAddBalModal(false);
+      setAddBalAmount("");
+      setAddBalNote("");
+      onSaved(updated as AdminUser);
+    } catch (err: any) {
+      toast({ title: "Failed", description: err?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setAddBalLoading(false);
     }
   }
 
@@ -484,44 +509,37 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
 
           {tab === "balance" && (
             <>
-              <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}>
-                <AlertTriangle size={14} style={{ color: AMBER }} className="shrink-0 mt-0.5" />
-                <div className="text-xs" style={{ color: "rgba(168,237,255,0.7)" }}>
-                  Manual balance edits bypass deposits, withdrawals, and earnings logic. Use only to correct genuine accounting errors.
+              {/* Balance cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl p-3" style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.12)" }}>
+                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Deposit Balance (USDT)</div>
+                  <div className="text-lg font-bold" style={{ color: TEAL }}>${liveUser.walletBalance.toFixed(2)}</div>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.12)" }}>
+                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Earnings Balance (USDT)</div>
+                  <div className="text-lg font-bold" style={{ color: GREEN }}>${liveUser.totalEarnings.toFixed(2)}</div>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(167,139,250,0.18)" }}>
+                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>HyperCoin Balance</div>
+                  <div className="text-lg font-bold" style={{ color: "#a78bfa" }}>{liveUser.hyperCoinBalance.toFixed(4)} HC</div>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: "rgba(0,15,30,0.4)", border: "1px solid rgba(61,214,245,0.08)" }}>
+                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(168,237,255,0.4)" }}>Total Invested</div>
+                  <div className="text-lg font-bold" style={{ color: "rgba(168,237,255,0.85)" }}>${liveUser.totalInvested.toFixed(2)}</div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Deposit Balance (USDT)">
-                  <Input
-                    data-testid="input-wallet-balance"
-                    type="number"
-                    step="0.01"
-                    value={walletBalance}
-                    onChange={e => setWalletBalance(e.target.value)}
-                    style={INPUT_STYLE}
-                  />
-                </Field>
-                <Field label="Earnings Balance (USDT)">
-                  <Input
-                    data-testid="input-earnings-balance"
-                    type="number"
-                    step="0.01"
-                    value={earningsBalance}
-                    onChange={e => setEarningsBalance(e.target.value)}
-                    style={INPUT_STYLE}
-                  />
-                </Field>
-              </div>
-              <Field label="HyperCoin balance">
-                <Input
-                  data-testid="input-hyper-balance"
-                  type="number"
-                  step="0.01"
-                  value={hyperCoinBalance}
-                  onChange={e => setHyperCoinBalance(e.target.value)}
-                  style={INPUT_STYLE}
-                />
-              </Field>
+
+              {/* Add Balance button */}
+              <button
+                type="button"
+                onClick={() => { setAddBalModal(true); setAddBalAmount(""); setAddBalNote(""); setAddBalCurrency("usdt"); }}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                style={{ background: "linear-gradient(135deg, rgba(61,214,245,0.18), rgba(61,214,245,0.08))", border: "1px solid rgba(61,214,245,0.4)", color: TEAL }}
+              >
+                <Wallet size={14} /> Add Balance
+              </button>
+
+              {/* Current level */}
               <Field label="Current level">
                 <Input
                   data-testid="input-level"
@@ -533,8 +551,102 @@ function EditUserDrawer({ user, onClose, onSaved }: { user: AdminUser; onClose: 
                   style={INPUT_STYLE}
                 />
               </Field>
-              <ReadOnly label="Total invested" value={`$${user.totalInvested.toFixed(2)}`} />
             </>
+          )}
+
+          {/* Add Balance Modal */}
+          {addBalModal && (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center"
+              style={{ background: "rgba(0,5,15,0.8)", backdropFilter: "blur(8px)" }}
+              onClick={() => setAddBalModal(false)}
+            >
+              <div
+                className="w-full max-w-sm mx-4 rounded-2xl p-5 space-y-4"
+                style={{ background: "rgba(5,15,28,0.98)", border: "1px solid rgba(61,214,245,0.22)", boxShadow: "0 0 40px rgba(61,214,245,0.12)" }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div>
+                  <div className="font-bold text-sm mb-0.5" style={{ color: "rgba(168,237,255,0.9)" }}>Add Balance</div>
+                  <div className="text-[11px]" style={{ color: "rgba(168,237,255,0.45)" }}>to {liveUser.name}</div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "rgba(168,237,255,0.6)" }}>Balance Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { val: "usdt" as const, label: "Deposit Balance (USDT)", color: TEAL },
+                      { val: "hypercoin" as const, label: "HyperCoin Balance", color: "#a78bfa" },
+                    ]).map(opt => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => setAddBalCurrency(opt.val)}
+                        className="py-2 px-3 rounded-xl text-xs font-semibold transition-all text-left"
+                        style={addBalCurrency === opt.val ? {
+                          background: `${opt.color}18`,
+                          border: `1px solid ${opt.color}55`,
+                          color: opt.color,
+                        } : {
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          color: "rgba(168,237,255,0.5)",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "rgba(168,237,255,0.6)" }}>
+                    Amount ({addBalCurrency === "usdt" ? "USDT" : "HC"})
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    value={addBalAmount}
+                    onChange={e => setAddBalAmount(e.target.value)}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "rgba(168,237,255,0.6)" }}>Note (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bonus credit, manual adjustment…"
+                    value={addBalNote}
+                    onChange={e => setAddBalNote(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2 text-xs focus:outline-none"
+                    style={INPUT_STYLE}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAddBalModal(false)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(168,237,255,0.6)" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddBalance}
+                    disabled={addBalLoading}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    style={{ background: "linear-gradient(135deg, #3DD6F5, #2AB3CF)", color: "#010810" }}
+                  >
+                    {addBalLoading ? "Adding…" : "Add Balance"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

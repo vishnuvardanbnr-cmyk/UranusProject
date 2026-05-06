@@ -303,6 +303,36 @@ export default function AdminSettings() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenResult, setRegenResult] = useState<{ regenerated: number; backed_up: number; message: string } | null>(null);
 
+  // Reset for Live
+  const [resetForLiveStep, setResetForLiveStep] = useState<"idle" | "confirm" | "typing">("idle");
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+
+  const doResetForLive = async () => {
+    if (resetConfirmText !== "RESET FOR LIVE") {
+      toast({ title: "Confirmation text doesn't match", variant: "destructive" });
+      return;
+    }
+    setResetting(true);
+    try {
+      const r = await fetch("/api/admin/reset-for-live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ confirm: "RESET FOR LIVE" }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed"); }
+      setResetDone(true);
+      setResetForLiveStep("idle");
+      setResetConfirmText("");
+      toast({ title: "Reset complete", description: "All non-admin data has been cleared" });
+    } catch (err: any) {
+      toast({ title: "Reset failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   type ServerStatus = { heapUsed: number; heapTotal: number; rss: number; external: number; uptimeSeconds: number };
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
   const [serverStatusLoading, setServerStatusLoading] = useState(false);
@@ -1516,6 +1546,101 @@ export default function AdminSettings() {
             </div>
           </div>
         </SectionCard>
+        <SectionCard
+          icon={AlertTriangle}
+          title="Reset for Live"
+          description="Wipe all non-admin users, investments, income, deposits and transactions. Use this to clean test data before going live."
+          accent="#f87171"
+        >
+          <div className="space-y-4">
+            <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.20)" }}>
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "rgba(248,113,113,0.85)" }} />
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.85)" }}>
+                This permanently deletes all non-admin user accounts and clears every transaction, income record, deposit, investment, withdrawal and admin balance adjustment. The admin account is kept and its balances are reset to zero. <strong>This cannot be undone.</strong>
+              </p>
+            </div>
+
+            {resetDone && (
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.25)" }}>
+                <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+                <span className="text-xs" style={{ color: "rgba(52,211,153,0.9)" }}>Reset complete — platform is clean and ready for live users.</span>
+              </div>
+            )}
+
+            {resetForLiveStep === "idle" && (
+              <button
+                type="button"
+                onClick={() => { setResetForLiveStep("confirm"); setResetDone(false); }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+                style={{ background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
+              >
+                <AlertTriangle size={13} /> Reset for Live
+              </button>
+            )}
+
+            {resetForLiveStep === "confirm" && (
+              <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.30)" }}>
+                <p className="text-xs font-semibold" style={{ color: "rgba(248,113,113,0.9)" }}>
+                  Are you absolutely sure? This will delete all test users and transactions.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetForLiveStep("typing")}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                    style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+                  >
+                    Yes, continue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResetForLiveStep("idle")}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                    style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetForLiveStep === "typing" && (
+              <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.30)" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.9)" }}>
+                  Type <strong>RESET FOR LIVE</strong> below to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={resetConfirmText}
+                  onChange={e => setResetConfirmText(e.target.value)}
+                  placeholder="RESET FOR LIVE"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none"
+                  style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={doResetForLive}
+                    disabled={resetting || resetConfirmText !== "RESET FOR LIVE"}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
+                    style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
+                  >
+                    {resetting ? <><RefreshCw size={13} className="animate-spin" /> Resetting…</> : "Reset Now"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setResetForLiveStep("idle"); setResetConfirmText(""); }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                    style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
         <SectionCard
           icon={Server}
           title="Server Status"

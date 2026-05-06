@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable, ranksTable, userRewardsTable } from "@workspace/db";
+import { db, usersTable, investmentsTable, withdrawalsTable, incomeTable, platformSettingsTable, offersTable, noticesTable, noticeViewsTable, depositsTable, walletAddressChangesTable, p2pTransfersTable, ranksTable, userRewardsTable, adminBalanceAdjustmentsTable } from "@workspace/db";
 import { eq, desc, ilike, or, and, inArray, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import { UpdateAdminUserBody, UpdateAdminInvestmentBody, UpdateAdminSettingsBody, ListAdminUsersQueryParams, ListAdminInvestmentsQueryParams, ListAdminWithdrawalsQueryParams } from "@workspace/api-zod";
@@ -1394,6 +1394,197 @@ router.delete("/admin/mark-rewarded", requireAdmin, async (req, res) => {
       eq(userRewardsTable.referenceId, referenceId),
     ));
   res.json({ success: true });
+});
+
+// ── Admin Balance Adjustments ─────────────────────────────────────────────────
+
+// POST /api/admin/users/:id/add-balance
+router.post("/admin/users/:id/add-balance", requireAdmin, async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  if (isNaN(userId)) { res.status(400).json({ message: "Invalid user ID" }); return; }
+
+  const parsed = z.object({
+    currency: z.enum(["usdt", "hypercoin"]),
+    amount: z.number().positive(),
+    note: z.string().optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid input" }); return; }
+
+  const { currency, amount, note } = parsed.data;
+  const adminId = (req as any).user.id;
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ message: "User not found" }); return; }
+
+  let updatedUser;
+  if (currency === "usdt") {
+    const newBalance = parseFloat(user.walletBalance ?? "0") + amount;
+    [updatedUser] = await db.update(usersTable)
+      .set({ walletBalance: newBalance.toString() })
+      .where(eq(usersTable.id, userId))
+      .returning();
+  } else {
+    const newBalance = parseFloat(user.hyperCoinBalance ?? "0") + amount;
+    [updatedUser] = await db.update(usersTable)
+      .set({ hyperCoinBalance: newBalance.toString() })
+      .where(eq(usersTable.id, userId))
+      .returning();
+  }
+
+  await db.insert(adminBalanceAdjustmentsTable).values({
+    userId,
+    adminId,
+    currency,
+    amount: amount.toString(),
+    note: note ?? null,
+  });
+
+  res.json(userToResponse(updatedUser));
+});
+
+// GET /api/admin/reports/income
+router.get("/admin/reports/income", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20")) || 20));
+  const search = (req.query.search ? String(req.query.search) : "").trim().toLowerCase();
+  const typeFilter = req.query.type ? String(req.query.type) : "";
+  const { from, to } = dateRange(req.query);
+
+  let rows = await db.select().from(incomeTable).orderBy(desc(incomeTable.createdAt));
+  if (typeFilter) rows = rows.filter(r => r.type === typeFilter);
+  if (from) rows = rows.filter(r => r.createdAt >= from!);
+  if (to)   rows = rows.filter(r => r.createdAt <= to!);
+
+  const userIds = Array.from(new Set(rows.map(r => r.userId)));
+  const users = userIds.length
+    ? await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u]));
+
+  let enriched = rows.map(r => {
+    const u = uMap.get(r.userId);
+    return {
+      id: r.id,
+      userId: r.userId,
+      userName: u?.name ?? "—",
+      userEmail: u?.email ?? "—",
+      type: r.type,
+      amount: parseFloat(r.amount),
+      description: r.description,
+      fromUserId: r.fromUserId,
+      fromUserName: r.fromUserName,
+      level: r.level,
+      createdAt: r.createdAt.toISOString(),
+    };
+  });
+
+  if (search) {
+    enriched = enriched.filter(r =>
+      r.userName.toLowerCase().includes(search) ||
+      r.userEmail.toLowerCase().includes(search) ||
+      r.description.toLowerCase().includes(search) ||
+      String(r.userId) === search,
+    );
+  }
+
+  const summary = {
+    totalCount: enriched.length,
+    totalAmount: enriched.reduce((s, r) => s + r.amount, 0),
+    dailyReturnCount: enriched.filter(r => r.type === "daily_return").length,
+    dailyReturnAmount: enriched.filter(r => r.type === "daily_return").reduce((s, r) => s + r.amount, 0),
+    levelCommCount: enriched.filter(r => r.type === "level_commission").length,
+    levelCommAmount: enriched.filter(r => r.type === "level_commission").reduce((s, r) => s + r.amount, 0),
+    spotReferralCount: enriched.filter(r => r.type === "spot_referral").length,
+    spotReferralAmount: enriched.filter(r => r.type === "spot_referral").reduce((s, r) => s + r.amount, 0),
+    rankBonusCount: enriched.filter(r => r.type === "rank_bonus").length,
+    rankBonusAmount: enriched.filter(r => r.type === "rank_bonus").reduce((s, r) => s + r.amount, 0),
+  };
+
+  const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// GET /api/admin/reports/balance-adjustments
+router.get("/admin/reports/balance-adjustments", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20")) || 20));
+  const search = (req.query.search ? String(req.query.search) : "").trim().toLowerCase();
+  const currencyFilter = req.query.currency ? String(req.query.currency) : "";
+  const { from, to } = dateRange(req.query);
+
+  let rows = await db.select().from(adminBalanceAdjustmentsTable).orderBy(desc(adminBalanceAdjustmentsTable.createdAt));
+  if (currencyFilter) rows = rows.filter(r => r.currency === currencyFilter);
+  if (from) rows = rows.filter(r => r.createdAt >= from!);
+  if (to)   rows = rows.filter(r => r.createdAt <= to!);
+
+  const userIds = Array.from(new Set([...rows.map(r => r.userId), ...rows.map(r => r.adminId)]));
+  const users = userIds.length
+    ? await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email }).from(usersTable).where(inArray(usersTable.id, userIds))
+    : [];
+  const uMap = new Map(users.map(u => [u.id, u]));
+
+  let enriched = rows.map(r => {
+    const u = uMap.get(r.userId);
+    const a = uMap.get(r.adminId);
+    return {
+      id: r.id,
+      userId: r.userId,
+      userName: u?.name ?? "—",
+      userEmail: u?.email ?? "—",
+      adminId: r.adminId,
+      adminName: a?.name ?? "—",
+      currency: r.currency,
+      amount: parseFloat(r.amount),
+      note: r.note,
+      createdAt: r.createdAt.toISOString(),
+    };
+  });
+
+  if (search) {
+    enriched = enriched.filter(r =>
+      r.userName.toLowerCase().includes(search) ||
+      r.userEmail.toLowerCase().includes(search) ||
+      (r.note ?? "").toLowerCase().includes(search) ||
+      String(r.userId) === search,
+    );
+  }
+
+  const summary = {
+    totalCount: enriched.length,
+    totalUsdtAmount: enriched.filter(r => r.currency === "usdt").reduce((s, r) => s + r.amount, 0),
+    totalHyperAmount: enriched.filter(r => r.currency === "hypercoin").reduce((s, r) => s + r.amount, 0),
+    usdtCount: enriched.filter(r => r.currency === "usdt").length,
+    hyperCount: enriched.filter(r => r.currency === "hypercoin").length,
+  };
+
+  const { rows: pageRows, total } = paginate(enriched, page, limit);
+  res.json({ rows: pageRows, total, page, limit, summary });
+});
+
+// POST /api/admin/reset-for-live
+router.post("/admin/reset-for-live", requireAdmin, async (req, res) => {
+  const parsed = z.object({ confirm: z.literal("RESET FOR LIVE") }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Confirmation text mismatch" }); return; }
+
+  await db.delete(incomeTable);
+  await db.delete(investmentsTable);
+  await db.delete(withdrawalsTable);
+  await db.delete(depositsTable);
+  await db.execute(sql`DELETE FROM hc_deposit_requests`);
+  await db.execute(sql`DELETE FROM p2p_transfers`);
+  await db.execute(sql`DELETE FROM wallet_address_changes`);
+  await db.execute(sql`DELETE FROM otp_codes`);
+  await db.execute(sql`DELETE FROM notice_views`);
+  await db.execute(sql`DELETE FROM support_messages`);
+  await db.execute(sql`DELETE FROM support_tickets`);
+  await db.delete(userRewardsTable);
+  await db.delete(adminBalanceAdjustmentsTable);
+  await db.delete(usersTable).where(eq(usersTable.isAdmin, false));
+  await db.update(usersTable)
+    .set({ totalEarnings: "0", walletBalance: "0", totalInvested: "0", hyperCoinBalance: "0", currentRankId: null, currentLevel: 0 })
+    .where(eq(usersTable.isAdmin, true));
+
+  res.json({ success: true, message: "All non-admin data cleared" });
 });
 
 export default router;
