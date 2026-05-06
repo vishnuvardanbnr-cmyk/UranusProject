@@ -133,7 +133,7 @@ export default function AdminReports() {
 
   const tabConfig = tabs.find(t => t.key === tab)!;
 
-  useEffect(() => { setPage(1); setStatus(""); setSearch(""); setOtpOnly(false); setCurrency(""); setIncomeType(""); }, [tab]);
+  useEffect(() => { setPage(1); setStatus(""); setSearch(""); setOtpOnly(false); setCurrency(""); setIncomeType(""); setData(null); }, [tab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -276,7 +276,7 @@ export default function AdminReports() {
           {tab === "balance-adjustments" && (<>
             <StatCard label="Total Records"   value={summary.totalCount}           color={TEAL} />
             <StatCard label="USDT Added"      value={summary.usdtCount}            sub={fmtMoney(summary.totalUsdtAmount)}  color="#34d399" />
-            <StatCard label="HC Added"        value={summary.hyperCount}           sub={`${summary.totalHyperAmount?.toFixed(4)} HC`} color="#a78bfa" />
+            <StatCard label="HC Added"        value={summary.hyperCount}           sub={`${(Number(summary.totalHyperAmount) || 0).toFixed(4)} HC`} color="#a78bfa" />
           </>)}
         </div>
       )}
