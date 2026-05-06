@@ -151,7 +151,7 @@ export default function Landing() {
             backgroundClip: "text",
           }}
         >
-          URANAZ
+          URANUS
         </div>
         <div className="flex items-center gap-3">
           <Link href="/login">
@@ -373,7 +373,7 @@ export default function Landing() {
             backgroundClip: "text",
           }}
         >
-          URANAZ
+          URANUS
         </div>
         <div className="flex items-center gap-5 text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
           <Link href="/terms"><span className="hover:text-teal-300 transition-colors cursor-pointer">Terms & Conditions</span></Link>
