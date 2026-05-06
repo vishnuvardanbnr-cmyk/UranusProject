@@ -50,29 +50,6 @@ function StarField() {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />;
 }
 
-/* ─── Stat pill ─────────────────────────────────────────────── */
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="flex flex-col items-center px-6 py-4">
-      <span
-        className="text-3xl sm:text-4xl font-black"
-        style={{
-          fontFamily: "'Orbitron', sans-serif",
-          background: "linear-gradient(135deg, #a8edff, #3DD6F5)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}
-      >
-        {value}
-      </span>
-      <span className="text-xs mt-1 font-medium tracking-wide uppercase" style={{ color: "rgba(168,237,255,0.45)" }}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
 /* ─── Feature card ──────────────────────────────────────────── */
 function FeatureCard({
   icon: Icon, title, desc, color,
@@ -262,24 +239,6 @@ export default function Landing() {
               Sign In
             </button>
           </Link>
-        </div>
-      </section>
-
-      {/* ── Stats bar ─────────────────────────────────────────── */}
-      <section className="relative z-10 px-4 pb-20 max-w-4xl mx-auto">
-        <div
-          className="rounded-2xl grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0"
-          style={{
-            background: "rgba(5,18,32,0.70)",
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(61,214,245,0.14)",
-            divideColor: "rgba(61,214,245,0.10)",
-          }}
-        >
-          <Stat value="0.8%" label="Daily Returns" />
-          <Stat value="10+" label="Years Experience" />
-          <Stat value="8" label="Commission Levels" />
-          <Stat value="24h" label="Withdrawal Time" />
         </div>
       </section>
 
