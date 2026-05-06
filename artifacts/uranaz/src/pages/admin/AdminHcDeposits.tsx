@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  CircleDollarSign, Clock, CheckCircle, XCircle, RefreshCw, Eye, X, Check, Ban,
+  CircleDollarSign, Clock, CheckCircle, XCircle, RefreshCw, Eye, X, Check, Ban, Trash2,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -208,6 +208,8 @@ export default function AdminHcDeposits() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [approveTarget, setApproveTarget] = useState<HcRequest | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [oldImageCount, setOldImageCount] = useState<number>(0);
+  const [clearing, setClearing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -224,7 +226,41 @@ export default function AdminHcDeposits() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadOldCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/hc-deposits/old-images/count", {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      setOldImageCount(d.count ?? 0);
+    } catch {
+      setOldImageCount(0);
+    }
+  }, []);
+
+  async function handleClearOldImages() {
+    if (oldImageCount === 0) return;
+    const confirmed = window.confirm(
+      `This will remove the screenshot images from ${oldImageCount} deposit record${oldImageCount !== 1 ? "s" : ""} older than 10 days.\n\nThe records and their status will remain — only the image data will be deleted to save database space.\n\nContinue?`
+    );
+    if (!confirmed) return;
+    setClearing(true);
+    try {
+      const res = await fetch("/api/admin/hc-deposits/old-images", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      alert(`Done — cleared images from ${d.cleared} record${d.cleared !== 1 ? "s" : ""}.`);
+      await Promise.all([load(), loadOldCount()]);
+    } catch {
+      alert("Failed to clear old images. Please try again.");
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  useEffect(() => { load(); loadOldCount(); }, [load, loadOldCount]);
 
   const filtered = filter === "all" ? requests : requests.filter(r => r.status === filter);
 
@@ -269,13 +305,31 @@ export default function AdminHcDeposits() {
             Review and credit HyperCoin deposit requests
           </p>
         </div>
-        <button
-          onClick={load}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
-          style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }}
-        >
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-        </button>
+        <div className="flex items-center gap-2">
+          {oldImageCount > 0 && (
+            <button
+              onClick={handleClearOldImages}
+              disabled={clearing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:brightness-125"
+              style={{
+                background: "rgba(248,113,113,0.10)",
+                border: "1px solid rgba(248,113,113,0.30)",
+                color: "#f87171",
+                opacity: clearing ? 0.5 : 1,
+              }}
+            >
+              <Trash2 size={12} />
+              {clearing ? "Clearing..." : `Clear Old Images (${oldImageCount})`}
+            </button>
+          )}
+          <button
+            onClick={() => { load(); loadOldCount(); }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
+            style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }}
+          >
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -367,14 +421,24 @@ export default function AdminHcDeposits() {
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
-                  <button
-                    onClick={() => setScreenshotUrl(req.screenshotUrl)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:brightness-125"
-                    style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }}
-                  >
-                    <Eye size={12} />
-                    Screenshot
-                  </button>
+                  {req.screenshotUrl ? (
+                    <button
+                      onClick={() => setScreenshotUrl(req.screenshotUrl)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:brightness-125"
+                      style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.18)", color: TEAL }}
+                    >
+                      <Eye size={12} />
+                      Screenshot
+                    </button>
+                  ) : (
+                    <span
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                      style={{ background: "rgba(168,237,255,0.04)", border: "1px solid rgba(168,237,255,0.08)", color: "rgba(168,237,255,0.25)" }}
+                    >
+                      <Eye size={12} />
+                      Image Cleared
+                    </span>
+                  )}
 
                   {req.status === "pending" && (
                     <>

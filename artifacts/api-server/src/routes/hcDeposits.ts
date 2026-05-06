@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, hcDepositRequestsTable, usersTable, platformSettingsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, lt, and, ne, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { sendHcDepositApprovedEmail, sendHcDepositRejectedEmail } from "../lib/email";
 
@@ -36,6 +36,33 @@ router.get("/hc-deposits", requireAuth, async (req, res) => {
     .where(eq(hcDepositRequestsTable.userId, user.id))
     .orderBy(desc(hcDepositRequestsTable.createdAt));
   res.json(records);
+});
+
+// GET /api/admin/hc-deposits/old-images/count — count images older than 10 days
+router.get("/admin/hc-deposits/old-images/count", requireAdmin, async (_req, res) => {
+  const cutoff = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(hcDepositRequestsTable)
+    .where(and(
+      lt(hcDepositRequestsTable.createdAt, cutoff),
+      ne(hcDepositRequestsTable.screenshotUrl, ""),
+    ));
+  res.json({ count: rows[0]?.count ?? 0 });
+});
+
+// DELETE /api/admin/hc-deposits/old-images — clear base64 images older than 10 days
+router.delete("/admin/hc-deposits/old-images", requireAdmin, async (_req, res) => {
+  const cutoff = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+  const result = await db
+    .update(hcDepositRequestsTable)
+    .set({ screenshotUrl: "" })
+    .where(and(
+      lt(hcDepositRequestsTable.createdAt, cutoff),
+      ne(hcDepositRequestsTable.screenshotUrl, ""),
+    ))
+    .returning({ id: hcDepositRequestsTable.id });
+  res.json({ cleared: result.length });
 });
 
 // GET /api/admin/hc-deposits — admin list all
