@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 const DEFAULT_PRIVACY = `1. Information We Collect
@@ -44,9 +43,9 @@ export default function Privacy() {
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto pb-24 md:pb-6">
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/" className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center">
+        <button onClick={() => window.history.back()} className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center">
           <ArrowLeft size={16} />
-        </Link>
+        </button>
         <h1 className="text-xl font-bold">Privacy Policy</h1>
       </div>
 
