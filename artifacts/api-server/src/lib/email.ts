@@ -474,9 +474,9 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
     try {
       const { webViewLink } = await uploadToGoogleDrive(attachBuffer, filename, driveFolderId);
       driveLink = webViewLink;
-      logger.info({ filename, driveLink }, "Backup uploaded to Google Drive");
+      console.info(`[backup] Uploaded to Google Drive: ${filename} → ${driveLink}`);
     } catch (err: any) {
-      logger.error({ err }, "Google Drive upload failed — falling back to email attachment");
+      console.error("[backup] Google Drive upload failed — falling back to email attachment", err);
     }
   }
 
