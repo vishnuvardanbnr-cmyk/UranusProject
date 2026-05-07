@@ -1,9 +1,109 @@
 import { Link } from "wouter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   TrendingUp, Building2, BarChart2, Coins, Shield, Users, Zap, Star,
-  ArrowRight, CheckCircle,
+  ArrowRight, CheckCircle, FileText, X,
 } from "lucide-react";
+
+/* ─── Certificate Modal ─────────────────────────────────────── */
+function CertificateModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(1,8,16,0.96)", backdropFilter: "blur(16px)" }}
+    >
+      <div
+        className="relative w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col"
+        style={{
+          background: "rgba(4,16,32,0.99)",
+          border: "1px solid rgba(61,214,245,0.20)",
+          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
+          maxHeight: "90vh",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-4 shrink-0"
+          style={{ borderBottom: "1px solid rgba(61,214,245,0.10)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.22)" }}
+            >
+              <FileText size={16} style={{ color: "#3DD6F5" }} />
+            </div>
+            <div>
+              <div className="text-sm font-bold" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.75rem" }}>
+                Certificate of Incorporation
+              </div>
+              <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
+                URANUS INVESTMENT LTD · Company No. 14309852
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
+            style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.20)", color: "#f87171" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* PDF viewer with protective overlay */}
+        <div
+          className="relative flex-1 overflow-hidden"
+          style={{ minHeight: 0 }}
+          onContextMenu={e => e.preventDefault()}
+        >
+          <iframe
+            src="/certificate.pdf#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
+            className="w-full h-full"
+            style={{ minHeight: "65vh", border: "none", display: "block" }}
+            title="Certificate of Incorporation"
+            sandbox="allow-same-origin allow-scripts"
+          />
+          {/* Transparent protective overlay — blocks right-click save / drag */}
+          <div
+            className="absolute inset-0"
+            style={{ zIndex: 10, userSelect: "none" }}
+            onContextMenu={e => e.preventDefault()}
+            onDragStart={e => e.preventDefault()}
+          />
+          {/* Watermark */}
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ zIndex: 11 }}
+          >
+            <div
+              className="text-2xl font-black tracking-widest select-none"
+              style={{
+                fontFamily: "'Orbitron', sans-serif",
+                color: "rgba(61,214,245,0.06)",
+                transform: "rotate(-30deg)",
+                whiteSpace: "nowrap",
+                userSelect: "none",
+              }}
+            >
+              URANUS TRADES · OFFICIAL
+            </div>
+          </div>
+        </div>
+
+        {/* Footer note */}
+        <div
+          className="px-5 py-3 text-center shrink-0"
+          style={{ borderTop: "1px solid rgba(61,214,245,0.08)" }}
+        >
+          <p className="text-xs" style={{ color: "rgba(168,237,255,0.28)" }}>
+            Issued by Companies House, England & Wales · 22 August 2022
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Star field canvas ─────────────────────────────────────── */
 function StarField() {
@@ -106,6 +206,8 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 
 /* ─── Main ──────────────────────────────────────────────────── */
 export default function Landing() {
+  const [showCert, setShowCert] = useState(false);
+
   return (
     <div className="min-h-screen relative overflow-x-hidden" style={{ background: "#010810" }}>
       <StarField />
@@ -317,6 +419,45 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Trust / Certificate ───────────────────────────────── */}
+      <section className="relative z-10 px-4 pb-20 max-w-4xl mx-auto">
+        <div
+          className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-center gap-5"
+          style={{
+            background: "rgba(5,18,32,0.65)",
+            backdropFilter: "blur(14px)",
+            border: "1px solid rgba(61,214,245,0.13)",
+          }}
+        >
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.25)" }}
+          >
+            <FileText size={22} style={{ color: "#3DD6F5" }} />
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <div className="font-bold text-sm mb-1" style={{ color: "rgba(200,240,255,0.90)" }}>
+              Officially Registered Company
+            </div>
+            <div className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
+              URANUS INVESTMENT LTD · Company No. 14309852 · Incorporated in England & Wales
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCert(true)}
+            className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all hover:brightness-125"
+            style={{
+              background: "rgba(61,214,245,0.10)",
+              border: "1px solid rgba(61,214,245,0.28)",
+              color: "#3DD6F5",
+            }}
+          >
+            <FileText size={13} />
+            View Certificate
+          </button>
+        </div>
+      </section>
+
       {/* ── Bottom CTA ────────────────────────────────────────── */}
       <section className="relative z-10 px-4 pb-20 max-w-3xl mx-auto text-center">
         <div
@@ -357,6 +498,9 @@ export default function Landing() {
           </Link>
         </div>
       </section>
+
+      {/* ── Certificate Modal ─────────────────────────────────── */}
+      {showCert && <CertificateModal onClose={() => setShowCert(false)} />}
 
       {/* ── Footer ────────────────────────────────────────────── */}
       <footer
