@@ -1,172 +1,9 @@
 import { Link } from "wouter";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   TrendingUp, Building2, BarChart2, Coins, Shield, Users, Zap, Star,
-  ArrowRight, CheckCircle, FileText, X,
+  ArrowRight, CheckCircle,
 } from "lucide-react";
-
-/* ─── Certificate Modal ─────────────────────────────────────── */
-function CertificateModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(1,8,16,0.96)", backdropFilter: "blur(16px)" }}
-    >
-      <div
-        className="relative w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col"
-        style={{
-          background: "rgba(4,16,32,0.99)",
-          border: "1px solid rgba(61,214,245,0.20)",
-          boxShadow: "0 8px 60px rgba(1,8,16,0.9)",
-          maxHeight: "90vh",
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 shrink-0"
-          style={{ borderBottom: "1px solid rgba(61,214,245,0.10)" }}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.22)" }}
-            >
-              <FileText size={16} style={{ color: "#3DD6F5" }} />
-            </div>
-            <div>
-              <div className="text-sm font-bold" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif", fontSize: "0.75rem" }}>
-                Certificate of Incorporation
-              </div>
-              <div className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
-                URANUS INVESTMENT LTD · Company No. 14309852
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:brightness-125"
-            style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.20)", color: "#f87171" }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Certificate content */}
-        <div
-          className="relative flex-1 overflow-y-auto"
-          style={{ minHeight: 0 }}
-          onContextMenu={e => e.preventDefault()}
-        >
-          {/* Certificate paper */}
-          <div
-            className="relative mx-4 my-5 rounded-xl p-8 sm:p-12 select-none"
-            style={{
-              background: "#f9f7f2",
-              border: "2px solid #c8b87a",
-              boxShadow: "inset 0 0 40px rgba(200,184,122,0.15), 0 4px 24px rgba(0,0,0,0.4)",
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              color: "#1a1208",
-            }}
-          >
-            {/* Corner decorations */}
-            {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map(pos => (
-              <div key={pos} className={`absolute ${pos} w-6 h-6`}
-                style={{ border: "2px solid #c8b87a", borderRadius: 2 }} />
-            ))}
-
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="text-xs tracking-[0.25em] uppercase mb-1" style={{ color: "#8a7a4a" }}>
-                Companies House
-              </div>
-              <div className="w-16 h-px mx-auto mb-4" style={{ background: "#c8b87a" }} />
-              <h2 className="text-lg font-bold tracking-widest uppercase mb-1" style={{ color: "#1a1208", letterSpacing: "0.15em" }}>
-                Certificate of Incorporation
-              </h2>
-              <div className="text-sm tracking-wide" style={{ color: "#5a4a2a" }}>of a</div>
-              <div className="text-base font-bold tracking-widest uppercase" style={{ color: "#1a1208" }}>
-                Private Limited Company
-              </div>
-              <div className="w-32 h-px mx-auto mt-4" style={{ background: "linear-gradient(90deg, transparent, #c8b87a, transparent)" }} />
-            </div>
-
-            {/* Company Number */}
-            <div className="text-center mb-6">
-              <span className="text-sm" style={{ color: "#5a4a2a" }}>Company Number </span>
-              <span className="text-base font-bold" style={{ color: "#1a1208" }}>14309852</span>
-            </div>
-
-            {/* Body */}
-            <div className="text-sm leading-relaxed text-center mb-6" style={{ color: "#2a1e0a" }}>
-              <p className="mb-4">
-                The Registrar of Companies for England and Wales, hereby certifies that
-              </p>
-              <p className="text-2xl font-bold tracking-wider my-5" style={{ color: "#1a1208", fontFamily: "'Georgia', serif" }}>
-                URANUS INVESTMENT LTD
-              </p>
-              <p>
-                is this day incorporated under the Companies Act 2006 as a private company,
-                that the company is limited by shares, and the situation of its registered
-                office is in England and Wales.
-              </p>
-            </div>
-
-            {/* Date */}
-            <div className="text-center mb-8 text-sm" style={{ color: "#5a4a2a" }}>
-              Given at Companies House, Cardiff, on{" "}
-              <strong style={{ color: "#1a1208" }}>22nd August 2022</strong>.
-            </div>
-
-            {/* Divider */}
-            <div className="w-full h-px mb-6" style={{ background: "linear-gradient(90deg, transparent, #c8b87a, transparent)" }} />
-
-            {/* Footer note */}
-            <p className="text-xs text-center leading-relaxed" style={{ color: "#7a6a4a" }}>
-              The above information was communicated by electronic means and authenticated by the
-              Registrar of Companies under section 1115 of the Companies Act 2006
-            </p>
-
-            {/* Watermark */}
-            <div
-              className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-xl"
-            >
-              <div
-                className="text-3xl font-black tracking-widest"
-                style={{
-                  fontFamily: "'Orbitron', sans-serif",
-                  color: "rgba(61,214,245,0.07)",
-                  transform: "rotate(-30deg)",
-                  whiteSpace: "nowrap",
-                  userSelect: "none",
-                }}
-              >
-                URANUS TRADES · OFFICIAL
-              </div>
-            </div>
-          </div>
-
-          {/* Transparent protective overlay */}
-          <div
-            className="absolute inset-0"
-            style={{ zIndex: 10 }}
-            onContextMenu={e => e.preventDefault()}
-            onDragStart={e => e.preventDefault()}
-          />
-        </div>
-
-        {/* Footer note */}
-        <div
-          className="px-5 py-3 text-center shrink-0"
-          style={{ borderTop: "1px solid rgba(61,214,245,0.08)" }}
-        >
-          <p className="text-xs" style={{ color: "rgba(168,237,255,0.28)" }}>
-            Issued by Companies House, England & Wales · 22 August 2022
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Star field canvas ─────────────────────────────────────── */
 function StarField() {
@@ -269,8 +106,6 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 
 /* ─── Main ──────────────────────────────────────────────────── */
 export default function Landing() {
-  const [showCert, setShowCert] = useState(false);
-
   return (
     <div className="min-h-screen relative overflow-x-hidden" style={{ background: "#010810" }}>
       <StarField />
@@ -482,45 +317,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Trust / Certificate ───────────────────────────────── */}
-      <section className="relative z-10 px-4 pb-20 max-w-4xl mx-auto">
-        <div
-          className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-center gap-5"
-          style={{
-            background: "rgba(5,18,32,0.65)",
-            backdropFilter: "blur(14px)",
-            border: "1px solid rgba(61,214,245,0.13)",
-          }}
-        >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.25)" }}
-          >
-            <FileText size={22} style={{ color: "#3DD6F5" }} />
-          </div>
-          <div className="flex-1 text-center sm:text-left">
-            <div className="font-bold text-sm mb-1" style={{ color: "rgba(200,240,255,0.90)" }}>
-              Officially Registered Company
-            </div>
-            <div className="text-xs" style={{ color: "rgba(168,237,255,0.45)" }}>
-              URANUS INVESTMENT LTD · Company No. 14309852 · Incorporated in England & Wales
-            </div>
-          </div>
-          <button
-            onClick={() => setShowCert(true)}
-            className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all hover:brightness-125"
-            style={{
-              background: "rgba(61,214,245,0.10)",
-              border: "1px solid rgba(61,214,245,0.28)",
-              color: "#3DD6F5",
-            }}
-          >
-            <FileText size={13} />
-            View Certificate
-          </button>
-        </div>
-      </section>
-
       {/* ── Bottom CTA ────────────────────────────────────────── */}
       <section className="relative z-10 px-4 pb-20 max-w-3xl mx-auto text-center">
         <div
@@ -562,9 +358,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Certificate Modal ─────────────────────────────────── */}
-      {showCert && <CertificateModal onClose={() => setShowCert(false)} />}
-
       {/* ── Footer ────────────────────────────────────────────── */}
       <footer
         className="relative z-10 px-6 py-8 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4"
@@ -583,6 +376,7 @@ export default function Landing() {
           URANUS
         </div>
         <div className="flex items-center gap-5 text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
+          <Link href="/about"><span className="hover:text-teal-300 transition-colors cursor-pointer">About</span></Link>
           <Link href="/terms"><span className="hover:text-teal-300 transition-colors cursor-pointer">Terms & Conditions</span></Link>
           <Link href="/privacy"><span className="hover:text-teal-300 transition-colors cursor-pointer">Privacy Policy</span></Link>
         </div>
