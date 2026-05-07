@@ -576,10 +576,73 @@ router.post("/admin/trigger-backup", requireAdmin, async (req, res) => {
     const { sendDatabaseBackupEmail } = await import("../lib/email.js");
     const result = await sendDatabaseBackupEmail();
     if (result.sent) {
-      res.json({ success: true, message: "Backup email sent successfully" });
+      res.json({ success: true, message: "Backup sent successfully" });
     } else {
       res.status(400).json({ success: false, message: result.error ?? "Backup not sent" });
     }
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
+  }
+});
+
+// POST /api/admin/db-restore  — multipart/form-data, field "files" (one or many parts)
+router.post("/admin/db-restore", requireAdmin, async (req, res) => {
+  try {
+    const { default: multer } = await import("multer");
+    const upload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 600 * 1024 * 1024, files: 50 },
+    }).array("files", 50);
+
+    await new Promise<void>((resolve, reject) => {
+      upload(req as any, res as any, (err: any) => (err ? reject(err) : resolve()));
+    });
+
+    const files = (req as any).files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      res.status(400).json({ success: false, message: "No files uploaded" });
+      return;
+    }
+
+    const { execFile } = await import("child_process");
+    const { promisify } = await import("util");
+    const { gunzip } = await import("zlib");
+    const execFileAsync = promisify(execFile);
+    const gunzipAsync = promisify(gunzip);
+
+    // Sort parts by name so part1, part2 … are in order
+    files.sort((a, b) => a.originalname.localeCompare(b.originalname));
+
+    // Join all buffers
+    let combined = Buffer.concat(files.map(f => f.buffer));
+
+    // Decompress if gzip
+    const isGzip = combined[0] === 0x1f && combined[1] === 0x8b;
+    let sqlBuffer: Buffer;
+    if (isGzip) {
+      try {
+        sqlBuffer = await gunzipAsync(combined) as Buffer;
+      } catch (err: any) {
+        res.status(400).json({ success: false, message: `Decompression failed — make sure all parts are uploaded in order: ${err?.message}` });
+        return;
+      }
+    } else {
+      sqlBuffer = combined;
+    }
+
+    const dbUrl = process.env.DATABASE_URL!;
+    try {
+      await execFileAsync(
+        "psql",
+        ["--dbname", dbUrl, "--quiet", "--set", "ON_ERROR_STOP=1"],
+        { input: sqlBuffer.toString("utf8"), maxBuffer: 600 * 1024 * 1024 },
+      );
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: `Restore failed: ${err?.message ?? err}` });
+      return;
+    }
+
+    res.json({ success: true, message: `Database restored successfully from ${files.length} file${files.length > 1 ? "s" : ""}` });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
   }

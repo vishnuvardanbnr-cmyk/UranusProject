@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Mail, Eye, EyeOff, Wallet, ShieldAlert, RefreshCw, Database,
   AlertTriangle, CheckCircle2, ArrowUpRight, TrendingUp, SlidersHorizontal, Coins, Server,
-  Layers, BadgeDollarSign, Search, ChevronLeft, ChevronRight, X,
+  Layers, BadgeDollarSign, Search, ChevronLeft, ChevronRight, X, Upload, FileArchive,
 } from "lucide-react";
 
 const TEAL = "#3DD6F5";
@@ -396,6 +396,13 @@ export default function AdminSettings() {
   const [backupSearch, setBackupSearch] = useState("");
   const [backupPage, setBackupPage] = useState(1);
   const BACKUP_PAGE_SIZE = 5;
+
+  // DB Restore
+  const [restoreMode, setRestoreMode] = useState<"single" | "multipart">("single");
+  const [restoreFiles, setRestoreFiles] = useState<File[]>([]);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState(false);
 
   const loadWalletStats = () => {
     fetch("/api/admin/wallet-stats", { headers: { Authorization: `Bearer ${getToken()}` } })
@@ -1760,6 +1767,176 @@ export default function AdminSettings() {
             </div>
           </div>
         </SectionCard>
+        <SectionCard
+          icon={Database}
+          title="Database Restore"
+          description="Restore the live database from a backup file. Single file (.sql or .sql.gz) or multiple Telegram part files joined together."
+          accent="#f59e0b"
+        >
+          <div className="space-y-5">
+            {/* Warning */}
+            <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)" }}>
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "rgba(245,158,11,0.85)" }} />
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(245,158,11,0.85)" }}>
+                This will <strong>overwrite the live database</strong> with the backup. All current data will be replaced. Make sure you upload the correct file(s). <strong>This cannot be undone.</strong>
+              </p>
+            </div>
+
+            {/* Mode selector */}
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { key: "single" as const, label: "Single File", desc: ".sql or .sql.gz", icon: FileArchive },
+                { key: "multipart" as const, label: "Multiple Parts", desc: "Telegram split parts", icon: Upload },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => { setRestoreMode(opt.key); setRestoreFiles([]); setRestoreResult(null); setConfirmRestore(false); }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+                  style={{
+                    background: restoreMode === opt.key ? "rgba(245,158,11,0.12)" : "rgba(0,15,30,0.5)",
+                    border: `1px solid ${restoreMode === opt.key ? "rgba(245,158,11,0.5)" : "rgba(61,214,245,0.10)"}`,
+                  }}
+                >
+                  <opt.icon size={18} style={{ color: restoreMode === opt.key ? "#f59e0b" : "rgba(168,237,255,0.4)" }} />
+                  <span className="text-sm font-bold" style={{ color: restoreMode === opt.key ? "#f59e0b" : "rgba(168,237,255,0.6)" }}>{opt.label}</span>
+                  <span className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* File input */}
+            <div>
+              <label
+                className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl cursor-pointer transition-all"
+                style={{ background: "rgba(0,15,30,0.5)", border: "2px dashed rgba(245,158,11,0.3)" }}
+              >
+                <Upload size={20} style={{ color: "rgba(245,158,11,0.7)" }} />
+                <span className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.7)" }}>
+                  {restoreMode === "single" ? "Click to select backup file" : "Click to select all part files"}
+                </span>
+                <span className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
+                  {restoreMode === "single" ? "Accepts .sql or .sql.gz" : "Select all .partXofY.gz files at once"}
+                </span>
+                <input
+                  type="file"
+                  multiple={restoreMode === "multipart"}
+                  accept={restoreMode === "single" ? ".sql,.gz" : ".gz,.sql"}
+                  className="hidden"
+                  onChange={e => {
+                    const selected = Array.from(e.target.files ?? []);
+                    setRestoreFiles(selected);
+                    setRestoreResult(null);
+                    setConfirmRestore(false);
+                  }}
+                />
+              </label>
+
+              {/* Selected files list */}
+              {restoreFiles.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {restoreFiles
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((f, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileArchive size={12} style={{ color: "rgba(245,158,11,0.7)", flexShrink: 0 }} />
+                          <span className="text-xs font-mono truncate" style={{ color: "rgba(168,237,255,0.8)" }}>{f.name}</span>
+                        </div>
+                        <span className="text-xs shrink-0" style={{ color: "rgba(168,237,255,0.4)" }}>{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                      </div>
+                    ))}
+                  <p className="text-xs mt-1" style={{ color: "rgba(168,237,255,0.4)" }}>
+                    {restoreFiles.length} file{restoreFiles.length > 1 ? "s" : ""} selected — {(restoreFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(1)} MB total
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Result */}
+            {restoreResult && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl"
+                style={{
+                  background: restoreResult.ok ? "rgba(52,211,153,0.07)" : "rgba(248,113,113,0.07)",
+                  border: `1px solid ${restoreResult.ok ? "rgba(52,211,153,0.25)" : "rgba(248,113,113,0.25)"}`,
+                }}
+              >
+                {restoreResult.ok
+                  ? <CheckCircle2 size={14} style={{ color: "rgba(52,211,153,0.9)" }} />
+                  : <AlertTriangle size={14} style={{ color: "rgba(248,113,113,0.9)" }} />}
+                <span className="text-xs" style={{ color: restoreResult.ok ? "rgba(52,211,153,0.9)" : "rgba(248,113,113,0.9)" }}>{restoreResult.text}</span>
+              </div>
+            )}
+
+            {/* Confirm + Restore button */}
+            {restoreFiles.length > 0 && !restoring && (
+              !confirmRestore ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmRestore(true)}
+                  className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                  style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.4)", color: "#f59e0b" }}
+                >
+                  <Upload size={15} /> Restore Database
+                </button>
+              ) : (
+                <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.30)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "rgba(245,158,11,0.9)" }}>
+                    Are you sure? This will overwrite all live data with the backup.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setRestoring(true);
+                        setRestoreResult(null);
+                        setConfirmRestore(false);
+                        try {
+                          const form = new FormData();
+                          restoreFiles.forEach(f => form.append("files", f));
+                          const r = await fetch("/api/admin/db-restore", {
+                            method: "POST",
+                            headers: { Authorization: `Bearer ${getToken()}` },
+                            body: form,
+                          });
+                          const d = await r.json();
+                          setRestoreResult({ ok: d.success, text: d.message });
+                          if (d.success) setRestoreFiles([]);
+                        } catch {
+                          setRestoreResult({ ok: false, text: "Upload failed — check your connection" });
+                        } finally {
+                          setRestoring(false);
+                        }
+                      }}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                      style={{ background: "rgba(245,158,11,0.85)", color: "#010810" }}
+                    >
+                      Yes, Restore Now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRestore(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                      style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )
+            )}
+
+            {restoring && (
+              <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <RefreshCw size={15} className="animate-spin" style={{ color: "#f59e0b" }} />
+                <span className="text-sm" style={{ color: "rgba(245,158,11,0.85)" }}>Restoring database — please wait, do not close this page…</span>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
         <SectionCard
           icon={AlertTriangle}
           title="Reset for Live"

@@ -394,7 +394,9 @@ export async function sendHcDepositRejectedEmail(
 }
 
 // ── Telegram helper ───────────────────────────────────────────────────────────
-async function sendTelegramDocument(
+const TELEGRAM_CHUNK_SIZE = 49 * 1024 * 1024; // 49 MB per chunk (Telegram bot limit is 50 MB)
+
+async function sendTelegramDocumentRaw(
   botToken: string,
   chatId: string,
   fileBuffer: Buffer,
@@ -406,12 +408,38 @@ async function sendTelegramDocument(
   const form = new FormData();
   form.append("chat_id", chatId);
   form.append("caption", caption);
-  form.append("document", fileBuffer, { filename, contentType: "application/gzip" });
+  form.append("document", fileBuffer, { filename, contentType: "application/octet-stream" });
   const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
   const res = await (fetch as any)(url, { method: "POST", body: form });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Telegram API error ${res.status}: ${text}`);
+  }
+}
+
+async function sendTelegramDocument(
+  botToken: string,
+  chatId: string,
+  fileBuffer: Buffer,
+  filename: string,
+  caption: string,
+): Promise<void> {
+  if (fileBuffer.length <= TELEGRAM_CHUNK_SIZE) {
+    await sendTelegramDocumentRaw(botToken, chatId, fileBuffer, filename, caption);
+    return;
+  }
+  // Split into chunks
+  const totalChunks = Math.ceil(fileBuffer.length / TELEGRAM_CHUNK_SIZE);
+  const baseName = filename.replace(/\.gz$/, "");
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * TELEGRAM_CHUNK_SIZE;
+    const end = Math.min(start + TELEGRAM_CHUNK_SIZE, fileBuffer.length);
+    const chunk = fileBuffer.slice(start, end);
+    const chunkFilename = `${baseName}.part${i + 1}of${totalChunks}.gz`;
+    const chunkCaption = i === 0
+      ? `${caption}\n📦 Part ${i + 1}/${totalChunks} — join all parts before restoring`
+      : `📦 Part ${i + 1}/${totalChunks} of ${filename}`;
+    await sendTelegramDocumentRaw(botToken, chatId, chunk, chunkFilename, chunkCaption);
   }
 }
 
