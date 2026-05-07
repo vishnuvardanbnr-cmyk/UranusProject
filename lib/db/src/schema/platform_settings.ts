@@ -73,6 +73,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   withdrawalCoolingHours: integer("withdrawal_cooling_hours").notNull().default(24),
   // DB Backup
   backupEmail: text("backup_email").notNull().default(""),
+  telegramBotToken: text("telegram_bot_token").notNull().default(""),
+  telegramChatId: text("telegram_chat_id").notNull().default(""),
   // Platform fees — deposit
   depositFeeFlat: numeric("deposit_fee_flat", { precision: 10, scale: 4 }).notNull().default("0.5000"),
   depositFeePercent: numeric("deposit_fee_percent", { precision: 8, scale: 5 }).notNull().default("0.00500"),

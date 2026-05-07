@@ -22,6 +22,8 @@ const SmtpSettingsBody = z.object({
   otpWalletUpdateEnabled: z.boolean().default(false),
   depositConfirmationEnabled: z.boolean(),
   backupEmail: z.string().default(""),
+  telegramBotToken: z.string().default(""),
+  telegramChatId: z.string().default(""),
 });
 
 const router = Router();
@@ -498,6 +500,8 @@ router.get("/admin/smtp-settings", requireAdmin, async (req, res) => {
     otpWalletUpdateEnabled: settings.otpWalletUpdateEnabled,
     depositConfirmationEnabled: settings.depositConfirmationEnabled,
     backupEmail: settings.backupEmail ?? "",
+    telegramBotToken: settings.telegramBotToken ?? "",
+    telegramChatId: settings.telegramChatId ?? "",
   });
 });
 
@@ -525,6 +529,8 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
         otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
         depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
         backupEmail: parsed.data.backupEmail,
+        telegramBotToken: parsed.data.telegramBotToken,
+        telegramChatId: parsed.data.telegramChatId,
       })
       .where(eq(platformSettingsTable.id, existing.id))
       .returning();
@@ -542,6 +548,8 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
       otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
       depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
       backupEmail: parsed.data.backupEmail,
+      telegramBotToken: parsed.data.telegramBotToken,
+      telegramChatId: parsed.data.telegramChatId,
     }).returning();
   }
   res.json({
@@ -557,6 +565,8 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
     otpWalletUpdateEnabled: updated.otpWalletUpdateEnabled,
     depositConfirmationEnabled: updated.depositConfirmationEnabled,
     backupEmail: updated.backupEmail ?? "",
+    telegramBotToken: updated.telegramBotToken ?? "",
+    telegramChatId: updated.telegramChatId ?? "",
   });
 });
 

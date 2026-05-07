@@ -393,6 +393,28 @@ export async function sendHcDepositRejectedEmail(
   });
 }
 
+// ── Telegram helper ───────────────────────────────────────────────────────────
+async function sendTelegramDocument(
+  botToken: string,
+  chatId: string,
+  fileBuffer: Buffer,
+  filename: string,
+  caption: string,
+): Promise<void> {
+  const { default: FormData } = await import("form-data");
+  const fetch = (await import("node-fetch")).default as unknown as typeof globalThis.fetch;
+  const form = new FormData();
+  form.append("chat_id", chatId);
+  form.append("caption", caption);
+  form.append("document", fileBuffer, { filename, contentType: "application/gzip" });
+  const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
+  const res = await (fetch as any)(url, { method: "POST", body: form });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Telegram API error ${res.status}: ${text}`);
+  }
+}
+
 // ── Database backup ───────────────────────────────────────────────────────────
 const BACKUP_DIR = process.env.BACKUP_DIR ?? "/var/www/uranaz/backups";
 const BACKUP_KEEP = 7;
@@ -415,8 +437,9 @@ async function saveBackupToDisk(buffer: Buffer, filename: string): Promise<strin
 
 export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?: string }> {
   const s = await getSettings();
-  if (!s?.smtpEnabled) return { sent: false, error: "SMTP not enabled" };
-  if (!s?.backupEmail) return { sent: false, error: "No backup email configured" };
+  const hasEmail = !!(s?.smtpEnabled && s?.backupEmail);
+  const hasTelegram = !!(s?.telegramBotToken && s?.telegramChatId);
+  if (!hasEmail && !hasTelegram) return { sent: false, error: "No backup destination configured (no email and no Telegram)" };
 
   const { execFile } = await import("child_process");
   const { promisify } = await import("util");
@@ -458,57 +481,84 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
     console.error("[backup] Disk save failed", err);
   }
 
-  const domain = fromDomain(s);
-  const transport = createTransport(s);
+  const errors: string[] = [];
 
-  await transport.sendMail({
-    from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
-    to: s.backupEmail,
-    subject: `[URANUS TRADES] Database Backup — ${now.toUTCString()}`,
-    messageId: makeMessageId(domain),
-    headers: baseHeaders(domain),
-    text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\n© URANUS TRADES`,
-    html: wrap(`
-      ${header(s)}
-      <tr><td style="padding:28px 32px;">
-        <div style="display:inline-block;background:rgba(61,214,245,0.10);border:1px solid rgba(61,214,245,0.28);
-          border-radius:6px;padding:4px 12px;margin-bottom:16px;">
-          <span style="color:#3DD6F5;font-size:11px;font-weight:700;letter-spacing:1px;">AUTOMATED BACKUP</span>
-        </div>
-        <h2 style="margin:0 0 10px;color:#FFFFFF;font-size:16px;">Database Backup</h2>
-        <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
-          Your hourly database backup is attached below.
-        </p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-          style="border:1px solid rgba(61,214,245,0.15);border-radius:8px;overflow:hidden;">
-          <tr>
-            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;width:120px;">Taken at</td>
-            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${now.toUTCString()}</td>
-          </tr>
-          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
-            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">File</td>
-            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${filename}</td>
-          </tr>
-          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
-            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Original size</td>
-            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(dumpBuffer.length / 1024).toFixed(1)} KB</td>
-          </tr>
-          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
-            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Compressed size</td>
-            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024).toFixed(1)} KB</td>
-          </tr>
-        </table>
-        <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
-          This is an automated hourly backup from the URANUS TRADES platform.
-        </p>
-      </td></tr>
-      ${footer()}
-    `),
-    attachments: [
-      { filename, content: attachBuffer, contentType: "application/gzip" },
-    ],
-  });
+  // ── Send via email ────────────────────────────────────────────────────────
+  if (hasEmail) {
+    try {
+      const domain = fromDomain(s!);
+      const transport = createTransport(s!);
+      await transport.sendMail({
+        from: `"${s!.smtpFromName || "URANUS TRADES"}" <${s!.smtpFrom}>`,
+        to: s!.backupEmail,
+        subject: `[URANUS TRADES] Database Backup — ${now.toUTCString()}`,
+        messageId: makeMessageId(domain),
+        headers: baseHeaders(domain),
+        text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\n© URANUS TRADES`,
+        html: wrap(`
+          ${header(s!)}
+          <tr><td style="padding:28px 32px;">
+            <div style="display:inline-block;background:rgba(61,214,245,0.10);border:1px solid rgba(61,214,245,0.28);
+              border-radius:6px;padding:4px 12px;margin-bottom:16px;">
+              <span style="color:#3DD6F5;font-size:11px;font-weight:700;letter-spacing:1px;">AUTOMATED BACKUP</span>
+            </div>
+            <h2 style="margin:0 0 10px;color:#FFFFFF;font-size:16px;">Database Backup</h2>
+            <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
+              Your hourly database backup is attached below.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+              style="border:1px solid rgba(61,214,245,0.15);border-radius:8px;overflow:hidden;">
+              <tr>
+                <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;width:120px;">Taken at</td>
+                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${now.toUTCString()}</td>
+              </tr>
+              <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+                <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">File</td>
+                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${filename}</td>
+              </tr>
+              <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+                <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Original size</td>
+                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(dumpBuffer.length / 1024).toFixed(1)} KB</td>
+              </tr>
+              <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+                <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Compressed size</td>
+                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024).toFixed(1)} KB</td>
+              </tr>
+            </table>
+            <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
+              This is an automated hourly backup from the URANUS TRADES platform.
+            </p>
+          </td></tr>
+          ${footer()}
+        `),
+        attachments: [
+          { filename, content: attachBuffer, contentType: "application/gzip" },
+        ],
+      });
+      console.info("[backup] Email sent to", s!.backupEmail);
+    } catch (err: any) {
+      const msg = `Email send failed: ${err?.message ?? err}`;
+      console.error("[backup]", msg);
+      errors.push(msg);
+    }
+  }
 
+  // ── Send via Telegram ─────────────────────────────────────────────────────
+  if (hasTelegram) {
+    try {
+      const caption = `🗄 URANUS TRADES — DB Backup\n📅 ${now.toUTCString()}\n📦 ${filename}\n💾 ${(attachBuffer.length / 1024).toFixed(1)} KB`;
+      await sendTelegramDocument(s!.telegramBotToken, s!.telegramChatId, attachBuffer, filename, caption);
+      console.info("[backup] Sent to Telegram chat", s!.telegramChatId);
+    } catch (err: any) {
+      const msg = `Telegram send failed: ${err?.message ?? err}`;
+      console.error("[backup]", msg);
+      errors.push(msg);
+    }
+  }
+
+  if (errors.length > 0 && !hasEmail && !hasTelegram) {
+    return { sent: false, error: errors.join("; ") };
+  }
   return { sent: true };
 }
 

@@ -104,6 +104,8 @@ type SmtpForm = {
   otpWalletUpdateEnabled: boolean;
   depositConfirmationEnabled: boolean;
   backupEmail: string;
+  telegramBotToken: string;
+  telegramChatId: string;
 };
 
 function getToken() {
@@ -257,6 +259,8 @@ export default function AdminSettings() {
       otpWalletUpdateEnabled: false,
       depositConfirmationEnabled: false,
       backupEmail: "",
+      telegramBotToken: "",
+      telegramChatId: "",
     },
   });
 
@@ -1469,7 +1473,7 @@ export default function AdminSettings() {
               </div>
 
               <SubHeader
-                hint="Receive a full SQL dump every hour. Make sure SMTP is enabled and working before saving."
+                hint="Receive a full SQL dump every hour via email and/or Telegram. At least one destination must be configured."
               >
                 Automated DB Backup
               </SubHeader>
@@ -1484,8 +1488,54 @@ export default function AdminSettings() {
                     style={INPUT_STYLE}
                   />
                   <FieldHint>
-                    A full database backup (.sql) will be emailed here every hour on the hour. Leave blank to disable.
+                    A full database backup (.sql.gz) will be emailed here every hour. Requires SMTP enabled. Leave blank to skip email.
                   </FieldHint>
+                </div>
+              </div>
+
+              {/* Telegram backup */}
+              <div
+                className="rounded-xl p-4 space-y-4"
+                style={{ background: "rgba(61,214,245,0.03)", border: "1px solid rgba(61,214,245,0.10)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(61,214,245,0.15)", border: "1px solid rgba(61,214,245,0.3)" }}>
+                    <span style={{ color: TEAL, fontSize: 13, fontWeight: 700 }}>✈</span>
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: "rgba(168,237,255,0.85)" }}>Telegram Backup</span>
+                </div>
+                <div
+                  className="text-xs leading-relaxed p-3 rounded-lg"
+                  style={{ background: "rgba(0,15,30,0.5)", border: "1px solid rgba(61,214,245,0.08)", color: "rgba(168,237,255,0.5)" }}
+                >
+                  <strong style={{ color: "rgba(168,237,255,0.75)" }}>How to set up:</strong><br />
+                  1. Open Telegram and message <strong style={{ color: TEAL }}>@BotFather</strong> → /newbot → copy the bot token.<br />
+                  2. Start a chat with your bot (or add it to a group/channel).<br />
+                  3. Message <strong style={{ color: TEAL }}>@userinfobot</strong> to get your Chat ID (a number like <code>123456789</code>). For groups, the ID starts with <code>-</code>.
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel>Telegram Bot Token</FieldLabel>
+                    <input
+                      type="text"
+                      placeholder="123456:ABCdefGHI..."
+                      {...smtpForm.register("telegramBotToken")}
+                      className={INPUT_CLS + " font-mono"}
+                      style={INPUT_STYLE}
+                    />
+                    <FieldHint>From @BotFather. Leave blank to disable Telegram backup.</FieldHint>
+                  </div>
+                  <div>
+                    <FieldLabel>Telegram Chat ID</FieldLabel>
+                    <input
+                      type="text"
+                      placeholder="123456789 or -100123456789"
+                      {...smtpForm.register("telegramChatId")}
+                      className={INPUT_CLS + " font-mono"}
+                      style={INPUT_STYLE}
+                    />
+                    <FieldHint>Your personal chat ID, group ID, or channel ID.</FieldHint>
+                  </div>
                 </div>
               </div>
 
