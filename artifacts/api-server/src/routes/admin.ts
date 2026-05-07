@@ -20,6 +20,7 @@ const SmtpSettingsBody = z.object({
   otpWithdrawalEnabled: z.boolean(),
   otpWalletUpdateEnabled: z.boolean().default(false),
   depositConfirmationEnabled: z.boolean(),
+  backupEmail: z.string().default(""),
 });
 
 const router = Router();
@@ -492,6 +493,7 @@ router.get("/admin/smtp-settings", requireAdmin, async (req, res) => {
     otpWithdrawalEnabled: settings.otpWithdrawalEnabled,
     otpWalletUpdateEnabled: settings.otpWalletUpdateEnabled,
     depositConfirmationEnabled: settings.depositConfirmationEnabled,
+    backupEmail: settings.backupEmail ?? "",
   });
 });
 
@@ -518,6 +520,7 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
         otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
         otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
         depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
+        backupEmail: parsed.data.backupEmail,
       })
       .where(eq(platformSettingsTable.id, existing.id))
       .returning();
@@ -534,6 +537,7 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
       otpWithdrawalEnabled: parsed.data.otpWithdrawalEnabled,
       otpWalletUpdateEnabled: parsed.data.otpWalletUpdateEnabled,
       depositConfirmationEnabled: parsed.data.depositConfirmationEnabled,
+      backupEmail: parsed.data.backupEmail,
     }).returning();
   }
   res.json({
@@ -548,7 +552,23 @@ router.put("/admin/smtp-settings", requireAdmin, async (req, res) => {
     otpWithdrawalEnabled: updated.otpWithdrawalEnabled,
     otpWalletUpdateEnabled: updated.otpWalletUpdateEnabled,
     depositConfirmationEnabled: updated.depositConfirmationEnabled,
+    backupEmail: updated.backupEmail ?? "",
   });
+});
+
+// POST /api/admin/trigger-backup
+router.post("/admin/trigger-backup", requireAdmin, async (req, res) => {
+  try {
+    const { sendDatabaseBackupEmail } = await import("../lib/email.js");
+    const result = await sendDatabaseBackupEmail();
+    if (result.sent) {
+      res.json({ success: true, message: "Backup email sent successfully" });
+    } else {
+      res.status(400).json({ success: false, message: result.error ?? "Backup not sent" });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
+  }
 });
 
 // GET /api/admin/income-settings

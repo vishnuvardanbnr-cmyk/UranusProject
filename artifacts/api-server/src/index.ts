@@ -4,6 +4,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { setupWebSocket } from "./lib/wsManager";
 import { processDailyPayout } from "./lib/dailyPayout";
+import { sendDatabaseBackupEmail } from "./lib/email";
 import { db, platformSettingsTable } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -46,6 +47,23 @@ cron.schedule("30 21 * * 0-4", async () => {
 });
 
 logger.info("Daily payout cron scheduled — Mon–Fri 03:00 AM IST (21:30 UTC Sun–Thu)");
+
+// ── Hourly DB backup cron ──────────────────────────────────────────────────
+cron.schedule("0 * * * *", async () => {
+  logger.info("Cron: starting hourly database backup");
+  try {
+    const result = await sendDatabaseBackupEmail();
+    if (result.sent) {
+      logger.info("Cron: database backup email sent successfully");
+    } else {
+      logger.info({ reason: result.error }, "Cron: database backup skipped");
+    }
+  } catch (err) {
+    logger.error({ err }, "Cron: database backup failed");
+  }
+});
+
+logger.info("Hourly DB backup cron scheduled — every hour at :00");
 
 server.listen(port, (err?: Error) => {
   if (err) {

@@ -71,6 +71,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   hcDepositUsername: text("hc_deposit_username").notNull().default(""),
   // Withdrawal cooling period (hours before ROI/commission starts)
   withdrawalCoolingHours: integer("withdrawal_cooling_hours").notNull().default(24),
+  // DB Backup
+  backupEmail: text("backup_email").notNull().default(""),
   // Certificate of Incorporation fields
   certCompanyName: text("cert_company_name").notNull().default("URANUS INVESTMENT LTD"),
   certCompanyNumber: text("cert_company_number").notNull().default("14309852"),

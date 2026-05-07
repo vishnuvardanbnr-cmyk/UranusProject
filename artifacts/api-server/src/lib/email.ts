@@ -393,6 +393,84 @@ export async function sendHcDepositRejectedEmail(
   });
 }
 
+// ── Database backup ───────────────────────────────────────────────────────────
+export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?: string }> {
+  const s = await getSettings();
+  if (!s?.smtpEnabled) return { sent: false, error: "SMTP not enabled" };
+  if (!s?.backupEmail) return { sent: false, error: "No backup email configured" };
+
+  const { execFile } = await import("child_process");
+  const { promisify } = await import("util");
+  const execFileAsync = promisify(execFile);
+
+  const dbUrl = process.env.DATABASE_URL!;
+  let dumpBuffer: Buffer;
+
+  try {
+    const { stdout } = await execFileAsync(
+      "pg_dump",
+      ["--dbname", dbUrl, "--format", "plain", "--no-owner", "--no-acl"],
+      { encoding: "buffer", maxBuffer: 200 * 1024 * 1024 },
+    );
+    dumpBuffer = stdout as unknown as Buffer;
+  } catch (err: any) {
+    return { sent: false, error: `pg_dump failed: ${err?.message ?? err}` };
+  }
+
+  const now = new Date();
+  const stamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const filename = `uranaz-backup-${stamp}.sql`;
+
+  const domain = fromDomain(s);
+  const transport = createTransport(s);
+
+  await transport.sendMail({
+    from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
+    to: s.backupEmail,
+    subject: `[URANUS TRADES] Database Backup — ${now.toUTCString()}`,
+    messageId: makeMessageId(domain),
+    headers: baseHeaders(domain),
+    text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\nThis is an automated hourly backup. Keep this file secure.\n\n© URANUS TRADES`,
+    html: wrap(`
+      ${header(s)}
+      <tr><td style="padding:28px 32px;">
+        <div style="display:inline-block;background:rgba(61,214,245,0.10);border:1px solid rgba(61,214,245,0.28);
+          border-radius:6px;padding:4px 12px;margin-bottom:16px;">
+          <span style="color:#3DD6F5;font-size:11px;font-weight:700;letter-spacing:1px;">AUTOMATED BACKUP</span>
+        </div>
+        <h2 style="margin:0 0 10px;color:#FFFFFF;font-size:16px;">Database Backup</h2>
+        <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
+          Your hourly database backup is attached. Keep this file in a secure location.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+          style="border:1px solid rgba(61,214,245,0.15);border-radius:8px;overflow:hidden;">
+          <tr>
+            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;width:120px;">Taken at</td>
+            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${now.toUTCString()}</td>
+          </tr>
+          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">File</td>
+            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${filename}</td>
+          </tr>
+          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Size</td>
+            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(dumpBuffer.length / 1024).toFixed(1)} KB</td>
+          </tr>
+        </table>
+        <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
+          This is an automated hourly backup from the URANUS TRADES platform.
+        </p>
+      </td></tr>
+      ${footer()}
+    `),
+    attachments: [
+      { filename, content: dumpBuffer, contentType: "application/sql" },
+    ],
+  });
+
+  return { sent: true };
+}
+
 export async function isOtpRegistrationEnabled(): Promise<boolean> {
   const s = await getSettings();
   return !!(s?.smtpEnabled && s?.otpRegistrationEnabled);

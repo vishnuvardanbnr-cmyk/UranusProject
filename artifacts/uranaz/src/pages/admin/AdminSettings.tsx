@@ -103,6 +103,7 @@ type SmtpForm = {
   otpWithdrawalEnabled: boolean;
   otpWalletUpdateEnabled: boolean;
   depositConfirmationEnabled: boolean;
+  backupEmail: string;
 };
 
 function getToken() {
@@ -255,12 +256,15 @@ export default function AdminSettings() {
       otpWithdrawalEnabled: false,
       otpWalletUpdateEnabled: false,
       depositConfirmationEnabled: false,
+      backupEmail: "",
     },
   });
 
   const [smtpLoading, setSmtpLoading] = useState(false);
   const [smtpSaving, setSmtpSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [triggeringBackup, setTriggeringBackup] = useState(false);
+  const [backupTriggerMsg, setBackupTriggerMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (settings) reset(settings as SettingsForm);
@@ -294,6 +298,23 @@ export default function AdminSettings() {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
     } finally {
       setSmtpSaving(false);
+    }
+  };
+
+  const triggerBackupNow = async () => {
+    setTriggeringBackup(true);
+    setBackupTriggerMsg(null);
+    try {
+      const res = await fetch("/api/admin/trigger-backup", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      setBackupTriggerMsg({ ok: data.success, text: data.message });
+    } catch {
+      setBackupTriggerMsg({ ok: false, text: "Request failed" });
+    } finally {
+      setTriggeringBackup(false);
     }
   };
 
@@ -1358,6 +1379,62 @@ export default function AdminSettings() {
                     </div>
                   );
                 })}
+              </div>
+
+              <SubHeader
+                hint="Receive a full SQL dump every hour. Make sure SMTP is enabled and working before saving."
+              >
+                Automated DB Backup
+              </SubHeader>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <FieldLabel>Backup Recipient Email</FieldLabel>
+                  <input
+                    type="email"
+                    placeholder="backup@yourdomain.com"
+                    {...smtpForm.register("backupEmail")}
+                    className={INPUT_CLS}
+                    style={INPUT_STYLE}
+                  />
+                  <FieldHint>
+                    A full database backup (.sql) will be emailed here every hour on the hour. Leave blank to disable.
+                  </FieldHint>
+                </div>
+              </div>
+
+              {/* Manual trigger */}
+              <div
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-xl"
+                style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.12)" }}
+              >
+                <div className="flex-1">
+                  <div className="text-sm font-medium" style={{ color: "rgba(168,237,255,0.85)" }}>Send Backup Now</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>
+                    Immediately trigger a backup email to the address above (must be saved first).
+                  </div>
+                  {backupTriggerMsg && (
+                    <div
+                      className="text-xs mt-1.5 font-medium"
+                      style={{ color: backupTriggerMsg.ok ? "#34d399" : "#f87171" }}
+                    >
+                      {backupTriggerMsg.text}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={triggerBackupNow}
+                  disabled={triggeringBackup}
+                  className="shrink-0 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all hover:brightness-125 disabled:opacity-50"
+                  style={{
+                    background: "rgba(61,214,245,0.10)",
+                    border: "1px solid rgba(61,214,245,0.28)",
+                    color: "#3DD6F5",
+                  }}
+                >
+                  <Database size={13} />
+                  {triggeringBackup ? "Sending…" : "Send Now"}
+                </button>
               </div>
 
               <div className="pt-2 flex justify-end">
