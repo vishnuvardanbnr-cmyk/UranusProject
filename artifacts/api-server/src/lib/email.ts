@@ -394,6 +394,42 @@ export async function sendHcDepositRejectedEmail(
 }
 
 // ── Database backup ───────────────────────────────────────────────────────────
+async function uploadToGoogleDrive(
+  buffer: Buffer,
+  filename: string,
+  folderId: string,
+): Promise<{ fileId: string; webViewLink: string }> {
+  const { google } = await import("googleapis");
+  const { Readable } = await import("stream");
+
+  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE
+    ?? "/var/www/uranaz/api/google-service-account.json";
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile,
+    scopes: ["https://www.googleapis.com/auth/drive.file"],
+  });
+
+  const drive = google.drive({ version: "v3", auth });
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: filename,
+      parents: [folderId],
+    },
+    media: {
+      mimeType: "application/gzip",
+      body: Readable.from(buffer),
+    },
+    fields: "id,webViewLink",
+  });
+
+  return {
+    fileId: res.data.id!,
+    webViewLink: res.data.webViewLink ?? `https://drive.google.com/file/d/${res.data.id}/view`,
+  };
+}
+
 export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?: string }> {
   const s = await getSettings();
   if (!s?.smtpEnabled) return { sent: false, error: "SMTP not enabled" };
@@ -419,7 +455,6 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
     return { sent: false, error: `pg_dump failed: ${err?.message ?? err}` };
   }
 
-  // Compress before attaching — SQL compresses ~90%, stays well within SMTP limits
   let attachBuffer: Buffer;
   try {
     attachBuffer = await gzipAsync(dumpBuffer);
@@ -431,8 +466,31 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
   const stamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const filename = `uranaz-backup-${stamp}.sql.gz`;
 
+  // Try Google Drive upload if folder ID is configured
+  const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  let driveLink: string | null = null;
+
+  if (driveFolderId) {
+    try {
+      const { webViewLink } = await uploadToGoogleDrive(attachBuffer, filename, driveFolderId);
+      driveLink = webViewLink;
+      logger.info({ filename, driveLink }, "Backup uploaded to Google Drive");
+    } catch (err: any) {
+      logger.error({ err }, "Google Drive upload failed — falling back to email attachment");
+    }
+  }
+
   const domain = fromDomain(s);
   const transport = createTransport(s);
+
+  const driveRow = driveLink
+    ? `<tr style="border-top:1px solid rgba(61,214,245,0.10);">
+        <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;width:120px;">Google Drive</td>
+        <td style="padding:8px 14px;font-size:12px;">
+          <a href="${driveLink}" style="color:#3DD6F5;font-weight:600;">Open in Drive</a>
+        </td>
+       </tr>`
+    : "";
 
   await transport.sendMail({
     from: `"${s.smtpFromName || "URANUS TRADES"}" <${s.smtpFrom}>`,
@@ -440,7 +498,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
     subject: `[URANUS TRADES] Database Backup — ${now.toUTCString()}`,
     messageId: makeMessageId(domain),
     headers: baseHeaders(domain),
-    text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\nThis is an automated hourly backup. Keep this file secure.\n\n© URANUS TRADES`,
+    text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n${driveLink ? `Google Drive: ${driveLink}\n` : ""}\n© URANUS TRADES`,
     html: wrap(`
       ${header(s)}
       <tr><td style="padding:28px 32px;">
@@ -450,7 +508,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
         </div>
         <h2 style="margin:0 0 10px;color:#FFFFFF;font-size:16px;">Database Backup</h2>
         <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
-          Your hourly database backup is attached. Keep this file in a secure location.
+          ${driveLink ? "Your backup has been uploaded to Google Drive." : "Your hourly database backup is attached."}
         </p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
           style="border:1px solid rgba(61,214,245,0.15);border-radius:8px;overflow:hidden;">
@@ -470,6 +528,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
             <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Compressed size</td>
             <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024).toFixed(1)} KB</td>
           </tr>
+          ${driveRow}
         </table>
         <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
           This is an automated hourly backup from the URANUS TRADES platform.
@@ -477,7 +536,8 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
       </td></tr>
       ${footer()}
     `),
-    attachments: [
+    // Only attach file if Drive upload was not used
+    attachments: driveLink ? [] : [
       { filename, content: attachBuffer, contentType: "application/gzip" },
     ],
   });

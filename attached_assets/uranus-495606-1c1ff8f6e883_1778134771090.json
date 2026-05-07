@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "uranus-495606",
+  "private_key_id": "1c1ff8f6e883ef632ffb7bc1bf40c3442bcb6db0",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC5Z5yucQI0Uv5b\ndTVKjxjd9dFkNJ9PIzNeM2VAWAqRPINF3rKvBOidM3bZn0f7gO1VIpMk7vJuyV0g\nPbWd7S+t3aVYmH8LBD/vklinN6SM03VNAhImbu93t5hKint4YITRZFshmooHrTTu\nQer4HaSf1QSqJH5tj5RhQlZm8XdrS5qkKkCbQtucHJtIzV2QF4fxruD+FyLwMeOP\nYyPcnfxS7yUwkJqFw1TjKsECcdUArSsdkhVGrrgC20ZIot5k+65KlwTmO7aeGqXs\nlIQjro4dTzEdAndf7kV8vtj0rpNoPVq89oSch9KKuuxaYgXWfEbNTYJ5E8MQXV8W\n/CpnenypAgMBAAECggEAH7ceaYW52Y8H5Ue5v8EWQSPTd5d71/r+xsK2c4kL97e5\nAfr8KG3Hx9pdnpD9bIOrtZhGQPdh/7sQ49rChlskQJLtfagKdW067aWkZihhzNhA\nVNXBmpL4Akvk8H1bbSZfmf0XjLpFmdYSe55Jjjtt5Yx4MY2wFdhNisyhAJeWNMNt\nhwJtZ0bDYQtAXQHTJ1b/LkfpwVsWwovV+kKl7QjZdulYPJKx8iK51vjNhSVcL6GM\nHVktsZJGYwMy8e2wQjVNqU6hOCbLnxwrjcFksQY80jRCG8OvmusqK5FKCSl86msw\njfd4w8B96NpZH1wIh/6x0wpaCUJJq6FvsgpWkaQaTQKBgQDtcE1Ob5WDciFru02V\nj54REs4+rT4e1CkU23CNaXnEP1LoLbpHDmjLF4SfEXiK9LK9l9NcS2zGmaHiI1zg\ncdhUSXTuAnEe0ELU3F1jhAP5DRXZOEHOVRKeX8CBSQkmKA7TABNs130hHfzcg3ne\nLrAAdIu6MIPvUm5q3K4GqhbKvQKBgQDH5f2C0NFSzVdm98mASLjAbwRY9oJpK18s\n6E5QAqYcjd/ciL0ja0gE+zeZTtLWrAlSe3IBti/9YazY2QppHin4l7DJP9QTJR5J\nwrgxfr7KDcjWpUrfncA4TkRkktFsOaplEgWb1QVEGVYq+XKBLik09UEQbFB721Hl\ntfaBxpaOXQKBgQDO3yW7zSSrXekYgBzczkCeB5CCs1aIbblNXtP1oYxiG/oUKKM/\n/aH4MQlvvj0UdJa28W1J4L1pW7nb2Yu2Ufp1lXq3VJFSk4lnBIipiAAeIfSDSays\nJRsPucVz3zqFcClaVZqXHjj7fbEuP68SkgLuopyLIHITNfLWUGefjtpE0QKBgQC3\n6mHhXtCIN0boBKiO79mTq1C7rSn1KyNpBN8wfA9rDBlgJSqnkMf1VVElK0GOoz/8\ndHlDG+VxYdGOvbn3VvpUrvPHZYNwjeEdChs/5pYQ/re+zNtjfBdjdpc0VWR7B18/\nmGIyqr4qlokSBumT8u2UvOU8//rYycPC7jS72AOjPQKBgQCAFvc1VYg2SmYnC+zL\ngqmizG8PDuDUceTBhZyAmagoFOd90NH4MCJPzEepgiyu5+sVeJ5tymO0ULHLnsff\nstyccBCExSZRFm4m0gJBGZKoaJFV6/5sw3oj2GiX5aKZO4kWwywbZRIXlPBTTI9T\n3wNS2l+RbLFRaou//RgVtpqeeA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "uranaz-backup@uranus-495606.iam.gserviceaccount.com",
+  "client_id": "102882673921705643257",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/uranaz-backup%40uranus-495606.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
