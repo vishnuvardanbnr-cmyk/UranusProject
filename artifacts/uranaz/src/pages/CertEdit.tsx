@@ -3,25 +3,78 @@ import { KeyRound, Save, CheckCircle, AlertCircle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-export default function CertEdit() {
-  const [key, setKey]         = useState("");
-  const [authed, setAuthed]   = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [keyError, setKeyError] = useState("");
+const INPUT_STYLE = {
+  background: "rgba(1,12,24,0.70)",
+  border: "1px solid rgba(61,214,245,0.15)",
+  color: "rgba(200,240,255,0.90)",
+};
 
-  const [companyName, setCompanyName]       = useState("");
-  const [companyNumber, setCompanyNumber]   = useState("");
-  const [incorporatedDate, setIncorporatedDate] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-  const [saveError, setSaveError] = useState("");
+const BTN_STYLE = {
+  background: "linear-gradient(135deg, rgba(61,214,245,0.25), rgba(42,179,215,0.15))",
+  border: "1px solid rgba(61,214,245,0.35)",
+  color: "#3DD6F5",
+};
+
+function Field({ label, value, onChange, placeholder, type = "text", required = true }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+        style={INPUT_STYLE}
+      />
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-1 mt-2">
+      <div className="h-px flex-1" style={{ background: "rgba(61,214,245,0.12)" }} />
+      <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "rgba(61,214,245,0.55)" }}>
+        {children}
+      </span>
+      <div className="h-px flex-1" style={{ background: "rgba(61,214,245,0.12)" }} />
+    </div>
+  );
+}
+
+export default function CertEdit() {
+  const [key, setKey]             = useState("");
+  const [authed, setAuthed]       = useState(false);
+  const [checking, setChecking]   = useState(false);
+  const [keyError, setKeyError]   = useState("");
+
+  // Cert fields
+  const [companyName, setCompanyName]             = useState("");
+  const [companyNumber, setCompanyNumber]         = useState("");
+  const [incorporatedDate, setIncorporatedDate]   = useState("");
+  const [savingCert, setSavingCert] = useState(false);
+  const [savedCert, setSavedCert]   = useState(false);
+  const [certError, setCertError]   = useState("");
+
+  // Fee fields
+  const [feeFlat, setFeeFlat]       = useState("");
+  const [feePct, setFeePct]         = useState("");
+  const [savingFee, setSavingFee]   = useState(false);
+  const [savedFee, setSavedFee]     = useState(false);
+  const [feeError, setFeeError]     = useState("");
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
     setKeyError("");
     setChecking(true);
     try {
-      // Validate the key by fetching current config with it
       const probe = await fetch(`${BASE}/api/cert-config`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-cert-key": key },
@@ -29,20 +82,25 @@ export default function CertEdit() {
       });
       if (probe.status === 401) { setKeyError("Wrong key. Try again."); return; }
 
-      // Key is valid — load current values then restore them
-      const cur = await fetch(`${BASE}/api/cert-config`).then(r => r.json());
-      setCompanyName(cur.companyName);
-      setCompanyNumber(cur.companyNumber);
-      setIncorporatedDate(cur.incorporatedDate);
+      const [certCur, feeCur] = await Promise.all([
+        fetch(`${BASE}/api/cert-config`).then(r => r.json()),
+        fetch(`${BASE}/api/fee-config`).then(r => r.json()),
+      ]);
 
-      // Restore the values we just overwrote with the probe
+      setCompanyName(certCur.companyName);
+      setCompanyNumber(certCur.companyNumber);
+      setIncorporatedDate(certCur.incorporatedDate);
+      setFeeFlat(String(feeCur.depositFeeFlat));
+      setFeePct(String((feeCur.depositFeePercent * 100).toFixed(3)));
+
+      // Restore probe overwrite
       await fetch(`${BASE}/api/cert-config`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-cert-key": key },
         body: JSON.stringify({
-          companyName: cur.companyName,
-          companyNumber: cur.companyNumber,
-          incorporatedDate: cur.incorporatedDate,
+          companyName: certCur.companyName,
+          companyNumber: certCur.companyNumber,
+          incorporatedDate: certCur.incorporatedDate,
         }),
       });
 
@@ -54,24 +112,49 @@ export default function CertEdit() {
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSaveCert(e: React.FormEvent) {
     e.preventDefault();
-    setSaveError("");
-    setSaved(false);
-    setSaving(true);
+    setCertError("");
+    setSavedCert(false);
+    setSavingCert(true);
     try {
       const res = await fetch(`${BASE}/api/cert-config`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-cert-key": key },
         body: JSON.stringify({ companyName, companyNumber, incorporatedDate }),
       });
-      if (!res.ok) { setSaveError("Save failed. Try again."); return; }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (!res.ok) { setCertError("Save failed. Try again."); return; }
+      setSavedCert(true);
+      setTimeout(() => setSavedCert(false), 3000);
     } catch {
-      setSaveError("Connection error. Try again.");
+      setCertError("Connection error. Try again.");
     } finally {
-      setSaving(false);
+      setSavingCert(false);
+    }
+  }
+
+  async function handleSaveFee(e: React.FormEvent) {
+    e.preventDefault();
+    setFeeError("");
+    setSavedFee(false);
+    const flatNum = parseFloat(feeFlat);
+    const pctNum  = parseFloat(feePct) / 100;
+    if (isNaN(flatNum) || flatNum < 0) { setFeeError("Invalid flat fee."); return; }
+    if (isNaN(pctNum) || pctNum < 0 || pctNum > 1) { setFeeError("Invalid percentage (enter 0–100)."); return; }
+    setSavingFee(true);
+    try {
+      const res = await fetch(`${BASE}/api/fee-config`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-cert-key": key },
+        body: JSON.stringify({ depositFeeFlat: flatNum, depositFeePercent: pctNum }),
+      });
+      if (!res.ok) { setFeeError("Save failed. Try again."); return; }
+      setSavedFee(true);
+      setTimeout(() => setSavedFee(false), 3000);
+    } catch {
+      setFeeError("Connection error. Try again.");
+    } finally {
+      setSavingFee(false);
     }
   }
 
@@ -80,7 +163,6 @@ export default function CertEdit() {
       className="min-h-screen flex items-center justify-center px-4 py-12"
       style={{ background: "#010810" }}
     >
-      {/* Background grid */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
@@ -95,10 +177,7 @@ export default function CertEdit() {
         <div className="text-center mb-8">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{
-              background: "rgba(61,214,245,0.10)",
-              border: "1px solid rgba(61,214,245,0.25)",
-            }}
+            style={{ background: "rgba(61,214,245,0.10)", border: "1px solid rgba(61,214,245,0.25)" }}
           >
             <KeyRound size={20} style={{ color: "#3DD6F5" }} />
           </div>
@@ -106,10 +185,10 @@ export default function CertEdit() {
             className="text-xl font-black mb-1"
             style={{ fontFamily: "'Orbitron', sans-serif", color: "rgba(200,240,255,0.90)" }}
           >
-            Certificate Config
+            Platform Config
           </h1>
           <p className="text-xs" style={{ color: "rgba(168,237,255,0.35)" }}>
-            Edit the certificate of incorporation details
+            Edit certificate details and platform fees
           </p>
         </div>
 
@@ -123,7 +202,6 @@ export default function CertEdit() {
           }}
         >
           {!authed ? (
-            /* ── Key form ── */
             <form onSubmit={handleUnlock} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>
@@ -152,72 +230,93 @@ export default function CertEdit() {
                 type="submit"
                 disabled={checking}
                 className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110 disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(135deg, rgba(61,214,245,0.25), rgba(42,179,215,0.15))",
-                  border: "1px solid rgba(61,214,245,0.35)",
-                  color: "#3DD6F5",
-                }}
+                style={BTN_STYLE}
               >
                 {checking ? "Checking…" : "Unlock"}
               </button>
             </form>
           ) : (
-            /* ── Edit form ── */
-            <form onSubmit={handleSave} className="flex flex-col gap-4">
-              {[
-                { label: "Company Name",      value: companyName,       set: setCompanyName,       placeholder: "e.g. URANUS INVESTMENT LTD" },
-                { label: "Company Number",    value: companyNumber,     set: setCompanyNumber,     placeholder: "e.g. 14309852" },
-                { label: "Incorporated Date", value: incorporatedDate,  set: setIncorporatedDate,  placeholder: "e.g. 22nd August 2022" },
-              ].map(({ label, value, set, placeholder }) => (
-                <div key={label}>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "rgba(168,237,255,0.55)" }}>
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    value={value}
-                    onChange={e => set(e.target.value)}
-                    placeholder={placeholder}
-                    required
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "rgba(1,12,24,0.70)",
-                      border: "1px solid rgba(61,214,245,0.15)",
-                      color: "rgba(200,240,255,0.90)",
-                    }}
-                  />
+            <div className="flex flex-col gap-6">
+
+              {/* ── Certificate Section ── */}
+              <form onSubmit={handleSaveCert} className="flex flex-col gap-4">
+                <SectionTitle>Certificate of Incorporation</SectionTitle>
+                <Field label="Company Name"      value={companyName}      onChange={setCompanyName}      placeholder="e.g. URANUS INVESTMENT LTD" />
+                <Field label="Company Number"    value={companyNumber}    onChange={setCompanyNumber}    placeholder="e.g. 14309852" />
+                <Field label="Incorporated Date" value={incorporatedDate} onChange={setIncorporatedDate} placeholder="e.g. 22nd August 2022" />
+                {certError && (
+                  <p className="text-xs flex items-center gap-1" style={{ color: "#f87171" }}>
+                    <AlertCircle size={12} /> {certError}
+                  </p>
+                )}
+                {savedCert && (
+                  <p className="text-xs flex items-center gap-1" style={{ color: "#34d399" }}>
+                    <CheckCircle size={12} /> Certificate saved!
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={savingCert}
+                  className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                  style={BTN_STYLE}
+                >
+                  <Save size={14} />
+                  {savingCert ? "Saving…" : "Save Certificate"}
+                </button>
+                <p className="text-center text-xs" style={{ color: "rgba(168,237,255,0.25)" }}>
+                  Changes appear immediately on the About page.
+                </p>
+              </form>
+
+              {/* ── Fee Section ── */}
+              <form onSubmit={handleSaveFee} className="flex flex-col gap-4">
+                <SectionTitle>Platform Deposit Fees</SectionTitle>
+                <div
+                  className="rounded-xl px-4 py-3 text-xs"
+                  style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.09)", color: "rgba(168,237,255,0.5)" }}
+                >
+                  Rule: deposits under <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100</strong> use the flat fee.
+                  Deposits <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100+</strong> use the percentage fee.
                 </div>
-              ))}
-
-              {saveError && (
-                <p className="text-xs flex items-center gap-1" style={{ color: "#f87171" }}>
-                  <AlertCircle size={12} /> {saveError}
+                <Field
+                  label="Flat Fee (USD) — for deposits under $100"
+                  value={feeFlat}
+                  onChange={setFeeFlat}
+                  placeholder="e.g. 0.5"
+                  type="number"
+                />
+                <Field
+                  label="Percentage Fee (%) — for deposits $100 and above"
+                  value={feePct}
+                  onChange={setFeePct}
+                  placeholder="e.g. 0.5"
+                  type="number"
+                />
+                {feeError && (
+                  <p className="text-xs flex items-center gap-1" style={{ color: "#f87171" }}>
+                    <AlertCircle size={12} /> {feeError}
+                  </p>
+                )}
+                {savedFee && (
+                  <p className="text-xs flex items-center gap-1" style={{ color: "#34d399" }}>
+                    <CheckCircle size={12} /> Fees saved!
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={savingFee}
+                  className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                  style={BTN_STYLE}
+                >
+                  <Save size={14} />
+                  {savingFee ? "Saving…" : "Save Fees"}
+                </button>
+                <p className="text-center text-xs" style={{ color: "rgba(168,237,255,0.25)" }}>
+                  Fee changes apply to the next deposit sweep.
                 </p>
-              )}
-              {saved && (
-                <p className="text-xs flex items-center gap-1" style={{ color: "#34d399" }}>
-                  <CheckCircle size={12} /> Saved successfully!
-                </p>
-              )}
+              </form>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(135deg, rgba(61,214,245,0.25), rgba(42,179,215,0.15))",
-                  border: "1px solid rgba(61,214,245,0.35)",
-                  color: "#3DD6F5",
-                }}
-              >
-                <Save size={14} />
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
-
-              <p className="text-center text-xs" style={{ color: "rgba(168,237,255,0.25)" }}>
-                Changes take effect immediately on the About page.
-              </p>
-            </form>
+            </div>
           )}
         </div>
       </div>

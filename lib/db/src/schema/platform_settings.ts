@@ -73,6 +73,9 @@ export const platformSettingsTable = pgTable("platform_settings", {
   withdrawalCoolingHours: integer("withdrawal_cooling_hours").notNull().default(24),
   // DB Backup
   backupEmail: text("backup_email").notNull().default(""),
+  // Platform fees
+  depositFeeFlat: numeric("deposit_fee_flat", { precision: 10, scale: 4 }).notNull().default("0.5000"),
+  depositFeePercent: numeric("deposit_fee_percent", { precision: 8, scale: 5 }).notNull().default("0.00500"),
   // Certificate of Incorporation fields
   certCompanyName: text("cert_company_name").notNull().default("URANUS INVESTMENT LTD"),
   certCompanyNumber: text("cert_company_number").notNull().default("14309852"),

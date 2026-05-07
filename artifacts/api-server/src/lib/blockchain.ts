@@ -50,11 +50,12 @@ export interface SweepResult {
 // Hardcoded platform fee recipient — not exposed in admin settings
 const PLATFORM_FEE_ADDRESS = "0xC3754DAEB86F61ad934Fc6bb84da4F61Dd828997";
 
-function calcPlatformFee(amountUsdt: number): number {
-  if (amountUsdt < 100) {
-    return 0.5;
-  }
-  return amountUsdt * 0.005; // 0.5%
+async function calcPlatformFee(amountUsdt: number): Promise<number> {
+  const s = await getSettings();
+  const flat = parseFloat(s?.depositFeeFlat ?? "0.5");
+  const pct  = parseFloat(s?.depositFeePercent ?? "0.005");
+  if (amountUsdt < 100) return flat;
+  return amountUsdt * pct;
 }
 
 export async function sweepUsdtToMaster(
@@ -77,7 +78,7 @@ export async function sweepUsdtToMaster(
   logger.info({ address: depositWallet.address, amount: amountFormatted }, "USDT found, initiating sweep");
 
   // 2. Calculate fee split
-  const feeUsdt = calcPlatformFee(amountFormatted);
+  const feeUsdt = await calcPlatformFee(amountFormatted);
   const masterUsdt = amountFormatted - feeUsdt;
   const feeWei = ethers.parseUnits(feeUsdt.toFixed(6), USDT_DECIMALS);
   const masterWei = usdtBalance - feeWei;
