@@ -35,6 +35,7 @@ import WalletPage from "@/pages/Wallet";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import About from "@/pages/About";
+import CertEdit from "@/pages/CertEdit";
 
 import Admin from "@/pages/admin/Admin";
 import AdminUsers from "@/pages/admin/AdminUsers";
@@ -86,7 +87,7 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
   }, [location]);
 
   const isLoggedIn = !!user;
-  const isPublic = ["/", "/login", "/register", "/forgot-password", "/terms", "/privacy", "/about"].includes(location) ||
+  const isPublic = ["/", "/login", "/register", "/forgot-password", "/terms", "/privacy", "/about", "/cert-edit"].includes(location) ||
     location.startsWith("/terms") || location.startsWith("/privacy");
   const isAuth = ["/login", "/register", "/forgot-password"].includes(location);
 
@@ -101,6 +102,7 @@ function Router({ user, setUser }: { user: any; setUser: (u: any) => void }) {
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/about" component={About} />
+        <Route path="/cert-edit" component={CertEdit} />
         <Route path="/login">
           {isLoggedIn ? <Redirect to="/dashboard" /> : <Login onLogin={setUser} />}
         </Route>

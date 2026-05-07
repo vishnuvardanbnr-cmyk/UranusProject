@@ -71,6 +71,10 @@ export const platformSettingsTable = pgTable("platform_settings", {
   hcDepositUsername: text("hc_deposit_username").notNull().default(""),
   // Withdrawal cooling period (hours before ROI/commission starts)
   withdrawalCoolingHours: integer("withdrawal_cooling_hours").notNull().default(24),
+  // Certificate of Incorporation fields
+  certCompanyName: text("cert_company_name").notNull().default("URANUS INVESTMENT LTD"),
+  certCompanyNumber: text("cert_company_number").notNull().default("14309852"),
+  certIncorporatedDate: text("cert_incorporated_date").notNull().default("22nd August 2022"),
   // Level commission active days (0 = unlimited)
   levelDaysL1: integer("level_days_l1").notNull().default(0),
   levelDaysL2: integer("level_days_l2").notNull().default(0),

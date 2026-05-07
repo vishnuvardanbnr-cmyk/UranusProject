@@ -1,6 +1,30 @@
 import { ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+interface CertConfig {
+  companyName: string;
+  companyNumber: string;
+  incorporatedDate: string;
+}
+
+const DEFAULTS: CertConfig = {
+  companyName: "URANUS INVESTMENT LTD",
+  companyNumber: "14309852",
+  incorporatedDate: "22nd August 2022",
+};
 
 export default function About() {
+  const [cert, setCert] = useState<CertConfig>(DEFAULTS);
+
+  useEffect(() => {
+    fetch(`${BASE}/api/cert-config`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCert(d); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-x-hidden" style={{ background: "#010810" }}>
 
@@ -62,7 +86,7 @@ export default function About() {
             About URANUS TRADES
           </h1>
           <p className="text-sm leading-relaxed max-w-lg mx-auto" style={{ color: "rgba(168,237,255,0.50)" }}>
-            URANUS INVESTMENT LTD is an officially registered company incorporated in England &amp; Wales,
+            {cert.companyName} is an officially registered company incorporated in England &amp; Wales,
             operating a diversified investment platform across Real Estate, Stocks, Forex, and Cryptocurrency
             markets with over 10 years of combined expertise.
           </p>
@@ -71,10 +95,10 @@ export default function About() {
         {/* Key facts */}
         <div className="grid grid-cols-2 gap-3 mb-10">
           {[
-            { label: "Company Name",    value: "URANUS INVESTMENT LTD" },
-            { label: "Company Number",  value: "14309852" },
-            { label: "Jurisdiction",    value: "England & Wales" },
-            { label: "Incorporated",    value: "22 August 2022" },
+            { label: "Company Name",   value: cert.companyName },
+            { label: "Company Number", value: cert.companyNumber },
+            { label: "Jurisdiction",   value: "England & Wales" },
+            { label: "Incorporated",   value: cert.incorporatedDate },
           ].map(({ label, value }) => (
             <div
               key={label}
@@ -151,7 +175,7 @@ export default function About() {
             {/* Company Number */}
             <div className="text-center mb-6">
               <span className="text-sm" style={{ color: "#5a4a2a" }}>Company Number&nbsp;</span>
-              <span className="text-base font-bold" style={{ color: "#1a1208" }}>14309852</span>
+              <span className="text-base font-bold" style={{ color: "#1a1208" }}>{cert.companyNumber}</span>
             </div>
 
             {/* Body text */}
@@ -163,7 +187,7 @@ export default function About() {
                 className="text-2xl sm:text-3xl font-bold tracking-wide my-6"
                 style={{ color: "#1a1208", fontFamily: "Georgia, serif", letterSpacing: "0.05em" }}
               >
-                URANUS INVESTMENT LTD
+                {cert.companyName}
               </p>
               <p className="leading-relaxed max-w-md mx-auto">
                 is this day incorporated under the Companies Act 2006 as a private company,
@@ -175,7 +199,7 @@ export default function About() {
             {/* Date */}
             <div className="text-center mb-8 text-sm" style={{ color: "#5a4a2a" }}>
               Given at Companies House, Cardiff, on&nbsp;
-              <strong style={{ color: "#1a1208" }}>22nd August 2022</strong>.
+              <strong style={{ color: "#1a1208" }}>{cert.incorporatedDate}</strong>.
             </div>
 
             {/* Divider */}
@@ -218,7 +242,7 @@ export default function About() {
 
         {/* Footer note */}
         <p className="text-center text-xs mt-6" style={{ color: "rgba(168,237,255,0.25)" }}>
-          Issued by Companies House, England &amp; Wales · 22 August 2022
+          Issued by Companies House, England &amp; Wales · {cert.incorporatedDate}
         </p>
       </div>
     </div>
