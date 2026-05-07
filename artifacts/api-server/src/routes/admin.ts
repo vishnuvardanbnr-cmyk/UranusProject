@@ -632,17 +632,30 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
 
     const dbUrl = process.env.DATABASE_URL!;
     try {
+      // Step 1: Wipe the entire public schema so we start completely clean — no duplicates
+      await execFileAsync(
+        "psql",
+        ["--dbname", dbUrl, "--quiet", "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;"],
+        { maxBuffer: 10 * 1024 * 1024 },
+      );
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: `Failed to clean schema before restore: ${err?.message ?? err}` });
+      return;
+    }
+
+    try {
+      // Step 2: Restore the backup SQL into the clean schema
       await execFileAsync(
         "psql",
         ["--dbname", dbUrl, "--quiet", "--set", "ON_ERROR_STOP=1"],
         { input: sqlBuffer.toString("utf8"), maxBuffer: 600 * 1024 * 1024 },
       );
     } catch (err: any) {
-      res.status(500).json({ success: false, message: `Restore failed: ${err?.message ?? err}` });
+      res.status(500).json({ success: false, message: `Restore failed after schema wipe — database may be in an empty state. Re-upload the backup: ${err?.message ?? err}` });
       return;
     }
 
-    res.json({ success: true, message: `Database restored successfully from ${files.length} file${files.length > 1 ? "s" : ""}` });
+    res.json({ success: true, message: `Clean restore complete from ${files.length} file${files.length > 1 ? "s" : ""} — all existing data was replaced with the backup` });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
   }
