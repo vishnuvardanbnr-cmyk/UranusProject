@@ -630,32 +630,50 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
       sqlBuffer = combined;
     }
 
-    const dbUrl = process.env.DATABASE_URL!;
+    const dbName = "uranazdb";
+    const { writeFile, unlink } = await import("fs/promises");
+    const { join } = await import("path");
+    const tmpSql = join("/tmp", `restore_${Date.now()}.sql`);
+
     try {
-      // Step 1: Wipe the entire public schema so we start completely clean — no duplicates
+      // Write SQL to temp file — avoids stdin/maxBuffer limits for large dumps
+      await writeFile(tmpSql, sqlBuffer);
+
+      // Step 1: Wipe the entire public schema using the postgres superuser (avoids permission issues)
       await execFileAsync(
-        "psql",
-        ["--dbname", dbUrl, "--quiet", "-c", "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;"],
+        "su",
+        ["-c", `psql -d ${dbName} -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public; GRANT ALL ON SCHEMA public TO uranaz;"`, "postgres"],
         { maxBuffer: 10 * 1024 * 1024 },
       );
     } catch (err: any) {
+      try { await unlink(tmpSql); } catch {}
       res.status(500).json({ success: false, message: `Failed to clean schema before restore: ${err?.message ?? err}` });
       return;
     }
 
     try {
-      // Step 2: Restore the backup SQL into the clean schema
+      // Step 2: Restore from temp file using postgres superuser
       await execFileAsync(
-        "psql",
-        ["--dbname", dbUrl, "--quiet", "--set", "ON_ERROR_STOP=1"],
-        { input: sqlBuffer.toString("utf8"), maxBuffer: 600 * 1024 * 1024 },
+        "su",
+        ["-c", `psql -d ${dbName} -q --set ON_ERROR_STOP=1 -f ${tmpSql}`, "postgres"],
+        { maxBuffer: 10 * 1024 * 1024 },
       );
     } catch (err: any) {
-      res.status(500).json({ success: false, message: `Restore failed after schema wipe — database may be in an empty state. Re-upload the backup: ${err?.message ?? err}` });
+      try { await unlink(tmpSql); } catch {}
+      res.status(500).json({ success: false, message: `Restore failed after schema wipe — database may be in empty state, re-upload backup: ${err?.message ?? err}` });
       return;
     }
 
-    res.json({ success: true, message: `Clean restore complete from ${files.length} file${files.length > 1 ? "s" : ""} — all existing data was replaced with the backup` });
+    try { await unlink(tmpSql); } catch {}
+
+    // Send response BEFORE restarting PM2 so the client gets confirmation
+    res.json({ success: true, message: `Clean restore complete from ${files.length} file${files.length > 1 ? "s" : ""} — all existing data replaced with backup. API is restarting to reconnect…` });
+
+    // Step 3: Restart PM2 after a short delay so the response is flushed first
+    setTimeout(() => {
+      const { spawn } = require("child_process");
+      spawn("pm2", ["restart", "uranaz-api", "--update-env"], { detached: true, stdio: "ignore" }).unref();
+    }, 1500);
   } catch (err: any) {
     res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
   }
