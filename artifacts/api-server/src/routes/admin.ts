@@ -441,8 +441,6 @@ router.get("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   res.json({
     withdrawalMode: settings.withdrawalMode,
     withdrawKeySet: !!(settings.withdrawWalletPrivateKey),
-    withdrawFeeFlat: parseFloat(settings.withdrawFeeFlat ?? "0.5"),
-    withdrawFeePercent: parseFloat(settings.withdrawFeePercent ?? "0.005") * 100,
     withdrawFeeMode: settings.withdrawFeeMode ?? "deduct_from_amount",
   });
 });
@@ -452,8 +450,6 @@ router.put("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   const body = z.object({
     withdrawalMode: z.enum(["auto", "manual"]),
     withdrawWalletPrivateKey: z.string().optional(),
-    withdrawFeeFlat: z.number().min(0).max(100).optional(),
-    withdrawFeePercent: z.number().min(0).max(100).optional(),
     withdrawFeeMode: z.enum(["deduct_from_amount", "deduct_from_balance"]).optional(),
   }).safeParse(req.body);
   if (!body.success) {
@@ -465,8 +461,6 @@ router.put("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   if (body.data.withdrawWalletPrivateKey && body.data.withdrawWalletPrivateKey.trim()) {
     vals.withdrawWalletPrivateKey = ensureEncrypted(body.data.withdrawWalletPrivateKey.trim());
   }
-  if (body.data.withdrawFeeFlat !== undefined) vals.withdrawFeeFlat = body.data.withdrawFeeFlat.toFixed(4);
-  if (body.data.withdrawFeePercent !== undefined) vals.withdrawFeePercent = (body.data.withdrawFeePercent / 100).toFixed(5);
   if (body.data.withdrawFeeMode !== undefined) vals.withdrawFeeMode = body.data.withdrawFeeMode;
   let updated;
   if (existing) {
@@ -480,8 +474,6 @@ router.put("/admin/withdrawal-settings", requireAdmin, async (req, res) => {
   res.json({
     withdrawalMode: updated.withdrawalMode,
     withdrawKeySet: !!(updated.withdrawWalletPrivateKey),
-    withdrawFeeFlat: parseFloat(updated.withdrawFeeFlat ?? "0.5"),
-    withdrawFeePercent: parseFloat(updated.withdrawFeePercent ?? "0.005") * 100,
     withdrawFeeMode: updated.withdrawFeeMode ?? "deduct_from_amount",
   });
 });

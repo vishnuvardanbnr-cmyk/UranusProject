@@ -91,9 +91,9 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
 
   const settings = await getSettings();
 
-  // Calculate withdrawal fee
-  const feeFlat    = parseFloat(settings?.withdrawFeeFlat    ?? "0.5");
-  const feePct     = parseFloat(settings?.withdrawFeePercent ?? "0.005");
+  // Calculate withdrawal fee — uses same flat/pct rates as deposit fee
+  const feeFlat    = parseFloat(settings?.depositFeeFlat    ?? "0.5");
+  const feePct     = parseFloat(settings?.depositFeePercent ?? "0.005");
   const feeMode    = settings?.withdrawFeeMode ?? "deduct_from_amount";
   const fee        = amount < 100 ? feeFlat : amount * feePct;
 

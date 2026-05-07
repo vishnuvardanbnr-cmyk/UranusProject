@@ -556,15 +556,11 @@ export default function AdminSettings() {
   const withdrawalForm = useForm<{
     withdrawalMode: "auto" | "manual";
     withdrawWalletPrivateKey: string;
-    withdrawFeeFlat: number;
-    withdrawFeePercent: number;
     withdrawFeeMode: "deduct_from_amount" | "deduct_from_balance";
   }>({
     defaultValues: {
       withdrawalMode: "manual",
       withdrawWalletPrivateKey: "",
-      withdrawFeeFlat: 0.5,
-      withdrawFeePercent: 0.5,
       withdrawFeeMode: "deduct_from_amount",
     },
   });
@@ -578,8 +574,6 @@ export default function AdminSettings() {
         withdrawalForm.reset({
           withdrawalMode: d.withdrawalMode ?? "manual",
           withdrawWalletPrivateKey: "",
-          withdrawFeeFlat: d.withdrawFeeFlat ?? 0.5,
-          withdrawFeePercent: d.withdrawFeePercent ?? 0.5,
           withdrawFeeMode: d.withdrawFeeMode ?? "deduct_from_amount",
         });
       })
@@ -590,16 +584,12 @@ export default function AdminSettings() {
   const onWithdrawalSubmit = async (data: {
     withdrawalMode: "auto" | "manual";
     withdrawWalletPrivateKey: string;
-    withdrawFeeFlat: number;
-    withdrawFeePercent: number;
     withdrawFeeMode: "deduct_from_amount" | "deduct_from_balance";
   }) => {
     setWithdrawalSaving(true);
     try {
       const body: Record<string, unknown> = {
         withdrawalMode: data.withdrawalMode,
-        withdrawFeeFlat: data.withdrawFeeFlat,
-        withdrawFeePercent: data.withdrawFeePercent,
         withdrawFeeMode: data.withdrawFeeMode,
       };
       if (data.withdrawWalletPrivateKey.trim()) body.withdrawWalletPrivateKey = data.withdrawWalletPrivateKey.trim();
@@ -614,8 +604,6 @@ export default function AdminSettings() {
       withdrawalForm.reset({
         withdrawalMode: data.withdrawalMode,
         withdrawWalletPrivateKey: "",
-        withdrawFeeFlat: updated.withdrawFeeFlat ?? data.withdrawFeeFlat,
-        withdrawFeePercent: updated.withdrawFeePercent ?? data.withdrawFeePercent,
         withdrawFeeMode: updated.withdrawFeeMode ?? data.withdrawFeeMode,
       });
       toast({ title: "Withdrawal settings saved!" });
@@ -1085,8 +1073,7 @@ export default function AdminSettings() {
                 className="rounded-xl px-4 py-3 text-xs mb-1"
                 style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.09)", color: "rgba(168,237,255,0.5)" }}
               >
-                Rule: withdrawals under <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100</strong> use the flat fee.
-                Withdrawals <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100+</strong> use the percentage fee.
+                Fee rates are shared with deposit fees — configure them at <strong style={{ color: "rgba(168,237,255,0.75)" }}>cert-edit</strong>. Select how the fee is deducted below.
               </div>
 
               {/* Fee deduction mode */}
@@ -1116,25 +1103,6 @@ export default function AdminSettings() {
                     <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{opt.desc}</span>
                   </label>
                 ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel>Flat Fee (USD) — under $100</FieldLabel>
-                  <input
-                    type="number" step="0.01" min="0" max="100"
-                    {...withdrawalForm.register("withdrawFeeFlat", { valueAsNumber: true })}
-                    className={INPUT_CLS} style={INPUT_STYLE}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Percentage Fee (%) — $100+</FieldLabel>
-                  <input
-                    type="number" step="0.01" min="0" max="100"
-                    {...withdrawalForm.register("withdrawFeePercent", { valueAsNumber: true })}
-                    className={INPUT_CLS} style={INPUT_STYLE}
-                  />
-                </div>
               </div>
 
               <SubHeader hint="If its BNB runs low, the gas wallet tops it up automatically.">Withdrawal Wallet — sends USDT to users</SubHeader>
