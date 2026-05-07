@@ -7,6 +7,7 @@ import { withdrawalToResponse } from "./withdrawals";
 import { investmentToResponse } from "./investments";
 import { z } from "zod";
 import { resolveKey, ensureEncrypted } from "../lib/keyEncryption.js";
+import bcrypt from "bcryptjs";
 
 const SmtpSettingsBody = z.object({
   smtpEnabled: z.boolean(),
@@ -1586,8 +1587,15 @@ router.get("/admin/reports/balance-adjustments", requireAdmin, async (req, res) 
 
 // POST /api/admin/reset-for-live
 router.post("/admin/reset-for-live", requireAdmin, async (req, res) => {
-  const parsed = z.object({ confirm: z.literal("RESET FOR LIVE") }).safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Confirmation text mismatch" }); return; }
+  const parsed = z.object({
+    confirm: z.literal("RESET FOR LIVE"),
+    newEmail: z.string().email("Valid email required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Validation failed" });
+    return;
+  }
 
   await db.delete(incomeTable);
   await db.delete(investmentsTable);
@@ -1603,11 +1611,18 @@ router.post("/admin/reset-for-live", requireAdmin, async (req, res) => {
   await db.delete(userRewardsTable);
   await db.delete(adminBalanceAdjustmentsTable);
   await db.delete(usersTable).where(eq(usersTable.isAdmin, false));
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
   await db.update(usersTable)
-    .set({ totalEarnings: "0", walletBalance: "0", totalInvested: "0", hyperCoinBalance: "0", currentRankId: null, currentLevel: 0 })
+    .set({
+      email: parsed.data.newEmail,
+      passwordHash,
+      totalEarnings: "0", walletBalance: "0", totalInvested: "0",
+      hyperCoinBalance: "0", currentRankId: null, currentLevel: 0,
+    })
     .where(eq(usersTable.isAdmin, true));
 
-  res.json({ success: true, message: "All non-admin data cleared" });
+  res.json({ success: true, message: "All non-admin data cleared and admin credentials updated" });
 });
 
 export default router;

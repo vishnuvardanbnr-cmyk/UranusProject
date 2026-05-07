@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +8,7 @@ import { setToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Eye, EyeOff } from "lucide-react";
 const schema = z.object({
   email: z.string().email("Valid email required"),
   password: z.string().min(6, "Password required"),
@@ -18,6 +20,7 @@ export default function Login({ onLogin }: Props) {
   const [, setLocation] = useLocation();
   const login = useLogin();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } });
 
@@ -100,17 +103,28 @@ export default function Login({ onLogin }: Props) {
                     Password
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      data-testid="input-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      {...field}
-                      style={{
-                        background: "rgba(0,20,40,0.6)",
-                        border: "1px solid rgba(61,214,245,0.18)",
-                        color: "rgba(168,237,255,0.9)",
-                      }}
-                    />
+                    <div className="relative">
+                      <Input
+                        data-testid="input-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        {...field}
+                        style={{
+                          background: "rgba(0,20,40,0.6)",
+                          border: "1px solid rgba(61,214,245,0.18)",
+                          color: "rgba(168,237,255,0.9)",
+                          paddingRight: "2.5rem",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(p => !p)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={15} style={{ color: "#3DD6F5" }} /> : <Eye size={15} style={{ color: "#3DD6F5" }} />}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

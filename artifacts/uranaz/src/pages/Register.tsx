@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Mail, ArrowLeft, ShieldCheck, ChevronsUpDown, Check } from "lucide-react";
+import { Mail, ArrowLeft, ShieldCheck, ChevronsUpDown, Check, Eye, EyeOff } from "lucide-react";
 import { COUNTRIES, COUNTRY_BY_ISO2 } from "@/lib/countries";
 
 function buildSchema(requireReferral: boolean) {
@@ -82,6 +82,7 @@ export default function Register({ onLogin }: Props) {
   const [formData, setFormData] = useState<RegisterValues | null>(null);
   const [regInfo, setRegInfo] = useState<RegistrationInfo | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchRegistrationInfo()
@@ -402,7 +403,23 @@ export default function Register({ onLogin }: Props) {
                   <FormItem>
                     <FormLabel style={LABEL_STYLE}>Password</FormLabel>
                     <FormControl>
-                      <Input data-testid="input-password" type="password" placeholder="Min 6 characters" {...field} style={INPUT_STYLE} />
+                      <div className="relative">
+                        <Input
+                          data-testid="input-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Min 6 characters"
+                          {...field}
+                          style={{ ...INPUT_STYLE, paddingRight: "2.5rem" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(p => !p)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff size={15} style={{ color: "#3DD6F5" }} /> : <Eye size={15} style={{ color: "#3DD6F5" }} />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

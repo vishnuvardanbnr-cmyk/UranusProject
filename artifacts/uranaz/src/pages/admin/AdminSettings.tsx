@@ -327,12 +327,39 @@ export default function AdminSettings() {
   // Reset for Live
   const [resetForLiveStep, setResetForLiveStep] = useState<"idle" | "confirm" | "typing">("idle");
   const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetNewEmail, setResetNewEmail] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetShowPass, setResetShowPass] = useState(false);
+  const [resetShowConfirmPass, setResetShowConfirmPass] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+
+  const resetForLiveClear = () => {
+    setResetForLiveStep("idle");
+    setResetConfirmText("");
+    setResetNewEmail("");
+    setResetNewPassword("");
+    setResetConfirmPassword("");
+    setResetShowPass(false);
+    setResetShowConfirmPass(false);
+  };
 
   const doResetForLive = async () => {
     if (resetConfirmText !== "RESET FOR LIVE") {
       toast({ title: "Confirmation text doesn't match", variant: "destructive" });
+      return;
+    }
+    if (!resetNewEmail) {
+      toast({ title: "New admin email is required", variant: "destructive" });
+      return;
+    }
+    if (resetNewPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
     setResetting(true);
@@ -340,13 +367,12 @@ export default function AdminSettings() {
       const r = await fetch("/api/admin/reset-for-live", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ confirm: "RESET FOR LIVE" }),
+        body: JSON.stringify({ confirm: "RESET FOR LIVE", newEmail: resetNewEmail, newPassword: resetNewPassword }),
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed"); }
       setResetDone(true);
-      setResetForLiveStep("idle");
-      setResetConfirmText("");
-      toast({ title: "Reset complete", description: "All non-admin data has been cleared" });
+      resetForLiveClear();
+      toast({ title: "Reset complete", description: "All non-admin data cleared and admin credentials updated" });
     } catch (err: any) {
       toast({ title: "Reset failed", description: err?.message, variant: "destructive" });
     } finally {
@@ -1744,22 +1770,79 @@ export default function AdminSettings() {
 
             {resetForLiveStep === "typing" && (
               <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.30)" }}>
-                <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.9)" }}>
-                  Type <strong>RESET FOR LIVE</strong> below to confirm:
+                <p className="text-xs font-semibold" style={{ color: "rgba(248,113,113,0.9)" }}>
+                  Set new admin credentials for after the reset:
                 </p>
-                <input
-                  type="text"
-                  value={resetConfirmText}
-                  onChange={e => setResetConfirmText(e.target.value)}
-                  placeholder="RESET FOR LIVE"
-                  className="w-full rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none"
-                  style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
-                />
+                {/* New admin email */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "rgba(168,237,255,0.55)" }}>New Admin Email</label>
+                  <input
+                    type="email"
+                    value={resetNewEmail}
+                    onChange={e => setResetNewEmail(e.target.value)}
+                    placeholder="admin@example.com"
+                    className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                    style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.9)" }}
+                  />
+                </div>
+                {/* New password */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "rgba(168,237,255,0.55)" }}>New Password</label>
+                  <div className="relative">
+                    <input
+                      type={resetShowPass ? "text" : "password"}
+                      value={resetNewPassword}
+                      onChange={e => setResetNewPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full rounded-xl px-3 py-2.5 pr-10 text-sm focus:outline-none"
+                      style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.9)" }}
+                    />
+                    <button type="button" onClick={() => setResetShowPass(p => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity">
+                      {resetShowPass ? <EyeOff size={14} style={{ color: TEAL }} /> : <Eye size={14} style={{ color: TEAL }} />}
+                    </button>
+                  </div>
+                </div>
+                {/* Confirm password */}
+                <div>
+                  <label className="text-xs mb-1 block" style={{ color: "rgba(168,237,255,0.55)" }}>Confirm Password</label>
+                  <div className="relative">
+                    <input
+                      type={resetShowConfirmPass ? "text" : "password"}
+                      value={resetConfirmPassword}
+                      onChange={e => setResetConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      className="w-full rounded-xl px-3 py-2.5 pr-10 text-sm focus:outline-none"
+                      style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.9)" }}
+                    />
+                    <button type="button" onClick={() => setResetShowConfirmPass(p => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity">
+                      {resetShowConfirmPass ? <EyeOff size={14} style={{ color: TEAL }} /> : <Eye size={14} style={{ color: TEAL }} />}
+                    </button>
+                  </div>
+                  {resetConfirmPassword && resetNewPassword !== resetConfirmPassword && (
+                    <p className="text-xs mt-1" style={{ color: "rgba(248,113,113,0.85)" }}>Passwords do not match</p>
+                  )}
+                </div>
+                {/* Confirmation text */}
+                <div>
+                  <p className="text-xs leading-relaxed mb-1" style={{ color: "rgba(248,113,113,0.9)" }}>
+                    Type <strong>RESET FOR LIVE</strong> to confirm:
+                  </p>
+                  <input
+                    type="text"
+                    value={resetConfirmText}
+                    onChange={e => setResetConfirmText(e.target.value)}
+                    placeholder="RESET FOR LIVE"
+                    className="w-full rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none"
+                    style={{ background: "rgba(0,15,30,0.7)", border: "1px solid rgba(248,113,113,0.35)", color: "rgba(248,113,113,0.9)" }}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={doResetForLive}
-                    disabled={resetting || resetConfirmText !== "RESET FOR LIVE"}
+                    disabled={resetting || resetConfirmText !== "RESET FOR LIVE" || !resetNewEmail || resetNewPassword.length < 6 || resetNewPassword !== resetConfirmPassword}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
                     style={{ background: "rgba(248,113,113,0.85)", color: "#fff" }}
                   >
@@ -1767,7 +1850,7 @@ export default function AdminSettings() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setResetForLiveStep("idle"); setResetConfirmText(""); }}
+                    onClick={resetForLiveClear}
                     className="flex-1 py-2.5 rounded-xl text-sm font-medium"
                     style={{ background: "rgba(61,214,245,0.08)", border: "1px solid rgba(61,214,245,0.2)", color: "rgba(168,237,255,0.7)" }}
                   >
