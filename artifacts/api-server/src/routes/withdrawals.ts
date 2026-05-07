@@ -89,6 +89,19 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     await db.update(otpCodesTable).set({ used: true }).where(eq(otpCodesTable.id, otpRecord.id));
   }
 
+  const settings = await getSettings();
+
+  // Calculate withdrawal fee
+  const feeFlat    = parseFloat(settings?.withdrawFeeFlat    ?? "0.5");
+  const feePct     = parseFloat(settings?.withdrawFeePercent ?? "0.005");
+  const feeMode    = settings?.withdrawFeeMode ?? "deduct_from_amount";
+  const fee        = amount < 100 ? feeFlat : amount * feePct;
+
+  // deduct_from_amount: balance debited = amount, user receives (amount - fee)
+  // deduct_from_balance: balance debited = amount + fee, user receives amount
+  const balanceDebit  = feeMode === "deduct_from_balance" ? amount + fee : amount;
+  const amountOnChain = feeMode === "deduct_from_amount"  ? amount - fee : amount;
+
   const allIncome = await db.select().from(incomeTable).where(eq(incomeTable.userId, user.id));
   const totalEarnings = allIncome.reduce((s, r) => s + parseFloat(r.amount), 0);
   const allWithdrawals = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.userId, user.id));
@@ -97,22 +110,26 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
     .reduce((s, w) => s + parseFloat(w.amount), 0);
   const available = totalEarnings - usedBalance;
 
-  if (amount > available) {
+  if (balanceDebit > available) {
     res.status(400).json({ message: "Insufficient balance" });
     return;
   }
 
-  // Insert with pending status first
+  if (amountOnChain <= 0) {
+    res.status(400).json({ message: "Amount is too small to cover the withdrawal fee" });
+    return;
+  }
+
+  // Insert with pending status first — store the balance debit as the record amount
   const [withdrawal] = await db.insert(withdrawalsTable).values({
     userId: user.id,
     userName: user.name,
-    amount: amount.toString(),
+    amount: balanceDebit.toString(),
     walletAddress,
     status: "pending",
   }).returning();
 
   // Check withdrawal mode — auto-process if configured
-  const settings = await getSettings();
   const withdrawPlaintextKey = settings ? resolveKey(settings.withdrawWalletPrivateKey) : null;
   const gasPlaintextKey = settings ? resolveKey(settings.gasWalletPrivateKey) : null;
   if (settings && settings.withdrawalMode === "auto" && withdrawPlaintextKey && gasPlaintextKey) {
@@ -126,7 +143,7 @@ router.post("/withdrawals", requireAuth, async (req, res) => {
       try {
         const result = await sendUsdtToAddress(
           walletAddress,
-          amount,
+          amountOnChain,
           withdrawPlaintextKey,
           gasPlaintextKey,
           settings.bscRpcUrl || "https://bsc-dataseed.binance.org/",

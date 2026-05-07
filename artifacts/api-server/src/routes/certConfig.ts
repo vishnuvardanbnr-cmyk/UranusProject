@@ -67,6 +67,9 @@ router.get("/fee-config", async (_req, res) => {
   res.json({
     depositFeeFlat: parseFloat(s.depositFeeFlat ?? "0.5"),
     depositFeePercent: parseFloat(s.depositFeePercent ?? "0.005"),
+    withdrawFeeFlat: parseFloat(s.withdrawFeeFlat ?? "0.5"),
+    withdrawFeePercent: parseFloat(s.withdrawFeePercent ?? "0.005"),
+    withdrawFeeMode: s.withdrawFeeMode ?? "deduct_from_amount",
   });
 });
 

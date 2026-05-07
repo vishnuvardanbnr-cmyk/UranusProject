@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,12 +51,25 @@ async function sendWithdrawalOtp(email: string): Promise<void> {
   }
 }
 
+type FeeConfig = { withdrawFeeFlat: number; withdrawFeePercent: number; withdrawFeeMode: string };
+
+function calcWithdrawFee(amount: number, cfg: FeeConfig | null): number {
+  if (!cfg) return 0;
+  return amount < 100 ? cfg.withdrawFeeFlat : amount * cfg.withdrawFeePercent;
+}
+
 export default function Withdrawals({ user }: { user: any }) {
   const { data: withdrawals, isLoading } = useListWithdrawals();
   const { data: summary } = useGetIncomeSummary();
   const createWithdrawal = useCreateWithdrawal();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const [feeConfig, setFeeConfig] = useState<FeeConfig | null>(null);
+
+  useEffect(() => {
+    fetch("/api/fee-config").then(r => r.json()).then(setFeeConfig).catch(() => {});
+  }, []);
 
   const [step, setStep] = useState<"form" | "otp">("form");
   const [otp, setOtp] = useState("");
@@ -67,6 +80,8 @@ export default function Withdrawals({ user }: { user: any }) {
     resolver: zodResolver(schema),
     defaultValues: { amount: 0, walletAddress: user?.walletAddress || "" },
   });
+
+  const watchedAmount = form.watch("amount");
 
   const handleFormSubmit = async (data: z.infer<typeof schema>) => {
     try {
@@ -202,6 +217,31 @@ export default function Withdrawals({ user }: { user: any }) {
                     <FormMessage />
                   </FormItem>
                 )} />
+                {/* Fee breakdown */}
+                {feeConfig && watchedAmount > 0 && (() => {
+                  const fee = calcWithdrawFee(Number(watchedAmount), feeConfig);
+                  const mode = feeConfig.withdrawFeeMode;
+                  const youReceive = mode === "deduct_from_amount" ? Number(watchedAmount) - fee : Number(watchedAmount);
+                  const balanceDebit = mode === "deduct_from_balance" ? Number(watchedAmount) + fee : Number(watchedAmount);
+                  return (
+                    <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.10)" }}>
+                      <div className="flex justify-between text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
+                        <span>Withdrawal fee</span>
+                        <span style={{ color: "#f87171" }}>−${fee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs" style={{ color: "rgba(168,237,255,0.5)" }}>
+                        <span>Balance debited</span>
+                        <span style={{ color: "rgba(168,237,255,0.8)" }}>${balanceDebit.toFixed(2)}</span>
+                      </div>
+                      <div className="h-px" style={{ background: "rgba(61,214,245,0.08)" }} />
+                      <div className="flex justify-between text-sm font-bold">
+                        <span style={{ color: "rgba(168,237,255,0.7)" }}>You receive</span>
+                        <span style={{ color: "#34d399" }}>${youReceive.toFixed(2)} USDT</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium" style={{ color: "rgba(168,237,255,0.65)" }}>USDT Wallet Address (BEP-20)</label>
                   <div

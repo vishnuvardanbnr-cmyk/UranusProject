@@ -553,8 +553,20 @@ export default function AdminSettings() {
   const [withdrawalSaving, setWithdrawalSaving] = useState(false);
   const [showWithdrawKey, setShowWithdrawKey] = useState(false);
   const [withdrawKeySet, setWithdrawKeySet] = useState(false);
-  const withdrawalForm = useForm<{ withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }>({
-    defaultValues: { withdrawalMode: "manual", withdrawWalletPrivateKey: "" },
+  const withdrawalForm = useForm<{
+    withdrawalMode: "auto" | "manual";
+    withdrawWalletPrivateKey: string;
+    withdrawFeeFlat: number;
+    withdrawFeePercent: number;
+    withdrawFeeMode: "deduct_from_amount" | "deduct_from_balance";
+  }>({
+    defaultValues: {
+      withdrawalMode: "manual",
+      withdrawWalletPrivateKey: "",
+      withdrawFeeFlat: 0.5,
+      withdrawFeePercent: 0.5,
+      withdrawFeeMode: "deduct_from_amount",
+    },
   });
 
   useEffect(() => {
@@ -563,17 +575,33 @@ export default function AdminSettings() {
       .then(r => r.json())
       .then(d => {
         setWithdrawKeySet(!!d.withdrawKeySet);
-        withdrawalForm.reset({ withdrawalMode: d.withdrawalMode ?? "manual", withdrawWalletPrivateKey: "" });
+        withdrawalForm.reset({
+          withdrawalMode: d.withdrawalMode ?? "manual",
+          withdrawWalletPrivateKey: "",
+          withdrawFeeFlat: d.withdrawFeeFlat ?? 0.5,
+          withdrawFeePercent: d.withdrawFeePercent ?? 0.5,
+          withdrawFeeMode: d.withdrawFeeMode ?? "deduct_from_amount",
+        });
       })
       .catch(() => {})
       .finally(() => setWithdrawalLoading(false));
   }, []);
 
-  const onWithdrawalSubmit = async (data: { withdrawalMode: "auto" | "manual"; withdrawWalletPrivateKey: string }) => {
+  const onWithdrawalSubmit = async (data: {
+    withdrawalMode: "auto" | "manual";
+    withdrawWalletPrivateKey: string;
+    withdrawFeeFlat: number;
+    withdrawFeePercent: number;
+    withdrawFeeMode: "deduct_from_amount" | "deduct_from_balance";
+  }) => {
     setWithdrawalSaving(true);
     try {
-      const body: Record<string, unknown> = { withdrawalMode: data.withdrawalMode };
-      // Only send the key if the admin entered a new one — blank means "keep existing"
+      const body: Record<string, unknown> = {
+        withdrawalMode: data.withdrawalMode,
+        withdrawFeeFlat: data.withdrawFeeFlat,
+        withdrawFeePercent: data.withdrawFeePercent,
+        withdrawFeeMode: data.withdrawFeeMode,
+      };
       if (data.withdrawWalletPrivateKey.trim()) body.withdrawWalletPrivateKey = data.withdrawWalletPrivateKey.trim();
       const res = await fetch("/api/admin/withdrawal-settings", {
         method: "PUT",
@@ -583,7 +611,13 @@ export default function AdminSettings() {
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
       setWithdrawKeySet(!!updated.withdrawKeySet);
-      withdrawalForm.reset({ withdrawalMode: data.withdrawalMode, withdrawWalletPrivateKey: "" });
+      withdrawalForm.reset({
+        withdrawalMode: data.withdrawalMode,
+        withdrawWalletPrivateKey: "",
+        withdrawFeeFlat: updated.withdrawFeeFlat ?? data.withdrawFeeFlat,
+        withdrawFeePercent: updated.withdrawFeePercent ?? data.withdrawFeePercent,
+        withdrawFeeMode: updated.withdrawFeeMode ?? data.withdrawFeeMode,
+      });
       toast({ title: "Withdrawal settings saved!" });
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
@@ -593,6 +627,7 @@ export default function AdminSettings() {
   };
 
   const withdrawalMode = withdrawalForm.watch("withdrawalMode");
+  const withdrawFeeMode = withdrawalForm.watch("withdrawFeeMode");
   const smtpEnabled = smtpForm.watch("smtpEnabled");
   const activeTabMeta = TABS.find(t => t.key === activeTab) ?? TABS[0];
 
@@ -1043,6 +1078,64 @@ export default function AdminSettings() {
                   </div>
                 </div>
               )}
+
+              {/* ── Withdrawal Fee ── */}
+              <SubHeader>Withdrawal Fee</SubHeader>
+              <div
+                className="rounded-xl px-4 py-3 text-xs mb-1"
+                style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.09)", color: "rgba(168,237,255,0.5)" }}
+              >
+                Rule: withdrawals under <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100</strong> use the flat fee.
+                Withdrawals <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100+</strong> use the percentage fee.
+              </div>
+
+              {/* Fee deduction mode */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  {
+                    value: "deduct_from_amount",
+                    label: "Deduct from Amount",
+                    desc: "User requests $100, receives $99.50 — balance debited $100",
+                  },
+                  {
+                    value: "deduct_from_balance",
+                    label: "Deduct from Balance",
+                    desc: "User requests $100, receives $100 — balance debited $100.50",
+                  },
+                ] as const).map(opt => (
+                  <label
+                    key={opt.value}
+                    className="flex flex-col gap-1.5 p-4 rounded-xl cursor-pointer transition-all"
+                    style={{
+                      background: withdrawFeeMode === opt.value ? "rgba(61,214,245,0.12)" : "rgba(0,15,30,0.5)",
+                      border: `1px solid ${withdrawFeeMode === opt.value ? "rgba(61,214,245,0.45)" : "rgba(61,214,245,0.10)"}`,
+                    }}
+                  >
+                    <input type="radio" value={opt.value} {...withdrawalForm.register("withdrawFeeMode")} className="sr-only" />
+                    <span className="text-sm font-bold" style={{ color: withdrawFeeMode === opt.value ? TEAL : "rgba(168,237,255,0.6)" }}>{opt.label}</span>
+                    <span className="text-xs" style={{ color: "rgba(168,237,255,0.4)" }}>{opt.desc}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel>Flat Fee (USD) — under $100</FieldLabel>
+                  <input
+                    type="number" step="0.01" min="0" max="100"
+                    {...withdrawalForm.register("withdrawFeeFlat", { valueAsNumber: true })}
+                    className={INPUT_CLS} style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Percentage Fee (%) — $100+</FieldLabel>
+                  <input
+                    type="number" step="0.01" min="0" max="100"
+                    {...withdrawalForm.register("withdrawFeePercent", { valueAsNumber: true })}
+                    className={INPUT_CLS} style={INPUT_STYLE}
+                  />
+                </div>
+              </div>
 
               <SubHeader hint="If its BNB runs low, the gas wallet tops it up automatically.">Withdrawal Wallet — sends USDT to users</SubHeader>
               <div>
