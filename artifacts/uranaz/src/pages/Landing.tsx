@@ -51,44 +51,107 @@ function CertificateModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* PDF viewer with protective overlay */}
+        {/* Certificate content */}
         <div
-          className="relative flex-1 overflow-hidden"
+          className="relative flex-1 overflow-y-auto"
           style={{ minHeight: 0 }}
           onContextMenu={e => e.preventDefault()}
         >
-          <iframe
-            src="/certificate.pdf#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
-            className="w-full h-full"
-            style={{ minHeight: "65vh", border: "none", display: "block" }}
-            title="Certificate of Incorporation"
-            sandbox="allow-same-origin allow-scripts"
-          />
-          {/* Transparent protective overlay — blocks right-click save / drag */}
+          {/* Certificate paper */}
+          <div
+            className="relative mx-4 my-5 rounded-xl p-8 sm:p-12 select-none"
+            style={{
+              background: "#f9f7f2",
+              border: "2px solid #c8b87a",
+              boxShadow: "inset 0 0 40px rgba(200,184,122,0.15), 0 4px 24px rgba(0,0,0,0.4)",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              color: "#1a1208",
+            }}
+          >
+            {/* Corner decorations */}
+            {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map(pos => (
+              <div key={pos} className={`absolute ${pos} w-6 h-6`}
+                style={{ border: "2px solid #c8b87a", borderRadius: 2 }} />
+            ))}
+
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="text-xs tracking-[0.25em] uppercase mb-1" style={{ color: "#8a7a4a" }}>
+                Companies House
+              </div>
+              <div className="w-16 h-px mx-auto mb-4" style={{ background: "#c8b87a" }} />
+              <h2 className="text-lg font-bold tracking-widest uppercase mb-1" style={{ color: "#1a1208", letterSpacing: "0.15em" }}>
+                Certificate of Incorporation
+              </h2>
+              <div className="text-sm tracking-wide" style={{ color: "#5a4a2a" }}>of a</div>
+              <div className="text-base font-bold tracking-widest uppercase" style={{ color: "#1a1208" }}>
+                Private Limited Company
+              </div>
+              <div className="w-32 h-px mx-auto mt-4" style={{ background: "linear-gradient(90deg, transparent, #c8b87a, transparent)" }} />
+            </div>
+
+            {/* Company Number */}
+            <div className="text-center mb-6">
+              <span className="text-sm" style={{ color: "#5a4a2a" }}>Company Number </span>
+              <span className="text-base font-bold" style={{ color: "#1a1208" }}>14309852</span>
+            </div>
+
+            {/* Body */}
+            <div className="text-sm leading-relaxed text-center mb-6" style={{ color: "#2a1e0a" }}>
+              <p className="mb-4">
+                The Registrar of Companies for England and Wales, hereby certifies that
+              </p>
+              <p className="text-2xl font-bold tracking-wider my-5" style={{ color: "#1a1208", fontFamily: "'Georgia', serif" }}>
+                URANUS INVESTMENT LTD
+              </p>
+              <p>
+                is this day incorporated under the Companies Act 2006 as a private company,
+                that the company is limited by shares, and the situation of its registered
+                office is in England and Wales.
+              </p>
+            </div>
+
+            {/* Date */}
+            <div className="text-center mb-8 text-sm" style={{ color: "#5a4a2a" }}>
+              Given at Companies House, Cardiff, on{" "}
+              <strong style={{ color: "#1a1208" }}>22nd August 2022</strong>.
+            </div>
+
+            {/* Divider */}
+            <div className="w-full h-px mb-6" style={{ background: "linear-gradient(90deg, transparent, #c8b87a, transparent)" }} />
+
+            {/* Footer note */}
+            <p className="text-xs text-center leading-relaxed" style={{ color: "#7a6a4a" }}>
+              The above information was communicated by electronic means and authenticated by the
+              Registrar of Companies under section 1115 of the Companies Act 2006
+            </p>
+
+            {/* Watermark */}
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-xl"
+            >
+              <div
+                className="text-3xl font-black tracking-widest"
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  color: "rgba(61,214,245,0.07)",
+                  transform: "rotate(-30deg)",
+                  whiteSpace: "nowrap",
+                  userSelect: "none",
+                }}
+              >
+                URANUS TRADES · OFFICIAL
+              </div>
+            </div>
+          </div>
+
+          {/* Transparent protective overlay */}
           <div
             className="absolute inset-0"
-            style={{ zIndex: 10, userSelect: "none" }}
+            style={{ zIndex: 10 }}
             onContextMenu={e => e.preventDefault()}
             onDragStart={e => e.preventDefault()}
           />
-          {/* Watermark */}
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ zIndex: 11 }}
-          >
-            <div
-              className="text-2xl font-black tracking-widest select-none"
-              style={{
-                fontFamily: "'Orbitron', sans-serif",
-                color: "rgba(61,214,245,0.06)",
-                transform: "rotate(-30deg)",
-                whiteSpace: "nowrap",
-                userSelect: "none",
-              }}
-            >
-              URANUS TRADES · OFFICIAL
-            </div>
-          </div>
         </div>
 
         {/* Footer note */}
