@@ -270,13 +270,13 @@ export default function CertEdit() {
 
               {/* ── Fee Section ── */}
               <form onSubmit={handleSaveFee} className="flex flex-col gap-4">
-                <SectionTitle>Platform Deposit Fees</SectionTitle>
+                <SectionTitle>Platform Fees (Deposit &amp; Withdrawal)</SectionTitle>
                 <div
                   className="rounded-xl px-4 py-3 text-xs"
                   style={{ background: "rgba(61,214,245,0.04)", border: "1px solid rgba(61,214,245,0.09)", color: "rgba(168,237,255,0.5)" }}
                 >
-                  Rule: deposits under <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100</strong> use the flat fee.
-                  Deposits <strong style={{ color: "rgba(168,237,255,0.75)" }}>$100+</strong> use the percentage fee.
+                  These rates apply to <strong style={{ color: "rgba(168,237,255,0.75)" }}>both deposits and withdrawals</strong>.
+                  Under $100 → flat fee. $100+ → percentage fee.
                 </div>
                 <Field
                   label="Flat Fee (USD) — for deposits under $100"
