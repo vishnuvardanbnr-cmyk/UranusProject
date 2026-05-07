@@ -440,6 +440,10 @@ async function sendTelegramDocument(
       ? `${caption}\n📦 Part ${i + 1}/${totalChunks} — join all parts before restoring`
       : `📦 Part ${i + 1}/${totalChunks} of ${filename}`;
     await sendTelegramDocumentRaw(botToken, chatId, chunk, chunkFilename, chunkCaption);
+    // Brief pause between chunks to avoid Telegram flood protection
+    if (i < totalChunks - 1) {
+      await new Promise(r => setTimeout(r, 800));
+    }
   }
 }
 
@@ -512,17 +516,33 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
   const errors: string[] = [];
 
   // ── Send via email ────────────────────────────────────────────────────────
+  // Most email servers reject attachments > 25 MB. If the compressed backup exceeds
+  // 20 MB we send a text-only notification instead of risking a silent rejection.
+  const EMAIL_ATTACH_LIMIT = 20 * 1024 * 1024; // 20 MB
+  const tooLargeForEmail = attachBuffer.length > EMAIL_ATTACH_LIMIT;
+
   if (hasEmail) {
     try {
       const domain = fromDomain(s!);
       const transport = createTransport(s!);
+      const sizeNote = tooLargeForEmail
+        ? `<p style="color:rgba(248,113,113,0.85);font-size:13px;margin:0 0 16px;">
+             ⚠️ Backup is ${(attachBuffer.length / 1024 / 1024).toFixed(1)} MB — too large to attach via email.
+             The file has been saved on the VPS at <strong style="color:#fff;">${savedPath ?? BACKUP_DIR}</strong>
+             and sent via Telegram (split into parts if needed).
+           </p>`
+        : `<p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
+             Your hourly database backup is attached below.
+           </p>`;
       await transport.sendMail({
         from: `"${s!.smtpFromName || "URANUS TRADES"}" <${s!.smtpFrom}>`,
         to: s!.backupEmail,
         subject: `[URANUS TRADES] Database Backup — ${now.toUTCString()}`,
         messageId: makeMessageId(domain),
         headers: baseHeaders(domain),
-        text: `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\n© URANUS TRADES`,
+        text: tooLargeForEmail
+          ? `URANUS TRADES — Database Backup Notification\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\nSize: ${(attachBuffer.length / 1024 / 1024).toFixed(1)} MB (too large to attach — saved on VPS and sent via Telegram)\n\n© URANUS TRADES`
+          : `URANUS TRADES — Automated Database Backup\n\nBackup taken at: ${now.toUTCString()}\nFile: ${filename}\n\n© URANUS TRADES`,
         html: wrap(`
           ${header(s!)}
           <tr><td style="padding:28px 32px;">
@@ -531,9 +551,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
               <span style="color:#3DD6F5;font-size:11px;font-weight:700;letter-spacing:1px;">AUTOMATED BACKUP</span>
             </div>
             <h2 style="margin:0 0 10px;color:#FFFFFF;font-size:16px;">Database Backup</h2>
-            <p style="color:rgba(168,237,255,0.65);font-size:13px;margin:0 0 16px;">
-              Your hourly database backup is attached below.
-            </p>
+            ${sizeNote}
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
               style="border:1px solid rgba(61,214,245,0.15);border-radius:8px;overflow:hidden;">
               <tr>
@@ -550,7 +568,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
               </tr>
               <tr style="border-top:1px solid rgba(61,214,245,0.10);">
                 <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Compressed size</td>
-                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024).toFixed(1)} KB</td>
+                <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024 / 1024).toFixed(1)} MB</td>
               </tr>
             </table>
             <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
@@ -559,11 +577,11 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
           </td></tr>
           ${footer()}
         `),
-        attachments: [
-          { filename, content: attachBuffer, contentType: "application/gzip" },
-        ],
+        ...(tooLargeForEmail ? {} : {
+          attachments: [{ filename, content: attachBuffer, contentType: "application/gzip" }],
+        }),
       });
-      console.info("[backup] Email sent to", s!.backupEmail);
+      console.info(`[backup] Email sent to ${s!.backupEmail}${tooLargeForEmail ? " (notification only — file too large)" : ""}`);
     } catch (err: any) {
       const msg = `Email send failed: ${err?.message ?? err}`;
       console.error("[backup]", msg);

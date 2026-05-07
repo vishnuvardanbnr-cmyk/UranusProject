@@ -585,8 +585,27 @@ router.post("/admin/trigger-backup", requireAdmin, async (req, res) => {
   }
 });
 
+// In-memory lock — prevents two concurrent restores corrupting the DB
+let restoreInProgress = false;
+
+// Cleanup stale temp restore files on module load (from previous crashed restores)
+import("fs/promises").then(async ({ readdir, unlink }) => {
+  const { join } = await import("path");
+  try {
+    const files = await readdir("/tmp");
+    for (const f of files.filter(f => f.startsWith("restore_") && f.endsWith(".sql"))) {
+      await unlink(join("/tmp", f)).catch(() => {});
+    }
+  } catch {}
+}).catch(() => {});
+
 // POST /api/admin/db-restore  — multipart/form-data, field "files" (one or many parts)
 router.post("/admin/db-restore", requireAdmin, async (req, res) => {
+  if (restoreInProgress) {
+    res.status(409).json({ success: false, message: "A restore is already in progress — please wait for it to finish before starting another." });
+    return;
+  }
+  restoreInProgress = true;
   try {
     const { default: multer } = await import("multer");
     const upload = multer({
@@ -600,6 +619,7 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
 
     const files = (req as any).files as Express.Multer.File[];
     if (!files || files.length === 0) {
+      restoreInProgress = false;
       res.status(400).json({ success: false, message: "No files uploaded" });
       return;
     }
@@ -623,6 +643,7 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
       try {
         sqlBuffer = await gunzipAsync(combined) as Buffer;
       } catch (err: any) {
+        restoreInProgress = false;
         res.status(400).json({ success: false, message: `Decompression failed — make sure all parts are uploaded in order: ${err?.message}` });
         return;
       }
@@ -647,6 +668,7 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
       );
     } catch (err: any) {
       try { await unlink(tmpSql); } catch {}
+      restoreInProgress = false;
       res.status(500).json({ success: false, message: `Failed to clean schema before restore: ${err?.message ?? err}` });
       return;
     }
@@ -660,21 +682,25 @@ router.post("/admin/db-restore", requireAdmin, async (req, res) => {
       );
     } catch (err: any) {
       try { await unlink(tmpSql); } catch {}
+      restoreInProgress = false;
       res.status(500).json({ success: false, message: `Restore failed after schema wipe — database may be in empty state, re-upload backup: ${err?.message ?? err}` });
       return;
     }
 
     try { await unlink(tmpSql); } catch {}
 
-    // Send response BEFORE restarting PM2 so the client gets confirmation
+    // Send response BEFORE restarting PM2 so the client receives confirmation
     res.json({ success: true, message: `Clean restore complete from ${files.length} file${files.length > 1 ? "s" : ""} — all existing data replaced with backup. API is restarting to reconnect…` });
 
-    // Step 3: Restart PM2 after a short delay so the response is flushed first
+    // Step 3: Restart PM2 after 3s — gives time for the HTTP response to be fully flushed
+    // through nginx to the browser before the process is killed and restarted.
+    // The lock resets automatically because PM2 restarts the process.
     setTimeout(() => {
       const { spawn } = require("child_process");
       spawn("pm2", ["restart", "uranaz-api", "--update-env"], { detached: true, stdio: "ignore" }).unref();
-    }, 1500);
+    }, 3000);
   } catch (err: any) {
+    restoreInProgress = false;
     res.status(500).json({ success: false, message: err?.message ?? "Internal error" });
   }
 });
