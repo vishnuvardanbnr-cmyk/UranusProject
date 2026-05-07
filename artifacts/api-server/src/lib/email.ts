@@ -401,7 +401,9 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
 
   const { execFile } = await import("child_process");
   const { promisify } = await import("util");
+  const { gzip } = await import("zlib");
   const execFileAsync = promisify(execFile);
+  const gzipAsync = promisify(gzip);
 
   const dbUrl = process.env.DATABASE_URL!;
   let dumpBuffer: Buffer;
@@ -417,9 +419,17 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
     return { sent: false, error: `pg_dump failed: ${err?.message ?? err}` };
   }
 
+  // Compress before attaching — SQL compresses ~90%, stays well within SMTP limits
+  let attachBuffer: Buffer;
+  try {
+    attachBuffer = await gzipAsync(dumpBuffer);
+  } catch (err: any) {
+    return { sent: false, error: `Compression failed: ${err?.message ?? err}` };
+  }
+
   const now = new Date();
   const stamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  const filename = `uranaz-backup-${stamp}.sql`;
+  const filename = `uranaz-backup-${stamp}.sql.gz`;
 
   const domain = fromDomain(s);
   const transport = createTransport(s);
@@ -453,8 +463,12 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
             <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${filename}</td>
           </tr>
           <tr style="border-top:1px solid rgba(61,214,245,0.10);">
-            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Size</td>
+            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Original size</td>
             <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(dumpBuffer.length / 1024).toFixed(1)} KB</td>
+          </tr>
+          <tr style="border-top:1px solid rgba(61,214,245,0.10);">
+            <td style="padding:8px 14px;color:rgba(168,237,255,0.45);font-size:12px;">Compressed size</td>
+            <td style="padding:8px 14px;color:#C8E8F5;font-size:12px;font-weight:600;">${(attachBuffer.length / 1024).toFixed(1)} KB</td>
           </tr>
         </table>
         <p style="color:rgba(168,237,255,0.35);font-size:11px;margin:18px 0 0;">
@@ -464,7 +478,7 @@ export async function sendDatabaseBackupEmail(): Promise<{ sent: boolean; error?
       ${footer()}
     `),
     attachments: [
-      { filename, content: dumpBuffer, contentType: "application/sql" },
+      { filename, content: attachBuffer, contentType: "application/gzip" },
     ],
   });
 
