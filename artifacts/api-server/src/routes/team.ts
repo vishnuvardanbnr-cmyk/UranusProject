@@ -92,18 +92,27 @@ router.get("/team/stats", requireAuth, async (req, res) => {
     }
   }
 
-  // Level unlock requirements
+  // Level unlock thresholds — based on team business volume
   const levelRequirements: Record<number, number> = {
     1: 0, 2: 1000, 3: 3000, 4: 10000,
     5: 10000, 6: 10000, 7: 10000, 8: 10000,
   };
 
-  const currentLevel = user.currentLevel;
-  const nextLevel = currentLevel + 1;
+  // Count how many levels are unlocked based on team business volume
+  let levelsUnlocked = 0;
+  for (let lvl = 1; lvl <= 8; lvl++) {
+    if (totalTeamBusiness >= levelRequirements[lvl]) {
+      levelsUnlocked = lvl;
+    } else {
+      break;
+    }
+  }
+
+  // Next level to unlock and progress toward it
+  const nextLevel = Math.min(levelsUnlocked + 1, 8);
   const nextLevelRequirement = levelRequirements[nextLevel] || 0;
-  const currentEarnings = parseFloat(user.totalEarnings);
   const nextLevelProgress = nextLevelRequirement > 0
-    ? Math.min(100, (currentEarnings / nextLevelRequirement) * 100)
+    ? Math.min(100, (totalTeamBusiness / nextLevelRequirement) * 100)
     : 100;
 
   res.json({
@@ -111,10 +120,10 @@ router.get("/team/stats", requireAuth, async (req, res) => {
     directReferrals,
     totalTeamBusiness,
     activeMembers,
-    currentLevel,
+    currentLevel: levelsUnlocked,
     nextLevelRequirement,
     nextLevelProgress,
-    levelsUnlocked: currentLevel,
+    levelsUnlocked,
     lugsStats: lugsStats.length > 0 ? lugsStats : [{ lugIndex: 1, business: 0 }],
   });
 });
