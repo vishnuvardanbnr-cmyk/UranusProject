@@ -253,7 +253,7 @@ export default function Team({ user }: { user: any }) {
             </div>
             <div className="mt-3">
               <div className="flex justify-between text-xs mb-1.5" style={{ color: "rgba(168,237,255,0.4)" }}>
-                <span>Level {user?.currentLevel} → Level {user?.currentLevel + 1}</span>
+                <span>Level {stats.levelsUnlocked} → Level {Math.min(stats.levelsUnlocked + 1, 8)}</span>
                 {(stats.nextLevelRequirement ?? 0) > 0 && (
                   <span>${stats.totalTeamBusiness.toFixed(0)} / ${(stats.nextLevelRequirement ?? 0).toLocaleString()}</span>
                 )}
