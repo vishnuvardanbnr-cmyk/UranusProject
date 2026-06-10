@@ -53,6 +53,60 @@ const DEFAULT_LEVEL_DAYS: Record<number, number> = {
   1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0,
 };
 
+/**
+ * Precompute team business volume for every user in one DB round-trip.
+ *
+ * Business volume of user X = sum of totalInvested for every member
+ * in X's entire downline (all generations, excluding X themselves).
+ *
+ * Algorithm:
+ *  1. Fetch all users (id, sponsorId, totalInvested).
+ *  2. Build a children map: parentId -> [childId, ...].
+ *  3. For each user, DFS-sum all descendants' totalInvested.
+ *
+ * Returns Map<userId, teamBusinessVolume>.
+ */
+async function buildTeamBusinessVolumeMap(): Promise<Map<number, number>> {
+  const allUsers = await db
+    .select({ id: usersTable.id, sponsorId: usersTable.sponsorId, totalInvested: usersTable.totalInvested })
+    .from(usersTable);
+
+  // children map: parentId -> child ids
+  const children = new Map<number, number[]>();
+  for (const u of allUsers) {
+    if (u.sponsorId != null) {
+      const arr = children.get(u.sponsorId) ?? [];
+      arr.push(u.id);
+      children.set(u.sponsorId, arr);
+    }
+  }
+
+  // totalInvested per user (as number)
+  const invested = new Map<number, number>();
+  for (const u of allUsers) {
+    invested.set(u.id, parseFloat(u.totalInvested ?? "0") || 0);
+  }
+
+  // DFS sum for a given root (excludes root itself)
+  function teamVolume(userId: number): number {
+    let vol = 0;
+    const stack = [...(children.get(userId) ?? [])];
+    while (stack.length > 0) {
+      const cid = stack.pop()!;
+      vol += invested.get(cid) ?? 0;
+      const grandchildren = children.get(cid) ?? [];
+      for (const gc of grandchildren) stack.push(gc);
+    }
+    return vol;
+  }
+
+  const volumeMap = new Map<number, number>();
+  for (const u of allUsers) {
+    volumeMap.set(u.id, teamVolume(u.id));
+  }
+  return volumeMap;
+}
+
 export async function processDailyPayout(): Promise<{ processed: number; skipped: number; errors: number }> {
   const stats = { processed: 0, skipped: 0, errors: 0 };
 
@@ -63,6 +117,9 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
   const levelRates   = cfg?.levelRates   ?? DEFAULT_LEVEL_RATES;
   const levelUnlocks = cfg?.levelUnlocks ?? DEFAULT_LEVEL_UNLOCKS;
   const levelDays    = cfg?.levelDays    ?? DEFAULT_LEVEL_DAYS;
+
+  // Build business-volume map once before the loop (single DB query)
+  const teamVolumeMap = await buildTeamBusinessVolumeMap();
 
   const activeInvestments = await db
     .select()
@@ -89,8 +146,6 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
       const isCompleted  = newRemaining === 0;
 
       // daysElapsed counts how many distributions have been run INCLUDING this one.
-      // Using newRemaining (after decrement) means distribution #1 = day 1, #2 = day 2, etc.
-      // so level commission day limits are checked correctly per manual or automatic run.
       const daysElapsed = inv.durationDays - newRemaining;
 
       // Update investment
@@ -123,7 +178,7 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         .set({ totalEarnings: (parseFloat(investor.totalEarnings) + dailyReturn).toString() })
         .where(eq(usersTable.id, inv.userId));
 
-      // Level commissions — walk up the sponsor chain (up to 8 levels)
+      // ── Level commissions — walk up the sponsor chain (up to 8 levels) ──
       let currentUserId: number | null = investor.sponsorId;
       let level = 1;
 
@@ -139,19 +194,20 @@ export async function processDailyPayout(): Promise<{ processed: number; skipped
         }
 
         const unlockThreshold = levelUnlocks[level] ?? 0;
-        const uplineEarnings  = parseFloat(upline.totalEarnings);
         const maxDays         = levelDays[level] ?? 0; // 0 = unlimited
 
+        // Unlock check: based on upline's TEAM BUSINESS VOLUME
+        // (total amount invested by everyone in the upline's entire downline)
+        const uplineTeamVolume = teamVolumeMap.get(upline.id) ?? 0;
+
         // Skip if this level's commission period has expired.
-        // daysElapsed starts at 1 on the first distribution, so maxDays=5 means
-        // commission is paid for exactly 5 distributions (days 1–5).
         if (maxDays > 0 && daysElapsed > maxDays) {
           currentUserId = upline.sponsorId;
           level++;
           continue;
         }
 
-        if (uplineEarnings >= unlockThreshold) {
+        if (uplineTeamVolume >= unlockThreshold) {
           const rate       = levelRates[level] ?? 0;
           const commission = dailyReturn * rate;
 

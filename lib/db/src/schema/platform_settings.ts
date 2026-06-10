@@ -57,7 +57,7 @@ export const platformSettingsTable = pgTable("platform_settings", {
   levelCommL6: numeric("level_comm_l6", { precision: 6, scale: 4 }).notNull().default("0.0400"),
   levelCommL7: numeric("level_comm_l7", { precision: 6, scale: 4 }).notNull().default("0.0400"),
   levelCommL8: numeric("level_comm_l8", { precision: 6, scale: 4 }).notNull().default("0.0400"),
-  // Level unlock thresholds (total earnings needed, in USD)
+  // Level unlock thresholds (upline team business volume needed, in USD)
   levelUnlockL2: numeric("level_unlock_l2", { precision: 10, scale: 2 }).notNull().default("1000"),
   levelUnlockL3: numeric("level_unlock_l3", { precision: 10, scale: 2 }).notNull().default("3000"),
   levelUnlockL4: numeric("level_unlock_l4", { precision: 10, scale: 2 }).notNull().default("10000"),
