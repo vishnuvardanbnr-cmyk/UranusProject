@@ -993,7 +993,7 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
               className="w-10 h-10 rounded-2xl flex items-center justify-center"
               style={{ background: "transparent", border: "none" }}
             >
-              <img src="/logo-icon-nobg.png" alt="HC" style={{ width: 40, height: 40, objectFit: "contain" }} />
+              <img src="/hypr-logo.png" alt="HYPR" style={{ width: 40, height: 40, objectFit: "contain" }} />
             </div>
             <div>
               <div className="font-bold tracking-wide text-sm" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif" }}>
