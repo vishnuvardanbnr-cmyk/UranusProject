@@ -75,10 +75,10 @@ const otpLimiter = rateLimit({
   skip: (req) => req.method === "OPTIONS",
 });
 
-// General API: 30 requests per minute per IP
+// General API: 200 requests per minute per IP
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, slow down." },

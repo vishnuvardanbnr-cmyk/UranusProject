@@ -916,11 +916,15 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [hcDepositUsername, setHcDepositUsername] = useState("");
+  const [hcPrice, setHcPrice] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.json())
-      .then(d => { if (d.hcDepositUsername) setHcDepositUsername(d.hcDepositUsername); })
+      .then(d => {
+        if (d.hcDepositUsername) setHcDepositUsername(d.hcDepositUsername);
+        if (d.hyperCoinPrice != null) setHcPrice(d.hyperCoinPrice);
+      })
       .catch(() => {});
   }, []);
 
@@ -987,19 +991,15 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(184,127,255,0.2), rgba(139,92,246,0.08))",
-                border: "1px solid rgba(184,127,255,0.3)",
-                boxShadow: "0 0 16px rgba(184,127,255,0.15)",
-              }}
+              style={{ background: "transparent", border: "none" }}
             >
-              <CircleDollarSign size={17} style={{ color: "#b87fff" }} />
+              <img src="/logo-icon-nobg.png" alt="HC" style={{ width: 40, height: 40, objectFit: "contain" }} />
             </div>
             <div>
               <div className="font-bold tracking-wide text-sm" style={{ color: "rgba(200,240,255,0.92)", fontFamily: "'Orbitron', sans-serif" }}>
-                HC Deposit
+                HYPR Deposit
               </div>
-              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HyperCoin top-up request</div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(168,237,255,0.4)" }}>HYPR top-up request</div>
             </div>
           </div>
           <button
@@ -1059,6 +1059,12 @@ function HcDepositModal({ user, onClose }: { user: any; onClose: () => void }) {
                       : <Copy size={11} style={{ color: "#b87fff" }} />}
                   </button>
                 </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <span className="text-xs shrink-0" style={{ color: "rgba(168,237,255,0.45)" }}>HC Price</span>
+                <span className="text-xs font-bold" style={{ color: "#b87fff" }}>
+                  {hcPrice != null ? `$${hcPrice.toFixed(4)} USDT` : "—"}
+                </span>
               </div>
             </div>
 

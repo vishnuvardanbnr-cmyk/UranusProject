@@ -435,7 +435,14 @@ export default function Invest({ user }: { user: any }) {
                     data-testid="input-amount"
                     type="number" step="100" min={plan.min} max={maxTotalInvestment}
                     {...field}
-                    onChange={e => handleAmountChange(Number(e.target.value))}
+                    value={field.value === 0 || field.value === undefined ? "" : field.value}
+                    onChange={e => {
+                      if (e.target.value === "") {
+                        field.onChange("");
+                      } else {
+                        handleAmountChange(Number(e.target.value));
+                      }
+                    }}
                     style={{ background: "rgba(0,20,40,0.6)", border: "1px solid rgba(61,214,245,0.18)", color: "rgba(168,237,255,0.9)" }}
                   />
                 </FormControl>

@@ -44,7 +44,7 @@ export default function Profile({ user, onUpdate }: { user: any; onUpdate: (u: a
   });
 
   const submitProfile = async (data: FormData, otp?: string) => {
-    const body: any = { ...data };
+    const body: any = { ...data, country: user?.country || "" };
     if (otp) body.otp = otp;
     const token = localStorage.getItem("uranaz_token");
     const r = await fetch("/api/auth/profile-setup", {
