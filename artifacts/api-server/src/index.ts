@@ -7,6 +7,18 @@ import { processDailyPayout } from "./lib/dailyPayout";
 import { sendDatabaseBackupEmail } from "./lib/email";
 import { db, platformSettingsTable } from "@workspace/db";
 
+// ── Crash guards ───────────────────────────────────────────────────────────────
+// Log unhandled promise rejections instead of crashing the process
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection — process kept alive");
+});
+
+// Log uncaught exceptions — exit only for truly irrecoverable errors
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception — restarting gracefully");
+  process.exit(1);
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

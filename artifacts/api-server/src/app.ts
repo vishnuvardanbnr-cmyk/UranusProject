@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import rateLimit from "express-rate-limit";
@@ -38,6 +38,8 @@ const allowedOrigins = [
   "https://www.uranustrades.net",
   /^http:\/\/localhost(:\d+)?$/,
   /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+  /\.replit\.dev$/,
+  /\.repl\.co$/,
 ];
 app.use(cors({
   origin: (origin, cb) => {
@@ -46,7 +48,8 @@ app.use(cors({
     const allowed = allowedOrigins.some(o =>
       typeof o === "string" ? o === origin : o.test(origin)
     );
-    cb(allowed ? null : new Error("Not allowed by CORS"), allowed);
+    // Return false (not an Error) so CORS silently blocks without throwing
+    cb(null, allowed);
   },
   credentials: true,
 }));
@@ -82,8 +85,9 @@ const generalLimiter = rateLimit({
   skip: (req) => req.method === "OPTIONS",
 });
 
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+// ── Body parsers — 10 mb to handle base64 profile images and large payloads ──
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Apply rate limiters before routing
 app.use("/api/auth/send-otp", otpLimiter);
@@ -92,5 +96,23 @@ app.use("/api/auth/register", authLimiter);
 app.use("/api", generalLimiter);
 
 app.use("/api", router);
+
+// ── Global error handler ──────────────────────────────────────────────────────
+// Catches PayloadTooLargeError, SyntaxError (bad JSON), and any other
+// synchronous errors thrown by middleware — returns clean JSON instead of
+// crashing or leaking stack traces.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.type === "entity.too.large" || err.status === 413) {
+    res.status(413).json({ message: "Request body too large. Maximum size is 10 MB." });
+    return;
+  }
+  if (err.status === 400 && err.type === "entity.parse.failed") {
+    res.status(400).json({ message: "Invalid JSON in request body." });
+    return;
+  }
+  logger.error({ err }, "Unhandled Express error");
+  res.status(err.status ?? 500).json({ message: err.message ?? "Internal server error" });
+});
 
 export default app;
